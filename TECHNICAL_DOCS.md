@@ -116,3 +116,10 @@ GoalPulse Agent is an analytics and monitoring tool. It does not place wagers, c
 5. Show agent-generated signals.
 6. Show finished matches triggering signal evaluation.
 7. Show accuracy stats on the dashboard.
+
+## Live Deployment Links
+
+- Frontend Dashboard: https://goalpulse-agent.vercel.app
+- Backend API: https://goalpulse-agent-api.onrender.com
+- API Health Check: https://goalpulse-agent-api.onrender.com/health
+

@@ -98,3 +98,10 @@ The architecture separates feed ingestion from the signal engine, so the simulat
 ## Safety Note
 
 GoalPulse Agent is an analytics and monitoring tool. It does not execute wagers, facilitate illegal betting, custody funds, or perform financial transactions.
+
+## Live Deployment
+
+- Frontend: https://goalpulse-agent.vercel.app
+- Backend API: https://goalpulse-agent-api.onrender.com
+- Health Check: https://goalpulse-agent-api.onrender.com/health
+
