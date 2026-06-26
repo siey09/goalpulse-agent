@@ -1,0 +1,22 @@
+﻿services:
+  - type: web
+    name: goalpulse-agent-api
+    runtime: node
+    plan: free
+    rootDir: apps/api
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: AGENT_INTERVAL_MS
+        value: 5000
+      - key: USE_SIMULATED_FEED
+        value: true
+      - key: TXLINE_API_BASE_URL
+        value: https://txline.txodds.com
+      - key: TXLINE_API_KEY
+        sync: false
