@@ -143,7 +143,7 @@ function App() {
           icon={<TrendingUp />}
           title="Strategy Accuracy"
           value={`${stats?.strategyAccuracy ?? 0}%`}
-          subtitle={`${stats?.pendingSignals ?? 0} pending signals`}
+          subtitle={`${stats?.correctSignals ?? 0} correct • ${stats?.incorrectSignals ?? 0} incorrect • ${stats?.closedSignals ?? 0} closed`}
         />
         <StatCard
           icon={<Clock />}
