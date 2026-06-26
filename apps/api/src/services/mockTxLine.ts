@@ -51,10 +51,10 @@ export function fetchSimulatedTxLineFeed(): {
   const now = new Date().toISOString();
 
   const updatedMatches: Match[] = matches.map((match): Match => {
-    const minuteIncrement = tick % 3 === 0 ? 1 : 0;
+    const minuteIncrement = match.status === "finished" ? 0 : 3;
 
     const homeGoal = match.id === "wc-usa-bra" && tick === 8 ? 1 : 0;
-    const awayGoal = match.id === "wc-jpn-esp" && tick === 12 ? 1 : 0;
+    const awayGoal = match.id === "wc-jpn-esp" && tick === 7 ? 1 : 0;
 
     const updatedMinute = Math.min(90, match.minute + minuteIncrement);
     const updatedStatus: Match["status"] =
@@ -80,15 +80,26 @@ export function fetchSimulatedTxLineFeed(): {
     const baseDraw = [3.25, 3.0, 3.4][index];
 
     const homeCompression =
-      match.id === "wc-usa-bra" ? Math.max(0, tick - 2) * 0.09 : 0;
+      match.id === "wc-usa-bra" && match.status !== "finished"
+        ? Math.max(0, tick - 2) * 0.09
+        : 0;
 
     const awayCompression =
-      match.id === "wc-jpn-esp" ? Math.max(0, tick - 3) * 0.035 : 0;
+      match.id === "wc-jpn-esp" && match.status !== "finished"
+        ? Math.max(0, tick - 2) * 0.06
+        : 0;
+
+    const germanyCompression =
+      match.id === "wc-mex-ger" && match.status !== "finished"
+        ? Math.max(0, tick - 1) * 0.03
+        : 0;
 
     const marketNoise = Math.sin(tick + index) * 0.03;
 
     const homeOdds = roundOdds(baseHome - homeCompression + marketNoise);
-    const awayOdds = roundOdds(baseAway - awayCompression - marketNoise);
+    const awayOdds = roundOdds(
+      baseAway - awayCompression - germanyCompression - marketNoise
+    );
     const drawOdds = roundOdds(baseDraw + Math.sin(tick / 2 + index) * 0.04);
 
     return {

@@ -49,6 +49,9 @@ export interface AgentStats {
   signalsGenerated: number;
   highSeverity: number;
   pendingSignals: number;
+  correctSignals: number;
+  incorrectSignals: number;
+  closedSignals: number;
   strategyAccuracy: number;
   lastAgentRun: {
     id: string;

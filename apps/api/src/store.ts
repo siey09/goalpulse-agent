@@ -38,18 +38,45 @@ export function signalAlreadyExists(signal: AgentSignal): boolean {
   });
 }
 
+export function evaluatePendingSignalsForFinishedMatches() {
+  let evaluatedCount = 0;
+
+  for (const signal of store.signals) {
+    if (signal.resultStatus !== "pending") continue;
+
+    const match = store.matches.find((item) => item.id === signal.matchId);
+
+    if (!match || match.status !== "finished") continue;
+
+    const homeWon = match.homeScore > match.awayScore;
+    const awayWon = match.awayScore > match.homeScore;
+
+    const signalWon =
+      (signal.side === "home" && homeWon) || (signal.side === "away" && awayWon);
+
+    signal.resultStatus = signalWon ? "correct" : "incorrect";
+    evaluatedCount += 1;
+  }
+
+  return evaluatedCount;
+}
+
 export function getStats() {
   const totalSignals = store.signals.length;
   const highSeverity = store.signals.filter((s) => s.severity === "HIGH").length;
   const pending = store.signals.filter((s) => s.resultStatus === "pending").length;
   const correct = store.signals.filter((s) => s.resultStatus === "correct").length;
-  const closed = store.signals.filter((s) => s.resultStatus !== "pending").length;
+  const incorrect = store.signals.filter((s) => s.resultStatus === "incorrect").length;
+  const closed = correct + incorrect;
 
   return {
     txlineUpdates: store.oddsSnapshots.length,
     signalsGenerated: totalSignals,
     highSeverity,
     pendingSignals: pending,
+    correctSignals: correct,
+    incorrectSignals: incorrect,
+    closedSignals: closed,
     strategyAccuracy:
       closed === 0 ? 0 : Number(((correct / closed) * 100).toFixed(1)),
     lastAgentRun: store.agentRuns[0] ?? null,

@@ -2,7 +2,12 @@
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { fetchSimulatedTxLineFeed } from "./services/mockTxLine";
 import { fetchTxLineFeed } from "./services/txlineClient";
-import { findPreviousSnapshot, signalAlreadyExists, store } from "./store";
+import {
+  evaluatePendingSignalsForFinishedMatches,
+  findPreviousSnapshot,
+  signalAlreadyExists,
+  store,
+} from "./store";
 import { AgentRun } from "./types";
 
 export async function processAgentCycle(): Promise<AgentRun> {
@@ -29,6 +34,8 @@ export async function processAgentCycle(): Promise<AgentRun> {
       }
     }
 
+    const evaluatedSignals = evaluatePendingSignalsForFinishedMatches();
+
     store.oddsSnapshots = store.oddsSnapshots.slice(0, 500);
     store.signals = store.signals.slice(0, 100);
 
@@ -40,7 +47,7 @@ export async function processAgentCycle(): Promise<AgentRun> {
       snapshotsCreated: feed.snapshots.length,
       signalsCreated,
       status: "success",
-      message: `Processed ${feed.matches.length} matches and generated ${signalsCreated} signal(s).`,
+      message: `Processed ${feed.matches.length} matches, generated ${signalsCreated} signal(s), and evaluated ${evaluatedSignals} pending signal(s).`,
     };
 
     store.agentRuns.unshift(run);
