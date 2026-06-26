@@ -1,0 +1,12 @@
+﻿{
+  "name": "goalpulse-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GoalPulse Agent: an autonomous TxLINE-powered World Cup odds movement and match momentum detector.",
+  "scripts": {
+    "dev:web": "cd apps/web && npm.cmd run dev",
+    "dev:api": "cd apps/api && npm.cmd run dev",
+    "build:web": "cd apps/web && npm.cmd run build",
+    "build:api": "cd apps/api && npm.cmd run build"
+  }
+}
