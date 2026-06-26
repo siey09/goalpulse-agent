@@ -1,25 +1,22 @@
 ﻿import cors from "cors";
-import dotenv from "dotenv";
 import express from "express";
 import { processAgentCycle } from "./agent";
+import { config } from "./config";
 import { getStats, store } from "./store";
-
-dotenv.config();
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-const PORT = Number(process.env.PORT ?? 4000);
-const AGENT_INTERVAL_MS = Number(process.env.AGENT_INTERVAL_MS ?? 60000);
-
 app.get("/health", (_req, res) => {
   res.json({
     ok: true,
     service: "GoalPulse Agent API",
     status: "running",
-    agentIntervalMs: AGENT_INTERVAL_MS,
+    agentIntervalMs: config.agentIntervalMs,
+    useSimulatedFeed: config.useSimulatedFeed,
+    txlineBaseUrl: config.txlineApiBaseUrl,
     timestamp: new Date().toISOString(),
   });
 });
@@ -60,23 +57,31 @@ app.get("/api/odds-history", (req, res) => {
   });
 });
 
-app.post("/api/agent/run-once", (_req, res) => {
-  const run = processAgentCycle();
+app.post("/api/agent/run-once", async (_req, res) => {
+  const run = await processAgentCycle();
 
   res.json({
     data: run,
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`GoalPulse Agent API running on http://localhost:${PORT}`);
-  console.log(`Autonomous agent interval: ${AGENT_INTERVAL_MS}ms`);
+app.listen(config.port, async () => {
+  console.log(`GoalPulse Agent API running on http://localhost:${config.port}`);
+  console.log(`Autonomous agent interval: ${config.agentIntervalMs}ms`);
+  console.log(
+    `Feed mode: ${config.useSimulatedFeed ? "simulated_txline" : "txline"}`
+  );
 
-  const firstRun = processAgentCycle();
+  const firstRun = await processAgentCycle();
   console.log(firstRun.message);
 
   setInterval(() => {
-    const run = processAgentCycle();
-    console.log(run.message);
-  }, AGENT_INTERVAL_MS);
+    processAgentCycle()
+      .then((run) => {
+        console.log(run.message);
+      })
+      .catch((error) => {
+        console.error("Agent cycle failed:", error);
+      });
+  }, config.agentIntervalMs);
 });

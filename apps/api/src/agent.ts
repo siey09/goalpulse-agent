@@ -1,13 +1,17 @@
-﻿import { buildSignalFromSnapshots } from "./logic/signalEngine";
+﻿import { config } from "./config";
+import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { fetchSimulatedTxLineFeed } from "./services/mockTxLine";
+import { fetchTxLineFeed } from "./services/txlineClient";
 import { findPreviousSnapshot, signalAlreadyExists, store } from "./store";
 import { AgentRun } from "./types";
 
-export function processAgentCycle(): AgentRun {
+export async function processAgentCycle(): Promise<AgentRun> {
   const startedAt = new Date().toISOString();
 
   try {
-    const feed = fetchSimulatedTxLineFeed();
+    const feed = config.useSimulatedFeed
+      ? fetchSimulatedTxLineFeed()
+      : await fetchTxLineFeed();
 
     store.matches = feed.matches;
 
