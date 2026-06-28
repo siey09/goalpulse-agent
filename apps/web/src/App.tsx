@@ -278,6 +278,7 @@ function App() {
   const [replayStep, setReplayStep] = useState(-1);
   const [isJudgeMode, setIsJudgeMode] = useState(false);
   const [judgeStep, setJudgeStep] = useState(0);
+  const [guidePanelPosition, setGuidePanelPosition] = useState({ top: 16, left: 16 });
   const [lastRefresh, setLastRefresh] = useState("");
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState("");
@@ -287,31 +288,58 @@ function App() {
 
   const judgeDemoSteps = [
     {
-      title: "1. Intelligence dashboard",
-      detail: "Review live feed, TxLINE-ready adapter, market pressure, and signals.",
+      title: "1. Dashboard overview",
+      detail: "Start with the live autonomous odds intelligence dashboard, agent status, key metrics, and search.",
     },
     {
-      title: "2. Agent replay cycle",
-      detail: "Show how the autonomous agent scans, detects, explains, and verifies.",
+      title: "2. Odds movement chart",
+      detail: "This chart visualizes home and away odds movement with signal markers placed on meaningful shifts.",
     },
     {
-      title: "3. Historical backtest",
-      detail: "Run saved World Cup replay through the same deterministic signal engine.",
+      title: "3. Market board",
+      detail: "Live matches are normalized here with home, draw, and away odds for quick market scanning.",
     },
     {
-      title: "4. Event correlation",
-      detail: "Connect odds movement with match events like shot on target, goal, and pressure.",
+      title: "4. Latest signals",
+      detail: "The signal engine lists detected odds movements, severity, explanation, and detail entry points.",
     },
     {
-      title: "5. Oracle council",
-      detail: "Show Agent A, Agent B, and Agent C voting before a signal is approved.",
+      title: "5. Outcome verification",
+      detail: "Signals are audited after detection so judges can see before odds, after odds, move size, and proof preview.",
     },
     {
-      title: "6. Proof readiness",
-      detail: "Show SHA-256 proof hash and Solana devnet anchoring readiness.",
+      title: "6. Selected match pressure",
+      detail: "The selected match card summarizes the current match and converts signal momentum into market pressure.",
+    },
+    {
+      title: "7. Agent timeline",
+      detail: "This shows the autonomous flow: feed ingestion, snapshot creation, signal execution, and outcome review.",
+    },
+    {
+      title: "8. Historical backtest",
+      detail: "Run a saved World Cup replay through the same deterministic engine to prove the logic works offline.",
+    },
+    {
+      title: "9. Event correlation",
+      detail: "The replay connects odds movement with match events like shots, goals, and sustained attacking pressure.",
+    },
+    {
+      title: "10. Oracle council",
+      detail: "Agent A, Agent B, and Agent C vote before a replay signal is approved.",
+    },
+    {
+      title: "11. Proof readiness",
+      detail: "The replay result generates a SHA-256 proof hash with Solana devnet anchoring readiness.",
+    },
+    {
+      title: "12. Signal thresholds",
+      detail: "These rules explain the deterministic thresholds used by the signal engine.",
+    },
+    {
+      title: "13. Compliance boundary",
+      detail: "GoalPulse is analytics-only: no wagers, no custody, no trading execution, and no illegal betting facilitation.",
     },
   ];
-
   const outcomeVerificationItems = useMemo(() => {
     const replayItems =
       replayBacktest?.signals?.map((signal) => ({
@@ -349,32 +377,183 @@ function App() {
       setIsReplayRunning(false);
     }
   }
+  const guideTargets = [
+    { id: "overview", text: "GoalPulse Agent" },
+    { text: "Selected market" },
+    { text: "Market board" },
+    { id: "agent", text: "Latest signals" },
+    { text: "Outcome verification" },
+    { text: "Selected match" },
+    { text: "Agent timeline" },
+    { id: "guide-backtest-card", text: "Backtest mode" },
+    { id: "guide-event-correlation", text: "Event correlation" },
+    { id: "guide-oracle-council", text: "Oracle council" },
+    { id: "guide-proof-readiness", text: "Proof network" },
+    { text: "Signal thresholds" },
+    { id: "compliance", text: "Analytics only" },
+  ];
+
+  const guideSpotlightClasses = [
+    "relative",
+    "z-[60]",
+    "scale-[1.01]",
+    "ring-2",
+    "ring-orange-400/70",
+    "shadow-2xl",
+    "shadow-orange-500/30",
+  ];
+
+  function clearGuideSpotlight() {
+    document.querySelectorAll("[data-guide-active='true']").forEach((element) => {
+      element.classList.remove(...guideSpotlightClasses);
+      element.removeAttribute("data-guide-active");
+    });
+  }
+
+  function findCardByText(text: string) {
+    const candidates = Array.from(
+      document.querySelectorAll("section, aside, div")
+    ) as HTMLElement[];
+
+    const matches = candidates.filter((element) => {
+      const className = `${element.className}`;
+      const isGuidePanel = Boolean(element.closest("[data-guide-panel='true']"));
+      const isCardLike =
+        className.includes("rounded-[24px]") ||
+        className.includes("rounded-[28px]") ||
+        className.includes("rounded-xl") ||
+        element.tagName.toLowerCase() === "section" ||
+        element.tagName.toLowerCase() === "aside";
+
+      return (
+        !isGuidePanel &&
+        isCardLike &&
+        element.offsetParent !== null &&
+        Boolean(element.textContent?.includes(text))
+      );
+    });
+
+    return (
+      matches.sort(
+        (first, second) =>
+          first.getBoundingClientRect().height - second.getBoundingClientRect().height
+      )[0] ?? null
+    );
+  }
+
+  function getGuideTargetElement(step: number) {
+    const target = guideTargets[step];
+
+    if (!target) return document.getElementById("overview");
+
+    if (target.id) {
+      const byId = document.getElementById(target.id);
+      if (byId) return byId;
+    }
+
+    if (target.text) {
+      return findCardByText(target.text);
+    }
+
+    return document.getElementById("overview");
+  }
+
+  function applyGuideSpotlight(target: HTMLElement | null) {
+    clearGuideSpotlight();
+
+    if (!target) return;
+
+    target.setAttribute("data-guide-active", "true");
+    target.classList.add(...guideSpotlightClasses);
+  }
+
+  function updateGuidePanelPosition(step: number) {
+    window.setTimeout(() => {
+      const target = getGuideTargetElement(step);
+      const panelWidth = 340;
+      const panelHeight = 260;
+      const margin = 18;
+
+      if (!target) {
+        setGuidePanelPosition({
+          top: margin,
+          left: Math.max(margin, window.innerWidth - panelWidth - margin),
+        });
+        return;
+      }
+
+      const rect = target.getBoundingClientRect();
+      const canPlaceRight = rect.right + margin + panelWidth <= window.innerWidth;
+      const canPlaceLeft = rect.left - margin - panelWidth >= margin;
+
+      const left = canPlaceRight
+        ? rect.right + margin
+        : canPlaceLeft
+          ? rect.left - panelWidth - margin
+          : Math.max(margin, window.innerWidth - panelWidth - margin);
+
+      const centeredTop = rect.top + rect.height / 2 - panelHeight / 2;
+      const top = Math.min(
+        Math.max(margin, centeredTop),
+        Math.max(margin, window.innerHeight - panelHeight - margin)
+      );
+
+      setGuidePanelPosition({ top, left });
+    }, 260);
+  }
+
+  function focusGuideTarget(step: number) {
+    window.setTimeout(() => {
+      const target = getGuideTargetElement(step);
+
+      target?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      applyGuideSpotlight(target);
+      updateGuidePanelPosition(step);
+    }, 120);
+  }
+
   function startGuideTour() {
     setIsJudgeMode(true);
     setJudgeStep(0);
-    goToSection("overview");
+    focusGuideTarget(0);
   }
 
   function nextGuideStep() {
     const nextStep = judgeStep + 1;
 
     if (nextStep >= judgeDemoSteps.length) {
+      clearGuideSpotlight();
       setIsJudgeMode(false);
       return;
     }
 
     setJudgeStep(nextStep);
+    focusGuideTarget(nextStep);
 
-    if (nextStep === 1) {
+    if (nextStep === 6) {
       startAgentReplay();
+      window.setTimeout(() => focusGuideTarget(nextStep), 500);
     }
 
-    if (nextStep === 2) {
+    if (nextStep === 7) {
       void runReplayBacktest();
+      window.setTimeout(() => focusGuideTarget(nextStep), 700);
     }
+
+    if (nextStep >= 8 && nextStep <= 10 && !replayBacktest) {
+      void runReplayBacktest();
+      window.setTimeout(() => focusGuideTarget(nextStep), 700);
+    }
+
+    window.setTimeout(() => focusGuideTarget(nextStep), 350);
   }
 
   function skipGuideTour() {
+    clearGuideSpotlight();
     setIsJudgeMode(false);
     setJudgeStep(0);
   }
@@ -614,22 +793,33 @@ function App() {
 
   return (
     <main className="min-h-screen bg-[#0b0806] p-3 text-stone-100">
+      {isJudgeMode && (
+        <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] transition-opacity duration-500 pointer-events-none" />
+      )}
+
       <button
         onClick={startGuideTour}
-        className="fixed bottom-4 right-4 z-50 rounded-full border border-orange-400/30 bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-orange-500/25 transition hover:bg-orange-400"
+        className="fixed bottom-4 right-4 z-[80] rounded-full border border-orange-400/30 bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-orange-500/25 transition hover:bg-orange-400"
       >
         Guide
       </button>
 
       {isJudgeMode && (
-        <div className="fixed right-4 top-4 z-50 w-[320px] rounded-[24px] border border-orange-400/25 bg-[#15100c]/95 p-4 shadow-2xl shadow-black/40 backdrop-blur">
+        <div
+          data-guide-panel="true"
+          className="fixed z-[70] w-[340px] rounded-[26px] border border-orange-400/30 bg-[#15100c]/95 p-4 shadow-2xl shadow-orange-500/20 backdrop-blur-xl ring-1 ring-white/10 transition-[top,left,transform] duration-500"
+          style={{
+            top: guidePanelPosition.top,
+            left: guidePanelPosition.left,
+          }}
+        >
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.24em] text-orange-200/70">
                 Guided tour
               </p>
               <h2 className="mt-1 text-sm font-semibold text-white">
-                Guide
+                GoalPulse guided tour
               </h2>
             </div>
             <span className="rounded-full bg-orange-400/10 px-2.5 py-1 text-[10px] font-semibold text-orange-200">
@@ -637,7 +827,7 @@ function App() {
             </span>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+          <div className="rounded-2xl border border-orange-400/15 bg-black/30 p-3 shadow-inner">
             <p className="text-sm font-semibold text-white">
               {judgeDemoSteps[judgeStep]?.title}
             </p>
@@ -1426,7 +1616,12 @@ function App() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-[#15100c] p-4">
+          <div
+            id="guide-backtest-card"
+            className={`rounded-[24px] border border-white/10 bg-[#15100c] p-4 transition-all ${
+              isJudgeMode && judgeStep === 7 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+            }`}
+          >
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs text-stone-500">Historical replay</p>
@@ -1464,7 +1659,12 @@ function App() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-emerald-400/15 bg-emerald-400/10 p-3">
+                <div
+                  id="guide-proof-readiness"
+                  className={`rounded-xl border border-emerald-400/15 bg-emerald-400/10 p-3 transition-all ${
+                    isJudgeMode && judgeStep === 10 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                  }`}
+                >
                   <div className="flex items-center justify-between gap-3 text-[11px]">
                     <span className="text-stone-400">Result</span>
                     <span className="font-medium text-emerald-200">
@@ -1495,7 +1695,12 @@ function App() {
                   </div>
                 </div>
                 {(replayBacktest.events ?? []).length > 0 && (
-                  <div className="rounded-xl border border-orange-400/15 bg-orange-400/10 p-3">
+                  <div
+                    id="guide-event-correlation"
+                    className={`rounded-xl border border-orange-400/15 bg-orange-400/10 p-3 transition-all ${
+                      isJudgeMode && judgeStep === 8 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                    }`}
+                  >
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[10px] text-orange-200/80">Event correlation</p>
@@ -1529,7 +1734,12 @@ function App() {
                 )}
 
                 {(replayBacktest.councilVotes ?? []).length > 0 && (
-                  <div className="rounded-xl border border-sky-400/15 bg-sky-400/10 p-3">
+                  <div
+                    id="guide-oracle-council"
+                    className={`rounded-xl border border-sky-400/15 bg-sky-400/10 p-3 transition-all ${
+                      isJudgeMode && judgeStep === 9 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                    }`}
+                  >
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[10px] text-sky-200/80">Oracle council</p>
@@ -1831,6 +2041,10 @@ function App() {
 }
 
 export default App;
+
+
+
+
 
 
 
