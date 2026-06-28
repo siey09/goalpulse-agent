@@ -276,12 +276,41 @@ function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [replayStep, setReplayStep] = useState(-1);
+  const [isJudgeMode, setIsJudgeMode] = useState(false);
+  const [judgeStep, setJudgeStep] = useState(0);
   const [lastRefresh, setLastRefresh] = useState("");
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState("");
   const [replayBacktest, setReplayBacktest] = useState<ReplayBacktest | null>(null);
   const [isReplayRunning, setIsReplayRunning] = useState(false);
   const hasLoadedOnceRef = useRef(false);
+
+  const judgeDemoSteps = [
+    {
+      title: "1. Intelligence dashboard",
+      detail: "Review live feed, TxLINE-ready adapter, market pressure, and signals.",
+    },
+    {
+      title: "2. Agent replay cycle",
+      detail: "Show how the autonomous agent scans, detects, explains, and verifies.",
+    },
+    {
+      title: "3. Historical backtest",
+      detail: "Run saved World Cup replay through the same deterministic signal engine.",
+    },
+    {
+      title: "4. Event correlation",
+      detail: "Connect odds movement with match events like shot on target, goal, and pressure.",
+    },
+    {
+      title: "5. Oracle council",
+      detail: "Show Agent A, Agent B, and Agent C voting before a signal is approved.",
+    },
+    {
+      title: "6. Proof readiness",
+      detail: "Show SHA-256 proof hash and Solana devnet anchoring readiness.",
+    },
+  ];
 
   const outcomeVerificationItems = useMemo(() => {
     const replayItems =
@@ -320,6 +349,36 @@ function App() {
       setIsReplayRunning(false);
     }
   }
+  function startGuideTour() {
+    setIsJudgeMode(true);
+    setJudgeStep(0);
+    goToSection("overview");
+  }
+
+  function nextGuideStep() {
+    const nextStep = judgeStep + 1;
+
+    if (nextStep >= judgeDemoSteps.length) {
+      setIsJudgeMode(false);
+      return;
+    }
+
+    setJudgeStep(nextStep);
+
+    if (nextStep === 1) {
+      startAgentReplay();
+    }
+
+    if (nextStep === 2) {
+      void runReplayBacktest();
+    }
+  }
+
+  function skipGuideTour() {
+    setIsJudgeMode(false);
+    setJudgeStep(0);
+  }
+
   function startAgentReplay() {
     setReplayStep(0);
 
@@ -555,6 +614,65 @@ function App() {
 
   return (
     <main className="min-h-screen bg-[#0b0806] p-3 text-stone-100">
+      <button
+        onClick={startGuideTour}
+        className="fixed bottom-4 right-4 z-50 rounded-full border border-orange-400/30 bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-orange-500/25 transition hover:bg-orange-400"
+      >
+        Guide
+      </button>
+
+      {isJudgeMode && (
+        <div className="fixed right-4 top-4 z-50 w-[320px] rounded-[24px] border border-orange-400/25 bg-[#15100c]/95 p-4 shadow-2xl shadow-black/40 backdrop-blur">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.24em] text-orange-200/70">
+                Guided tour
+              </p>
+              <h2 className="mt-1 text-sm font-semibold text-white">
+                Guide
+              </h2>
+            </div>
+            <span className="rounded-full bg-orange-400/10 px-2.5 py-1 text-[10px] font-semibold text-orange-200">
+              {judgeStep + 1}/{judgeDemoSteps.length}
+            </span>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+            <p className="text-sm font-semibold text-white">
+              {judgeDemoSteps[judgeStep]?.title}
+            </p>
+            <p className="mt-1 text-[11px] leading-5 text-stone-400">
+              {judgeDemoSteps[judgeStep]?.detail}
+            </p>
+          </div>
+
+          <div className="mt-3 grid grid-cols-6 gap-1.5">
+            {judgeDemoSteps.map((step, index) => (
+              <div
+                key={step.title}
+                className={`h-1.5 rounded-full ${
+                  index <= judgeStep ? "bg-orange-400" : "bg-white/10"
+                }`}
+              />
+            ))}
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              onClick={skipGuideTour}
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-medium text-stone-300 transition hover:bg-white/10 hover:text-white"
+            >
+              Skip
+            </button>
+            <button
+              onClick={nextGuideStep}
+              className="rounded-full border border-orange-400/30 bg-orange-500 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-orange-400"
+            >
+              {judgeStep + 1 >= judgeDemoSteps.length ? "Finish" : "Next"}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="mx-auto grid max-w-[1380px] grid-cols-[70px_minmax(0,1fr)_300px] gap-4">
         <aside className="sticky top-3 h-[calc(100vh-24px)] rounded-[26px] border border-white/10 bg-[#15100c] p-3">
           <div className="mb-7 flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500 text-lg font-black text-[#07100b]">
@@ -1713,6 +1831,8 @@ function App() {
 }
 
 export default App;
+
+
 
 
 
