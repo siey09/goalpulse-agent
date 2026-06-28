@@ -286,6 +286,7 @@ function App() {
   const [replayBacktest, setReplayBacktest] = useState<ReplayBacktest | null>(null);
   const [isReplayRunning, setIsReplayRunning] = useState(false);
   const hasLoadedOnceRef = useRef(false);
+  const latestOddsRequestRef = useRef(0);
 
   const judgeDemoSteps = [
     {
@@ -588,22 +589,14 @@ function App() {
       const signalList = asArray<AgentSignal>(signalsPayload, ["signals", "data"]);
       const runList = asArray<AgentRun>(runsPayload, ["runs", "agentRuns", "data"]);
 
-      const activeMatchId = selectedMatchId || matchList[0]?.id || "";
+      const fallbackMatchId = matchList[0]?.id || "";
 
       setHealth(healthPayload);
       setMatches(matchList);
       setSignals(signalList);
       setRuns(runList);
       setStats(statsPayload);
-      setSelectedMatchId(activeMatchId);
-
-      if (activeMatchId) {
-        const oddsPayload = await request<unknown>(
-          `/api/odds-history?matchId=${activeMatchId}`
-        );
-
-        setOddsHistory(asArray<OddsSnapshot>(oddsPayload, ["history", "snapshots", "data"]));
-      }
+      setSelectedMatchId((currentMatchId) => currentMatchId || fallbackMatchId);
 
       setLastRefresh(new Date().toLocaleTimeString());
       hasLoadedOnceRef.current = true;
@@ -625,6 +618,36 @@ function App() {
     const interval = window.setInterval(loadDashboard, 5000);
 
     return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const currentRequestId = Date.now();
+    latestOddsRequestRef.current = currentRequestId;
+
+    async function loadSelectedOddsHistory() {
+      if (!selectedMatchId) {
+        setOddsHistory([]);
+        return;
+      }
+
+      try {
+        const oddsPayload = await request<unknown>(
+          `/api/odds-history?matchId=${selectedMatchId}`
+        );
+
+        if (latestOddsRequestRef.current === currentRequestId) {
+          setOddsHistory(
+            asArray<OddsSnapshot>(oddsPayload, ["history", "snapshots", "data"])
+          );
+        }
+      } catch (currentError) {
+        if (latestOddsRequestRef.current === currentRequestId) {
+          console.error("Unable to load selected odds history", currentError);
+        }
+      }
+    }
+
+    void loadSelectedOddsHistory();
   }, [selectedMatchId]);
 
   function goToSection(sectionId: string) {
@@ -2043,6 +2066,9 @@ function App() {
 }
 
 export default App;
+
+
+
 
 
 
