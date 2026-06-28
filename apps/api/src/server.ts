@@ -300,7 +300,16 @@ app.get("/api/replay/backtest", (_req, res) => {
       proof: {
         type: "sha256",
         hash: proofHash,
-        note: "Devnet anchoring can store this hash when Solana signing is configured.",
+        network: "solana-devnet",
+        anchoringStatus: process.env.SOLANA_PRIVATE_KEY
+          ? "ready_to_anchor"
+          : "pending_wallet_configuration",
+        walletConfigured: Boolean(process.env.SOLANA_PRIVATE_KEY),
+        transactionSignature: null,
+        explorerUrl: null,
+        note: process.env.SOLANA_PRIVATE_KEY
+          ? "Wallet configured. This proof hash is ready for Solana devnet transaction signing."
+          : "Proof hash generated. Devnet anchoring is pending until a Solana wallet/private key is configured.",
       },
     },
   });
@@ -333,6 +342,7 @@ app.listen(config.port, async () => {
       });
   }, config.agentIntervalMs);
 });
+
 
 
 

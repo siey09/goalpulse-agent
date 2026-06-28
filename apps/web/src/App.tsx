@@ -128,6 +128,11 @@ type ReplayBacktest = {
   proof?: {
     type?: string;
     hash?: string;
+    network?: string;
+    anchoringStatus?: string;
+    walletConfigured?: boolean;
+    transactionSignature?: string | null;
+    explorerUrl?: string | null;
     note?: string;
   };
 };
@@ -1349,9 +1354,27 @@ function App() {
                       {replayBacktest.summary?.incorrectSignals ?? 0} incorrect
                     </span>
                   </div>
-                  <p className="mt-2 truncate text-[10px] text-stone-500">
-                    Proof hash: {replayBacktest.proof?.hash ?? "pending"}
-                  </p>
+
+                  <div className="mt-3 rounded-lg bg-black/20 p-2">
+                    <div className="flex items-center justify-between gap-3 text-[10px]">
+                      <span className="text-stone-500">Proof network</span>
+                      <span className="font-medium text-sky-200">
+                        {replayBacktest.proof?.network ?? "solana-devnet"}
+                      </span>
+                    </div>
+
+                    <div className="mt-1 flex items-center justify-between gap-3 text-[10px]">
+                      <span className="text-stone-500">Anchoring</span>
+                      <span className="font-medium text-orange-200">
+                        {(replayBacktest.proof?.anchoringStatus ?? "pending_wallet_configuration")
+                          .replaceAll("_", " ")}
+                      </span>
+                    </div>
+
+                    <p className="mt-2 truncate text-[10px] text-stone-500">
+                      Hash: {replayBacktest.proof?.hash ?? "pending"}
+                    </p>
+                  </div>
                 </div>
                 {(replayBacktest.events ?? []).length > 0 && (
                   <div className="rounded-xl border border-orange-400/15 bg-orange-400/10 p-3">
@@ -1690,6 +1713,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
