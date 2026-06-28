@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { SignalIntelligencePanel } from "./components/SignalIntelligencePanel";
 import {
   BarChart3,
   Bot,
@@ -1329,6 +1330,7 @@ function App() {
                 )}
               </div>
             </div>
+          <SignalIntelligencePanel />
 
             <div
               id="agent"
@@ -2041,6 +2043,9 @@ function App() {
 }
 
 export default App;
+
+
+
 
 
 

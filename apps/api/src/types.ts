@@ -4,6 +4,22 @@ export type Severity = "HIGH" | "MEDIUM" | "LOW" | "NONE";
 
 export type MatchStatus = "scheduled" | "live" | "finished";
 
+export interface TxLineEvidence {
+  source: "txline" | "simulated_txline";
+  fixtureId?: string;
+  endpointUsed?: string;
+  bookmaker?: string;
+  messageId?: string;
+  marketType?: string;
+  marketPeriod?: string | null;
+  marketParameters?: string | null;
+  previousSnapshotId?: string;
+  currentSnapshotId?: string;
+  previousTimestamp?: string;
+  currentTimestamp?: string;
+  proofLabel?: string;
+}
+
 export interface Match {
   id: string;
   competition: string;
@@ -29,6 +45,7 @@ export interface OddsSnapshot {
   minute: number;
   source: "simulated_txline" | "txline";
   createdAt: string;
+  evidence?: TxLineEvidence;
 }
 
 export interface AgentSignal {
@@ -46,6 +63,7 @@ export interface AgentSignal {
   explanation: string;
   createdAt: string;
   resultStatus: "pending" | "correct" | "incorrect";
+  evidence?: TxLineEvidence;
 }
 
 export interface AgentRun {

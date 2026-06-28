@@ -57,7 +57,9 @@ async function getGuestJwt(): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error(`TxLINE guest auth failed: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `TxLINE guest auth failed: ${response.status} ${response.statusText}`
+    );
   }
 
   const data = (await response.json()) as { token?: string };
@@ -83,8 +85,11 @@ async function txlineGet<T>(path: string, jwt: string): Promise<T> {
 
   if (!response.ok) {
     const text = await response.text();
+
     throw new Error(
-      `TxLINE request failed ${path}: ${response.status} ${response.statusText} ${text.slice(0, 300)}`
+      `TxLINE request failed ${path}: ${response.status} ${
+        response.statusText
+      } ${text.slice(0, 300)}`
     );
   }
 
@@ -182,6 +187,12 @@ function preferMainMarket(item: TxLineOddsSnapshot): boolean {
   return item.MarketPeriod === null || item.MarketPeriod === undefined;
 }
 
+function getPrice(item: TxLineOddsSnapshot, name: "part1" | "draw" | "part2") {
+  const index = item.PriceNames?.indexOf(name) ?? -1;
+
+  return index >= 0 ? priceToDecimal(item.Prices?.[index]) : 1.01;
+}
+
 function findLatest1x2Odds(
   odds: TxLineOddsSnapshot[]
 ): TxLineOddsSnapshot | undefined {
@@ -199,11 +210,11 @@ function findLatest1x2Odds(
     .sort((a, b) => (b.Ts ?? 0) - (a.Ts ?? 0))[0];
 }
 
-function selectRecentMovementOdds(
+function selectMovementOdds(
   odds: TxLineOddsSnapshot[],
   limit = 8
 ): TxLineOddsSnapshot[] {
-  const oneXTwo = odds
+  const mainMarket = odds
     .filter(is1x2Odds)
     .filter(preferMainMarket)
     .sort((a, b) => (a.Ts ?? 0) - (b.Ts ?? 0));
@@ -212,55 +223,105 @@ function selectRecentMovementOdds(
     .filter(is1x2Odds)
     .sort((a, b) => (a.Ts ?? 0) - (b.Ts ?? 0));
 
-  const candidates = oneXTwo.length > 0 ? oneXTwo : fallback;
+  const candidates = mainMarket.length > 0 ? mainMarket : fallback;
 
   const uniqueByMessage = new Map<string, TxLineOddsSnapshot>();
 
   for (const item of candidates) {
-    const key = item.MessageId ?? `${item.FixtureId}-${item.Ts}-${item.Prices?.join("-")}`;
+    const key =
+      item.MessageId ??
+      `${item.FixtureId}-${item.Ts}-${item.Prices?.join("-")}`;
 
     uniqueByMessage.set(key, item);
   }
 
-  return [...uniqueByMessage.values()].slice(-limit);
+  const unique = [...uniqueByMessage.values()].sort(
+    (a, b) => (a.Ts ?? 0) - (b.Ts ?? 0)
+  );
+
+  let strongestPair: [TxLineOddsSnapshot, TxLineOddsSnapshot] | null = null;
+  let strongestCompression = 0;
+
+  for (let index = 1; index < unique.length; index += 1) {
+    const previous = unique[index - 1];
+    const current = unique[index];
+
+    const previousHome = getPrice(previous, "part1");
+    const currentHome = getPrice(current, "part1");
+    const previousAway = getPrice(previous, "part2");
+    const currentAway = getPrice(current, "part2");
+
+    const homeCompression =
+      previousHome > 0 ? ((previousHome - currentHome) / previousHome) * 100 : 0;
+
+    const awayCompression =
+      previousAway > 0 ? ((previousAway - currentAway) / previousAway) * 100 : 0;
+
+    const bestCompression = Math.max(homeCompression, awayCompression);
+
+    if (bestCompression > strongestCompression) {
+      strongestCompression = bestCompression;
+      strongestPair = [previous, current];
+    }
+  }
+
+  const selected = new Map<string, TxLineOddsSnapshot>();
+
+  for (const item of unique.slice(-limit)) {
+    selected.set(item.MessageId ?? `${item.FixtureId}-${item.Ts}`, item);
+  }
+
+  if (strongestPair && strongestCompression >= 4) {
+    for (const item of strongestPair) {
+      selected.set(item.MessageId ?? `${item.FixtureId}-${item.Ts}`, item);
+    }
+  }
+
+  return [...selected.values()].sort((a, b) => (a.Ts ?? 0) - (b.Ts ?? 0));
 }
 
 function normalizeOddsSnapshot(
   match: Match,
-  odds: TxLineOddsSnapshot
+  odds: TxLineOddsSnapshot,
+  endpointUsed: string
 ): OddsSnapshot {
-  const priceNames = odds.PriceNames ?? [];
-  const prices = odds.Prices ?? [];
-
-  const part1Index = priceNames.indexOf("part1");
-  const drawIndex = priceNames.indexOf("draw");
-  const part2Index = priceNames.indexOf("part2");
-
-  const homePrice = prices[part1Index >= 0 ? part1Index : 0];
-  const drawPrice = prices[drawIndex >= 0 ? drawIndex : 1];
-  const awayPrice = prices[part2Index >= 0 ? part2Index : 2];
-
   const createdAt = odds.Ts
     ? new Date(odds.Ts).toISOString()
     : new Date().toISOString();
 
   return {
-    id: `txline-${match.id}-${odds.Ts ?? Date.now()}-${odds.MessageId ?? "snapshot"}`,
+    id: `txline-${match.id}-${odds.Ts ?? Date.now()}-${
+      odds.MessageId ?? "snapshot"
+    }`,
     matchId: match.id,
     homeTeam: match.homeTeam,
     awayTeam: match.awayTeam,
-    homeOdds: priceToDecimal(homePrice),
-    awayOdds: priceToDecimal(awayPrice),
-    drawOdds: priceToDecimal(drawPrice),
+    homeOdds: getPrice(odds, "part1"),
+    awayOdds: getPrice(odds, "part2"),
+    drawOdds: getPrice(odds, "draw"),
     homeScore: match.homeScore,
     awayScore: match.awayScore,
     minute: match.minute,
     source: "txline",
     createdAt,
+    evidence: {
+      source: "txline",
+      fixtureId: match.id,
+      endpointUsed,
+      bookmaker: odds.Bookmaker,
+      messageId: odds.MessageId,
+      marketType: odds.SuperOddsType,
+      marketPeriod: odds.MarketPeriod,
+      marketParameters: odds.MarketParameters,
+      currentTimestamp: createdAt,
+      proofLabel: "Generated from real TxLINE odds movement data",
+    },
   };
 }
 
-function sortSnapshotsChronologically(snapshots: OddsSnapshot[]): OddsSnapshot[] {
+function sortSnapshotsChronologically(
+  snapshots: OddsSnapshot[]
+): OddsSnapshot[] {
   return snapshots.sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
@@ -294,10 +355,8 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
 
       latestOdds = findLatest1x2Odds(currentOdds);
 
-      if (latestOdds) {
-        const historicalOdds = await getOddsUpdates(fixture.FixtureId, jwt);
-        movementOdds = selectRecentMovementOdds(historicalOdds, 8);
-      }
+      const historicalOdds = await getOddsUpdates(fixture.FixtureId, jwt);
+      movementOdds = selectMovementOdds(historicalOdds, 8);
     } catch (error) {
       console.warn(
         `TxLINE odds enrichment skipped for fixture ${fixture.FixtureId}:`,
@@ -305,9 +364,7 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
       );
     }
 
-    const selectedOdds = latestOdds
-      ? [...movementOdds, latestOdds]
-      : movementOdds;
+    const selectedOdds = latestOdds ? [...movementOdds, latestOdds] : movementOdds;
 
     if (selectedOdds.length === 0) {
       continue;
@@ -316,7 +373,12 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
     matches.push(match);
 
     for (const item of selectedOdds) {
-      snapshots.push(normalizeOddsSnapshot(match, item));
+      const endpointUsed =
+        item.MessageId === latestOdds?.MessageId
+          ? `/api/odds/snapshot/${fixture.FixtureId}`
+          : `/api/odds/updates/${fixture.FixtureId}`;
+
+      snapshots.push(normalizeOddsSnapshot(match, item, endpointUsed));
     }
   }
 
@@ -331,7 +393,7 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
   ]);
 
   console.log(
-    `TxLINE feed normalized: ${matches.length} matches, ${normalizedSnapshots.length} snapshots with historical movement`
+    `TxLINE feed normalized: ${matches.length} matches, ${normalizedSnapshots.length} snapshots with strongest movement evidence`
   );
 
   return {

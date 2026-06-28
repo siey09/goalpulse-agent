@@ -84,8 +84,21 @@ export function buildSignalFromSnapshots(
           bestChangePct
         )}%. The agent will continue watching this match for continuation.`;
 
+  const evidence = {
+    ...(current.evidence ?? previous.evidence),
+    source: current.source,
+    previousSnapshotId: previous.id,
+    currentSnapshotId: current.id,
+    previousTimestamp: previous.createdAt,
+    currentTimestamp: current.createdAt,
+    proofLabel:
+      current.source === "txline"
+        ? "Generated from real TxLINE odds movement data"
+        : "Generated from simulated sandbox feed",
+  } as AgentSignal["evidence"];
+
   return {
-    id: `signal-${current.matchId}-${Date.now()}-${side}`,
+    id: `signal-${current.matchId}-${current.id}-${side}`,
     matchId: current.matchId,
     match: `${current.homeTeam} vs ${current.awayTeam}`,
     target,
@@ -99,5 +112,7 @@ export function buildSignalFromSnapshots(
     explanation,
     createdAt: new Date().toISOString(),
     resultStatus: "pending",
+    evidence,
   };
 }
+
