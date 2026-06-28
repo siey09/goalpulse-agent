@@ -119,6 +119,36 @@ const replayBacktestSnapshots: OddsSnapshot[] = [
   },
 ];
 
+const replayMatchEvents = [
+  {
+    id: "event-usa-bra-1",
+    matchId: "replay-usa-bra",
+    minute: 39,
+    team: "Brazil",
+    type: "shot_on_target",
+    description: "Brazil registered a dangerous shot on target before the odds move.",
+    createdAt: "2026-06-20T18:39:00.000Z",
+  },
+  {
+    id: "event-usa-bra-2",
+    matchId: "replay-usa-bra",
+    minute: 41,
+    team: "Brazil",
+    type: "goal",
+    description: "Brazil scored, confirming the market-side pressure detected by the odds feed.",
+    createdAt: "2026-06-20T18:41:00.000Z",
+  },
+  {
+    id: "event-usa-bra-3",
+    matchId: "replay-usa-bra",
+    minute: 60,
+    team: "Brazil",
+    type: "sustained_attack",
+    description: "Brazil sustained attacking momentum after the goal.",
+    createdAt: "2026-06-20T19:00:00.000Z",
+  },
+];
+
 app.get("/api/replay/backtest", (_req, res) => {
   const detectedSignals = replayBacktestSnapshots
     .map((snapshot, index) =>
@@ -136,7 +166,16 @@ app.get("/api/replay/backtest", (_req, res) => {
     const movementApproved = signal.oddsChangePct >= 4;
     const reversionApproved =
       signal.oddsChangePct < 22 && signal.momentumScore >= 2;
-    const eventApproved = signal.side === "away" || signal.momentumScore >= 8;
+    const relatedEvents = replayMatchEvents.filter(
+      (event) => event.matchId === signal.matchId && event.team === signal.target
+    );
+
+    const eventApproved =
+      relatedEvents.some((event) =>
+        ["goal", "penalty", "shot_on_target", "sustained_attack"].includes(
+          event.type
+        )
+      ) || signal.momentumScore >= 8;
 
     const votes = [
       {
@@ -155,7 +194,7 @@ app.get("/api/replay/backtest", (_req, res) => {
         agent: "Agent C - Event Correlator",
         vote: eventApproved ? "approve" : "watch",
         reason: eventApproved
-          ? "Replay context supports the detected market movement."
+          ? `Replay event feed found ${relatedEvents.length} supporting event(s) for ${signal.target}.`
           : "No strong event-side confirmation found in replay context.",
       },
     ];
@@ -187,6 +226,13 @@ app.get("/api/replay/backtest", (_req, res) => {
       JSON.stringify({
         datasetId: "world-cup-replay-usa-bra",
         snapshots: replayBacktestSnapshots.map((snapshot) => snapshot.id),
+        events: replayMatchEvents.map((event) => ({
+          id: event.id,
+          matchId: event.matchId,
+          minute: event.minute,
+          team: event.team,
+          type: event.type,
+        })),
         signals: detectedSignals.map((signal) => ({
           id: signal.id,
           matchId: signal.matchId,
@@ -227,6 +273,10 @@ app.get("/api/replay/backtest", (_req, res) => {
           detail: `${replayBacktestSnapshots.length} odds snapshots loaded`,
         },
         {
+          step: "Match events correlated",
+          detail: `${replayMatchEvents.length} event(s) checked against odds movement`,
+        },
+        {
           step: "Signal engine replayed",
           detail: `${detectedSignals.length} signal(s) detected using deterministic thresholds`,
         },
@@ -244,6 +294,7 @@ app.get("/api/replay/backtest", (_req, res) => {
         },
       ],
       snapshots: replayBacktestSnapshots,
+      events: replayMatchEvents,
       signals: detectedSignals,
       councilVotes,
       proof: {
@@ -282,6 +333,7 @@ app.listen(config.port, async () => {
       });
   }, config.agentIntervalMs);
 });
+
 
 
 

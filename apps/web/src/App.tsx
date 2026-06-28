@@ -102,6 +102,15 @@ type ReplayBacktest = {
     step?: string;
     detail?: string;
   }[];
+  events?: {
+    id?: string;
+    matchId?: string;
+    minute?: number;
+    team?: string;
+    type?: string;
+    description?: string;
+    createdAt?: string;
+  }[];
   signals?: AgentSignal[];
   councilVotes?: {
     signalId?: string;
@@ -1344,6 +1353,39 @@ function App() {
                     Proof hash: {replayBacktest.proof?.hash ?? "pending"}
                   </p>
                 </div>
+                {(replayBacktest.events ?? []).length > 0 && (
+                  <div className="rounded-xl border border-orange-400/15 bg-orange-400/10 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] text-orange-200/80">Event correlation</p>
+                        <p className="text-xs font-semibold text-white">
+                          {(replayBacktest.events ?? []).length} supporting event(s)
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-medium text-orange-100">
+                        Dual-feed
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {(replayBacktest.events ?? []).slice(0, 3).map((event, index) => (
+                        <div key={event.id ?? index} className="rounded-lg bg-black/20 p-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="truncate text-[11px] font-semibold text-stone-100">
+                              {event.type?.replaceAll("_", " ").toUpperCase()}
+                            </p>
+                            <span className="shrink-0 text-[10px] text-orange-200">
+                              {event.minute}'
+                            </span>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-stone-500">
+                            {event.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {(replayBacktest.councilVotes ?? []).length > 0 && (
                   <div className="rounded-xl border border-sky-400/15 bg-sky-400/10 p-3">
@@ -1648,6 +1690,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
