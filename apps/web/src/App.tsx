@@ -954,7 +954,7 @@ function App() {
                     ? "Connecting"
                     : health.useSimulatedFeed
                       ? "Sandbox feed"
-                      : "TxLINE live"}
+                      : "Real TxLINE feed"}
               </span>
               <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-2 text-xs font-medium text-sky-200">
                 TxLINE-ready
