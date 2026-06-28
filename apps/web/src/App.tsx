@@ -256,6 +256,22 @@ function App() {
   const [isReplayRunning, setIsReplayRunning] = useState(false);
   const hasLoadedOnceRef = useRef(false);
 
+  const outcomeVerificationItems = useMemo(() => {
+    const replayItems =
+      replayBacktest?.signals?.map((signal) => ({
+        signal,
+        source: "Historical replay",
+        proofHash: replayBacktest.proof?.hash,
+      })) ?? [];
+
+    const liveItems = signals.slice(0, 4).map((signal) => ({
+      signal,
+      source: "Live monitor",
+      proofHash: undefined,
+    }));
+
+    return [...replayItems, ...liveItems].slice(0, 5);
+  }, [signals, replayBacktest]);
   async function runReplayBacktest() {
     try {
       setIsReplayRunning(true);
@@ -1038,6 +1054,94 @@ function App() {
                 )}
               </div>
             </div>
+
+            <div className="rounded-[24px] border border-white/10 bg-[#15100c] p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-stone-500">Post-signal audit</p>
+                  <h2 className="text-xl font-semibold">Outcome verification</h2>
+                </div>
+                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-medium text-emerald-200">
+                  Verifiable
+                </span>
+              </div>
+
+              {outcomeVerificationItems.length > 0 ? (
+                <div className="space-y-2">
+                  {outcomeVerificationItems.map((item, index) => {
+                    const outcome = getSignalOutcome(item.signal);
+                    const isCorrect = outcome.toLowerCase().includes("correct");
+                    const isIncorrect = outcome.toLowerCase().includes("incorrect");
+                    const proofPreview = item.proofHash
+                      ? `${item.proofHash.slice(0, 12)}...${item.proofHash.slice(-6)}`
+                      : "pending";
+
+                    return (
+                      <button
+                        key={`${item.source}-${item.signal.id ?? index}`}
+                        onClick={() => setSelectedSignal(item.signal)}
+                        className="w-full rounded-xl border border-white/8 bg-black/20 p-3 text-left transition hover:border-emerald-400/30 hover:bg-emerald-400/10"
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-white">
+                              {signalTypeLabel(getSignalType(item.signal))}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-stone-500">
+                              {item.source} • {getSignalTarget(item.signal)}
+                            </p>
+                          </div>
+
+                          <span
+                            className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                              isCorrect
+                                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                                : isIncorrect
+                                  ? "border-red-400/30 bg-red-400/10 text-red-200"
+                                  : "border-orange-400/30 bg-orange-400/10 text-orange-200"
+                            }`}
+                          >
+                            {outcome}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 text-[11px]">
+                          <div className="rounded-lg bg-black/25 p-2">
+                            <p className="text-stone-500">Before</p>
+                            <p className="mt-1 font-semibold text-stone-100">
+                              {formatOdds(item.signal.oddsBefore)}
+                            </p>
+                          </div>
+
+                          <div className="rounded-lg bg-black/25 p-2">
+                            <p className="text-stone-500">After</p>
+                            <p className="mt-1 font-semibold text-stone-100">
+                              {formatOdds(item.signal.oddsAfter)}
+                            </p>
+                          </div>
+
+                          <div className="rounded-lg bg-black/25 p-2">
+                            <p className="text-stone-500">Move</p>
+                            <p className="mt-1 font-semibold text-orange-200">
+                              {formatOddsChange(item.signal.oddsChangePct)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-stone-500">
+                          <span>Proof: {proofPreview}</span>
+                          <span>{formatTime(item.signal.createdAt)}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl bg-black/25 p-4 text-sm text-stone-500">
+                  Run the backtest or wait for live signals to verify outcomes.
+                </div>
+              )}
+            </div>
           </section>
         </section>
 
@@ -1486,6 +1590,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
