@@ -103,6 +103,19 @@ type ReplayBacktest = {
     detail?: string;
   }[];
   signals?: AgentSignal[];
+  councilVotes?: {
+    signalId?: string;
+    matchId?: string;
+    target?: string;
+    decision?: string;
+    approvals?: number;
+    totalAgents?: number;
+    votes?: {
+      agent?: string;
+      vote?: string;
+      reason?: string;
+    }[];
+  }[];
   proof?: {
     type?: string;
     hash?: string;
@@ -1332,6 +1345,51 @@ function App() {
                   </p>
                 </div>
 
+                {(replayBacktest.councilVotes ?? []).length > 0 && (
+                  <div className="rounded-xl border border-sky-400/15 bg-sky-400/10 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] text-sky-200/80">Oracle council</p>
+                        <p className="text-xs font-semibold text-white">
+                          {(replayBacktest.councilVotes ?? [])[0]?.decision?.toUpperCase() ??
+                            "PENDING"}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-medium text-sky-100">
+                        {(replayBacktest.councilVotes ?? [])[0]?.approvals ?? 0}/
+                        {(replayBacktest.councilVotes ?? [])[0]?.totalAgents ?? 3} approvals
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {((replayBacktest.councilVotes ?? [])[0]?.votes ?? []).map(
+                        (vote, index) => (
+                          <div key={`${vote.agent}-${index}`} className="rounded-lg bg-black/20 p-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="truncate text-[11px] font-semibold text-stone-100">
+                                {vote.agent}
+                              </p>
+                              <span
+                                className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${
+                                  vote.vote === "approve"
+                                    ? "bg-emerald-400/10 text-emerald-200"
+                                    : vote.vote === "reject"
+                                      ? "bg-red-400/10 text-red-200"
+                                      : "bg-orange-400/10 text-orange-200"
+                                }`}
+                              >
+                                {vote.vote}
+                              </span>
+                            </div>
+                            <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-stone-500">
+                              {vote.reason}
+                            </p>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   {(replayBacktest.timeline ?? []).slice(0, 3).map((item, index) => (
                     <div key={`${item.step}-${index}`} className="rounded-xl bg-black/20 p-2.5">
@@ -1590,6 +1648,7 @@ function App() {
 }
 
 export default App;
+
 
 
 

@@ -132,6 +132,48 @@ app.get("/api/replay/backtest", (_req, res) => {
       resultStatus: signal.side === "away" ? "correct" : "incorrect",
     }));
 
+  const councilVotes = detectedSignals.map((signal) => {
+    const movementApproved = signal.oddsChangePct >= 4;
+    const reversionApproved =
+      signal.oddsChangePct < 22 && signal.momentumScore >= 2;
+    const eventApproved = signal.side === "away" || signal.momentumScore >= 8;
+
+    const votes = [
+      {
+        agent: "Agent A - Movement Detector",
+        vote: movementApproved ? "approve" : "reject",
+        reason: `${signal.oddsChangePct}% odds compression crossed the movement threshold.`,
+      },
+      {
+        agent: "Agent B - Mean Reversion Guard",
+        vote: reversionApproved ? "approve" : "watch",
+        reason: reversionApproved
+          ? "Movement is strong but not beyond the overextension guard."
+          : "Movement may be overextended and needs caution.",
+      },
+      {
+        agent: "Agent C - Event Correlator",
+        vote: eventApproved ? "approve" : "watch",
+        reason: eventApproved
+          ? "Replay context supports the detected market movement."
+          : "No strong event-side confirmation found in replay context.",
+      },
+    ];
+
+    const approvals = votes.filter((vote) => vote.vote === "approve").length;
+    const decision =
+      approvals >= 2 ? "approved" : approvals === 1 ? "watch" : "rejected";
+
+    return {
+      signalId: signal.id,
+      matchId: signal.matchId,
+      target: signal.target,
+      decision,
+      approvals,
+      totalAgents: votes.length,
+      votes,
+    };
+  });
   const correctSignals = detectedSignals.filter(
     (signal) => signal.resultStatus === "correct"
   ).length;
@@ -153,6 +195,12 @@ app.get("/api/replay/backtest", (_req, res) => {
           oddsAfter: signal.oddsAfter,
           oddsChangePct: signal.oddsChangePct,
           resultStatus: signal.resultStatus,
+        })),
+        councilVotes: councilVotes.map((councilVote) => ({
+          signalId: councilVote.signalId,
+          decision: councilVote.decision,
+          approvals: councilVote.approvals,
+          totalAgents: councilVote.totalAgents,
         })),
       })
     )
@@ -183,6 +231,10 @@ app.get("/api/replay/backtest", (_req, res) => {
           detail: `${detectedSignals.length} signal(s) detected using deterministic thresholds`,
         },
         {
+          step: "Council voted",
+          detail: `${councilVotes.filter((vote) => vote.decision === "approved").length} approved decision(s) from 3-agent quorum`,
+        },
+        {
           step: "Outcomes verified",
           detail: `${correctSignals} correct and ${incorrectSignals} incorrect signal(s)`,
         },
@@ -193,6 +245,7 @@ app.get("/api/replay/backtest", (_req, res) => {
       ],
       snapshots: replayBacktestSnapshots,
       signals: detectedSignals,
+      councilVotes,
       proof: {
         type: "sha256",
         hash: proofHash,
@@ -229,5 +282,6 @@ app.listen(config.port, async () => {
       });
   }, config.agentIntervalMs);
 });
+
 
 
