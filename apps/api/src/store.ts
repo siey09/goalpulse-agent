@@ -12,6 +12,10 @@ export const store: {
   agentRuns: [],
 };
 
+export function snapshotAlreadyExists(snapshotId: string): boolean {
+  return store.oddsSnapshots.some((snapshot) => snapshot.id === snapshotId);
+}
+
 export function findPreviousSnapshot(matchId: string): OddsSnapshot | undefined {
   const snapshots = store.oddsSnapshots
     .filter((snapshot) => snapshot.matchId === matchId)
@@ -24,7 +28,7 @@ export function findPreviousSnapshot(matchId: string): OddsSnapshot | undefined 
 }
 
 export function signalAlreadyExists(signal: AgentSignal): boolean {
-  const twoMinutesAgo = Date.now() - 2 * 60 * 1000;
+  const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
 
   return store.signals.some((existing) => {
     const createdTime = new Date(existing.createdAt).getTime();
@@ -32,8 +36,10 @@ export function signalAlreadyExists(signal: AgentSignal): boolean {
     return (
       existing.matchId === signal.matchId &&
       existing.side === signal.side &&
-      existing.severity === signal.severity &&
-      createdTime >= twoMinutesAgo
+      existing.signalType === signal.signalType &&
+      existing.oddsBefore === signal.oddsBefore &&
+      existing.oddsAfter === signal.oddsAfter &&
+      createdTime >= sixHoursAgo
     );
   });
 }

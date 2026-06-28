@@ -6,6 +6,7 @@ import {
   evaluatePendingSignalsForFinishedMatches,
   findPreviousSnapshot,
   signalAlreadyExists,
+  snapshotAlreadyExists,
   store,
 } from "./store";
 import { AgentRun } from "./types";
@@ -21,12 +22,22 @@ export async function processAgentCycle(): Promise<AgentRun> {
     store.matches = feed.matches;
 
     let signalsCreated = 0;
+    let snapshotsCreated = 0;
 
-    for (const snapshot of feed.snapshots) {
+    const orderedSnapshots = [...feed.snapshots].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    for (const snapshot of orderedSnapshots) {
+      if (snapshotAlreadyExists(snapshot.id)) {
+        continue;
+      }
+
       const previousSnapshot = findPreviousSnapshot(snapshot.matchId);
       const signal = buildSignalFromSnapshots(snapshot, previousSnapshot);
 
       store.oddsSnapshots.unshift(snapshot);
+      snapshotsCreated += 1;
 
       if (signal && !signalAlreadyExists(signal)) {
         store.signals.unshift(signal);
@@ -36,7 +47,7 @@ export async function processAgentCycle(): Promise<AgentRun> {
 
     const evaluatedSignals = evaluatePendingSignalsForFinishedMatches();
 
-    store.oddsSnapshots = store.oddsSnapshots.slice(0, 500);
+    store.oddsSnapshots = store.oddsSnapshots.slice(0, 800);
     store.signals = store.signals.slice(0, 100);
 
     const run: AgentRun = {
@@ -44,10 +55,10 @@ export async function processAgentCycle(): Promise<AgentRun> {
       startedAt,
       finishedAt: new Date().toISOString(),
       matchesProcessed: feed.matches.length,
-      snapshotsCreated: feed.snapshots.length,
+      snapshotsCreated,
       signalsCreated,
       status: "success",
-      message: `Processed ${feed.matches.length} matches, generated ${signalsCreated} signal(s), and evaluated ${evaluatedSignals} pending signal(s).`,
+      message: `Processed ${feed.matches.length} matches, stored ${snapshotsCreated} new snapshot(s), generated ${signalsCreated} signal(s), and evaluated ${evaluatedSignals} pending signal(s).`,
     };
 
     store.agentRuns.unshift(run);

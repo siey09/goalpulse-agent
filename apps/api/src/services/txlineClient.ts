@@ -22,6 +22,10 @@ interface TxLineOddsSnapshot {
   Ts?: number;
   Bookmaker?: string;
   SuperOddsType?: string;
+  GameState?: string | null;
+  InRunning?: boolean;
+  MarketParameters?: string | null;
+  MarketPeriod?: string | null;
   PriceNames?: string[];
   Prices?: number[];
   Pct?: string[];
@@ -29,6 +33,14 @@ interface TxLineOddsSnapshot {
 
 let cachedGuestJwt = "";
 let cachedGuestJwtCreatedAt = 0;
+
+const oddsUpdatesCache = new Map<
+  number,
+  {
+    fetchedAt: number;
+    data: TxLineOddsSnapshot[];
+  }
+>();
 
 async function getGuestJwt(): Promise<string> {
   const now = Date.now();
@@ -77,6 +89,30 @@ async function txlineGet<T>(path: string, jwt: string): Promise<T> {
   }
 
   return (await response.json()) as T;
+}
+
+async function getOddsUpdates(
+  fixtureId: number,
+  jwt: string
+): Promise<TxLineOddsSnapshot[]> {
+  const cached = oddsUpdatesCache.get(fixtureId);
+  const now = Date.now();
+
+  if (cached && now - cached.fetchedAt < 60 * 1000) {
+    return cached.data;
+  }
+
+  const data = await txlineGet<TxLineOddsSnapshot[]>(
+    `/api/odds/updates/${fixtureId}`,
+    jwt
+  );
+
+  oddsUpdatesCache.set(fixtureId, {
+    fetchedAt: now,
+    data,
+  });
+
+  return data;
 }
 
 function priceToDecimal(price?: number): number {
@@ -130,20 +166,68 @@ function normalizeFixture(fixture: TxLineFixture, nowIso: string): Match {
   };
 }
 
-function find1x2Odds(odds: TxLineOddsSnapshot[]): TxLineOddsSnapshot | undefined {
-  return odds.find(
-    (item) =>
-      item.SuperOddsType === "1X2_PARTICIPANT_RESULT" &&
-      Array.isArray(item.PriceNames) &&
-      Array.isArray(item.Prices) &&
-      item.Prices.length >= 3
+function is1x2Odds(item: TxLineOddsSnapshot): boolean {
+  return (
+    item.SuperOddsType === "1X2_PARTICIPANT_RESULT" &&
+    Array.isArray(item.PriceNames) &&
+    Array.isArray(item.Prices) &&
+    item.Prices.length >= 3 &&
+    item.PriceNames.includes("part1") &&
+    item.PriceNames.includes("draw") &&
+    item.PriceNames.includes("part2")
   );
+}
+
+function preferMainMarket(item: TxLineOddsSnapshot): boolean {
+  return item.MarketPeriod === null || item.MarketPeriod === undefined;
+}
+
+function findLatest1x2Odds(
+  odds: TxLineOddsSnapshot[]
+): TxLineOddsSnapshot | undefined {
+  const mainMarket = odds
+    .filter(is1x2Odds)
+    .filter(preferMainMarket)
+    .sort((a, b) => (b.Ts ?? 0) - (a.Ts ?? 0));
+
+  if (mainMarket[0]) {
+    return mainMarket[0];
+  }
+
+  return odds
+    .filter(is1x2Odds)
+    .sort((a, b) => (b.Ts ?? 0) - (a.Ts ?? 0))[0];
+}
+
+function selectRecentMovementOdds(
+  odds: TxLineOddsSnapshot[],
+  limit = 8
+): TxLineOddsSnapshot[] {
+  const oneXTwo = odds
+    .filter(is1x2Odds)
+    .filter(preferMainMarket)
+    .sort((a, b) => (a.Ts ?? 0) - (b.Ts ?? 0));
+
+  const fallback = odds
+    .filter(is1x2Odds)
+    .sort((a, b) => (a.Ts ?? 0) - (b.Ts ?? 0));
+
+  const candidates = oneXTwo.length > 0 ? oneXTwo : fallback;
+
+  const uniqueByMessage = new Map<string, TxLineOddsSnapshot>();
+
+  for (const item of candidates) {
+    const key = item.MessageId ?? `${item.FixtureId}-${item.Ts}-${item.Prices?.join("-")}`;
+
+    uniqueByMessage.set(key, item);
+  }
+
+  return [...uniqueByMessage.values()].slice(-limit);
 }
 
 function normalizeOddsSnapshot(
   match: Match,
-  odds: TxLineOddsSnapshot,
-  nowIso: string
+  odds: TxLineOddsSnapshot
 ): OddsSnapshot {
   const priceNames = odds.PriceNames ?? [];
   const prices = odds.Prices ?? [];
@@ -155,6 +239,10 @@ function normalizeOddsSnapshot(
   const homePrice = prices[part1Index >= 0 ? part1Index : 0];
   const drawPrice = prices[drawIndex >= 0 ? drawIndex : 1];
   const awayPrice = prices[part2Index >= 0 ? part2Index : 2];
+
+  const createdAt = odds.Ts
+    ? new Date(odds.Ts).toISOString()
+    : new Date().toISOString();
 
   return {
     id: `txline-${match.id}-${odds.Ts ?? Date.now()}-${odds.MessageId ?? "snapshot"}`,
@@ -168,8 +256,14 @@ function normalizeOddsSnapshot(
     awayScore: match.awayScore,
     minute: match.minute,
     source: "txline",
-    createdAt: nowIso,
+    createdAt,
   };
+}
+
+function sortSnapshotsChronologically(snapshots: OddsSnapshot[]): OddsSnapshot[] {
+  return snapshots.sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
 }
 
 export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
@@ -186,31 +280,62 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
   const matches: Match[] = [];
   const snapshots: OddsSnapshot[] = [];
 
-  for (const fixture of fixtures.slice(0, 30)) {
-    const odds = await txlineGet<TxLineOddsSnapshot[]>(
-      `/api/odds/snapshot/${fixture.FixtureId}`,
-      jwt
-    );
+  for (const fixture of fixtures.slice(0, 14)) {
+    const match = normalizeFixture(fixture, nowIso);
 
-    const oneXTwo = find1x2Odds(odds);
+    let latestOdds: TxLineOddsSnapshot | undefined;
+    let movementOdds: TxLineOddsSnapshot[] = [];
 
-    if (!oneXTwo) {
+    try {
+      const currentOdds = await txlineGet<TxLineOddsSnapshot[]>(
+        `/api/odds/snapshot/${fixture.FixtureId}`,
+        jwt
+      );
+
+      latestOdds = findLatest1x2Odds(currentOdds);
+
+      if (latestOdds) {
+        const historicalOdds = await getOddsUpdates(fixture.FixtureId, jwt);
+        movementOdds = selectRecentMovementOdds(historicalOdds, 8);
+      }
+    } catch (error) {
+      console.warn(
+        `TxLINE odds enrichment skipped for fixture ${fixture.FixtureId}:`,
+        error instanceof Error ? error.message : error
+      );
+    }
+
+    const selectedOdds = latestOdds
+      ? [...movementOdds, latestOdds]
+      : movementOdds;
+
+    if (selectedOdds.length === 0) {
       continue;
     }
 
-    const match = normalizeFixture(fixture, nowIso);
-    const snapshot = normalizeOddsSnapshot(match, oneXTwo, nowIso);
-
     matches.push(match);
-    snapshots.push(snapshot);
+
+    for (const item of selectedOdds) {
+      snapshots.push(normalizeOddsSnapshot(match, item));
+    }
   }
 
+  const uniqueSnapshots = new Map<string, OddsSnapshot>();
+
+  for (const snapshot of snapshots) {
+    uniqueSnapshots.set(snapshot.id, snapshot);
+  }
+
+  const normalizedSnapshots = sortSnapshotsChronologically([
+    ...uniqueSnapshots.values(),
+  ]);
+
   console.log(
-    `TxLINE feed normalized: ${matches.length} matches, ${snapshots.length} snapshots`
+    `TxLINE feed normalized: ${matches.length} matches, ${normalizedSnapshots.length} snapshots with historical movement`
   );
 
   return {
     matches,
-    snapshots,
+    snapshots: normalizedSnapshots,
   };
 }
