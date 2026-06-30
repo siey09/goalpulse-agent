@@ -7,6 +7,7 @@ import {
   findPreviousSnapshot,
   signalAlreadyExists,
   snapshotAlreadyExists,
+  upsertRecentFinishedMatches,
   store,
 } from "./store";
 import { AgentRun } from "./types";
@@ -20,6 +21,7 @@ export async function processAgentCycle(): Promise<AgentRun> {
       : await fetchTxLineFeed();
 
     store.matches = feed.matches;
+    upsertRecentFinishedMatches(feed.matches);
 
     let signalsCreated = 0;
     let snapshotsCreated = 0;
@@ -81,3 +83,4 @@ export async function processAgentCycle(): Promise<AgentRun> {
     return run;
   }
 }
+

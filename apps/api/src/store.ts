@@ -2,11 +2,13 @@
 
 export const store: {
   matches: Match[];
+  recentFinishedMatches: Match[];
   oddsSnapshots: OddsSnapshot[];
   signals: AgentSignal[];
   agentRuns: AgentRun[];
 } = {
   matches: [],
+  recentFinishedMatches: [],
   oddsSnapshots: [],
   signals: [],
   agentRuns: [],
@@ -44,13 +46,38 @@ export function signalAlreadyExists(signal: AgentSignal): boolean {
   });
 }
 
+
+export function upsertRecentFinishedMatches(matches: Match[]) {
+  const finishedMatches = matches.filter((match) => match.status === "finished");
+
+  for (const match of finishedMatches) {
+    const existingIndex = store.recentFinishedMatches.findIndex(
+      (item) => item.id === match.id
+    );
+
+    if (existingIndex >= 0) {
+      store.recentFinishedMatches[existingIndex] = match;
+    } else {
+      store.recentFinishedMatches.unshift(match);
+    }
+  }
+
+  store.recentFinishedMatches = store.recentFinishedMatches
+    .sort(
+      (a, b) =>
+        new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+    )
+    .slice(0, 20);
+}
 export function evaluatePendingSignalsForFinishedMatches() {
   let evaluatedCount = 0;
 
   for (const signal of store.signals) {
     if (signal.resultStatus !== "pending") continue;
 
-    const match = store.matches.find((item) => item.id === signal.matchId);
+    const match =
+      store.matches.find((item) => item.id === signal.matchId) ??
+      store.recentFinishedMatches.find((item) => item.id === signal.matchId);
 
     if (!match || match.status !== "finished") continue;
 
@@ -88,3 +115,4 @@ export function getStats() {
     lastAgentRun: store.agentRuns[0] ?? null,
   };
 }
+

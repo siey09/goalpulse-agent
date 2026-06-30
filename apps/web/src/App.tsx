@@ -1,5 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { SignalIntelligencePanel } from "./components/SignalIntelligencePanel";
+import { ResultsSettlementPanel } from "./components/ResultsSettlementPanel";
+import { WhatChangedPanel } from "./components/WhatChangedPanel";
 import {
   BarChart3,
   Bot,
@@ -151,7 +153,7 @@ async function request<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`);
 
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
+    throw new Error(`Request failed: ${response.status} ${API_BASE_URL}${path}`);
   }
 
   return response.json();
@@ -275,6 +277,7 @@ function App() {
   const [selectedSignal, setSelectedSignal] = useState<AgentSignal | null>(null);
   const [activeSection, setActiveSection] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
+  const [matchStatusFilter, setMatchStatusFilter] = useState<"all" | Match["status"]>("all");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [replayStep, setReplayStep] = useState(-1);
   const [isJudgeMode, setIsJudgeMode] = useState(false);
@@ -307,7 +310,7 @@ function App() {
     },
     {
       title: "5. Outcome verification",
-      detail: "Signals are audited after detection so judges can see before odds, after odds, move size, and proof preview.",
+      detail: "Signals are audited after detection so users can see before odds, after odds, move size, and proof preview.",
     },
     {
       title: "6. Selected match pressure",
@@ -318,20 +321,20 @@ function App() {
       detail: "This shows the autonomous flow: feed ingestion, snapshot creation, signal execution, and outcome review.",
     },
     {
-      title: "8. Historical backtest",
-      detail: "Run a saved World Cup replay through the same deterministic engine to prove the logic works offline.",
+      title: "8. Real TxLINE replay",
+      detail: "Replay stored TxLINE odds snapshots through the same signal engine to audit whether market movements were later confirmed or rejected.",
     },
     {
-      title: "9. Event correlation",
-      detail: "The replay connects odds movement with match events like shots, goals, and sustained attacking pressure.",
+      title: "9. Evidence chain",
+      detail: "The replay verifies TxLINE snapshot IDs, message IDs, source labels, and stored odds movement evidence.",
     },
     {
-      title: "10. Oracle council",
-      detail: "Agent A, Agent B, and Agent C vote before a replay signal is approved.",
+      title: "10. Signal review council",
+      detail: "Multiple agent checks review movement strength, reversion risk, and evidence quality before approving a signal.",
     },
     {
-      title: "11. Proof readiness",
-      detail: "The replay result generates a SHA-256 proof hash with Solana devnet anchoring readiness.",
+      title: "11. Proof hash",
+      detail: "The replay generates a SHA-256 proof hash so the audit trail can be anchored later on Solana devnet.",
     },
     {
       title: "12. Signal thresholds",
@@ -346,7 +349,7 @@ function App() {
     const replayItems =
       replayBacktest?.signals?.map((signal) => ({
         signal,
-        source: "Historical replay",
+        source: "TxLINE replay audit",
         proofHash: replayBacktest.proof?.hash,
       })) ?? [];
 
@@ -387,9 +390,9 @@ function App() {
     { text: "Outcome verification" },
     { text: "Selected match" },
     { text: "Agent timeline" },
-    { id: "guide-backtest-card", text: "Backtest mode" },
-    { id: "guide-event-correlation", text: "Event correlation" },
-    { id: "guide-oracle-council", text: "Oracle council" },
+    { id: "guide-backtest-card", text: "Outcome audit" },
+    { id: "guide-event-correlation", text: "Evidence chain" },
+    { id: "guide-oracle-council", text: "Signal review" },
     { id: "guide-proof-readiness", text: "Proof network" },
     { text: "Signal thresholds" },
     { id: "compliance", text: "Analytics only" },
@@ -576,16 +579,35 @@ function App() {
 
       setError("");
 
-      const [healthPayload, matchesPayload, signalsPayload, runsPayload, statsPayload] =
-        await Promise.all([
-          request<Health>("/health"),
-          request<unknown>("/api/matches"),
-          request<unknown>("/api/signals"),
-          request<unknown>("/api/agent-runs"),
-          request<AgentStats>("/api/stats"),
-        ]);
+      const [
+        healthPayload,
+        matchesPayload,
+        recentResultsPayload,
+        signalsPayload,
+        runsPayload,
+        statsPayload,
+      ] = await Promise.all([
+        request<Health>("/health"),
+        request<unknown>("/api/matches"),
+        request<unknown>("/api/recent-results"),
+        request<unknown>("/api/signals"),
+        request<unknown>("/api/agent-runs"),
+        request<AgentStats>("/api/stats"),
+      ]);
 
-      const matchList = asArray<Match>(matchesPayload, ["matches", "data"]);
+      const currentMatchList = asArray<Match>(matchesPayload, ["matches", "data"]);
+      const recentResultList = asArray<Match>(recentResultsPayload, ["matches", "data"]);
+      const mergedMatchMap = new Map<string, Match>();
+
+      for (const match of currentMatchList) {
+        mergedMatchMap.set(match.id, match);
+      }
+
+      for (const match of recentResultList) {
+        mergedMatchMap.set(match.id, match);
+      }
+
+      const matchList = [...mergedMatchMap.values()];
       const signalList = asArray<AgentSignal>(signalsPayload, ["signals", "data"]);
       const runList = asArray<AgentRun>(runsPayload, ["runs", "agentRuns", "data"]);
 
@@ -717,17 +739,32 @@ function App() {
     };
   }, [selectedMatch, signals]);
 
+  const matchStatusCounts = useMemo(
+    () => ({
+      all: matches.length,
+      live: matches.filter((match) => match.status === "live").length,
+      scheduled: matches.filter((match) => match.status === "scheduled").length,
+      finished: matches.filter((match) => match.status === "finished").length,
+    }),
+    [matches]
+  );
+
   const filteredMatches = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
 
-    if (!query) return matches;
+    const statusFilteredMatches =
+      matchStatusFilter === "all"
+        ? matches
+        : matches.filter((match) => match.status === matchStatusFilter);
 
-    return matches.filter((match) =>
+    if (!query) return statusFilteredMatches;
+
+    return statusFilteredMatches.filter((match) =>
       `${match.homeTeam ?? ""} ${match.awayTeam ?? ""} ${match.status ?? ""}`
         .toLowerCase()
         .includes(query)
     );
-  }, [matches, searchTerm]);
+  }, [matches, searchTerm, matchStatusFilter]);
 
   const filteredSignals = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -1071,6 +1108,26 @@ function App() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <div
+                    className={`rounded-2xl border px-3 py-2 text-right ${
+                      health?.useSimulatedFeed
+                        ? "border-amber-400/30 bg-amber-400/10"
+                        : "border-emerald-400/30 bg-emerald-400/10"
+                    }`}
+                  >
+                    <p className="text-[10px] text-stone-500">Feed mode</p>
+                    <p
+                      className={`text-xs font-black tracking-[0.22em] ${
+                        health?.useSimulatedFeed ? "text-amber-200" : "text-emerald-200"
+                      }`}
+                    >
+                      {health?.useSimulatedFeed ? "LAB MODE" : "LIVE MODE"}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-stone-400">
+                      {health?.useSimulatedFeed ? "Demo feed" : "Real TxLINE API"}
+                    </p>
+                  </div>
+
                   <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
                     <p className="text-[10px] text-stone-500">Updates</p>
                     <p className="text-lg font-semibold text-white">
@@ -1287,6 +1344,31 @@ function App() {
                 </div>
                 <Radio className="h-4 w-4 text-emerald-300" />
               </div>
+
+              <div className="mb-3 grid grid-cols-4 gap-1.5 rounded-2xl bg-black/20 p-1">
+                {(["all", "live", "scheduled", "finished"] as const).map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setMatchStatusFilter(status)}
+                    className={`rounded-xl px-2 py-2 text-[10px] font-semibold transition ${
+                      matchStatusFilter === status
+                        ? "bg-orange-400/15 text-orange-200"
+                        : "text-stone-500 hover:bg-white/6 hover:text-stone-200"
+                    }`}
+                  >
+                    <span>
+                      {status === "all"
+                        ? "All"
+                        : status === "scheduled"
+                          ? "Upcoming"
+                          : status.charAt(0).toUpperCase() + status.slice(1)}
+                    </span>
+                    <span className="ml-1 opacity-70">
+                      {matchStatusCounts[status]}
+                    </span>
+                  </button>
+                ))}
+              </div>
 
               <div className="space-y-2">
                 {filteredMatches.length > 0 ? (
@@ -1354,6 +1436,10 @@ function App() {
               </div>
             </div>
           <SignalIntelligencePanel />
+
+          <ResultsSettlementPanel />
+
+          <WhatChangedPanel />
 
             <div
               id="agent"
@@ -1649,15 +1735,19 @@ function App() {
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs text-stone-500">Historical replay</p>
-                <h2 className="text-base font-semibold">Backtest mode</h2>
+                <p className="text-xs text-stone-500">
+                  {replayBacktest?.mode === "real_txline_replay"
+                    ? "Real TxLINE replay"
+                    : "Stored replay"}
+                </p>
+                <h2 className="text-base font-semibold">Outcome audit mode</h2>
               </div>
               <button
                 onClick={runReplayBacktest}
                 disabled={isReplayRunning}
                 className="rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1.5 text-[11px] font-medium text-orange-200 transition hover:border-orange-300/40 hover:bg-orange-400/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isReplayRunning ? "Running..." : "Run backtest"}
+                {isReplayRunning ? "Running..." : "Run audit"}
               </button>
             </div>
 
@@ -1677,9 +1767,10 @@ function App() {
                     </p>
                   </div>
                   <div className="rounded-xl bg-black/20 p-2.5">
-                    <p className="text-[10px] text-stone-500">Accuracy</p>
+                    <p className="text-[10px] text-stone-500">Settled checks</p>
                     <p className="mt-1 text-sm font-semibold text-emerald-200">
-                      {replayBacktest.summary?.accuracyPct ?? 0}%
+                      {(replayBacktest.summary?.correctSignals ?? 0) +
+                        (replayBacktest.summary?.incorrectSignals ?? 0)}
                     </p>
                   </div>
                 </div>
@@ -1691,10 +1782,10 @@ function App() {
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3 text-[11px]">
-                    <span className="text-stone-400">Result</span>
+                    <span className="text-stone-400">Outcome audit</span>
                     <span className="font-medium text-emerald-200">
-                      {replayBacktest.summary?.correctSignals ?? 0} correct •{" "}
-                      {replayBacktest.summary?.incorrectSignals ?? 0} incorrect
+                      {replayBacktest.summary?.correctSignals ?? 0} confirmed •{" "}
+                      {replayBacktest.summary?.incorrectSignals ?? 0} rejected
                     </span>
                   </div>
 
@@ -1728,7 +1819,7 @@ function App() {
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[10px] text-orange-200/80">Event correlation</p>
+                        <p className="text-[10px] text-orange-200/80">Evidence chain</p>
                         <p className="text-xs font-semibold text-white">
                           {(replayBacktest.events ?? []).length} supporting event(s)
                         </p>
@@ -1767,7 +1858,7 @@ function App() {
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[10px] text-sky-200/80">Oracle council</p>
+                        <p className="text-[10px] text-sky-200/80">Signal review council</p>
                         <p className="text-xs font-semibold text-white">
                           {(replayBacktest.councilVotes ?? [])[0]?.decision?.toUpperCase() ??
                             "PENDING"}
@@ -1900,7 +1991,7 @@ function App() {
 
       {selectedSignal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-[24px] border border-white/10 bg-[#15100c] p-4 shadow-2xl shadow-black/50">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[24px] border border-white/10 bg-[#15100c] p-4 shadow-2xl shadow-black/50">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs text-stone-500">Signal details</p>
@@ -1931,6 +2022,28 @@ function App() {
               </span>
             </div>
 
+            <div className="mb-4 rounded-2xl border border-sky-400/15 bg-sky-400/10 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-sky-200/70">
+                    How to read this signal
+                  </p>
+                  <h3 className="mt-1 text-sm font-semibold text-white">
+                    The agent detected a meaningful odds movement for {getSignalTarget(selectedSignal)}.
+                  </h3>
+                </div>
+                <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-sky-100">
+                  Analytics only
+                </span>
+              </div>
+
+              <p className="mt-3 text-xs leading-5 text-stone-300">
+                Previous odds were <span className="font-semibold text-white">{formatOdds(selectedSignal.oddsBefore)}</span>, then moved to{" "}
+                <span className="font-semibold text-white">{formatOdds(selectedSignal.oddsAfter)}</span>. That creates a{" "}
+                <span className="font-semibold text-sky-100">{formatOddsChange(selectedSignal.oddsChangePct)}</span> movement, which crossed the
+                configured signal threshold. This does not recommend a bet; it explains what changed in the market and why the agent flagged it.
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <DetailRow
                 label="Match"
@@ -2066,6 +2179,24 @@ function App() {
 }
 
 export default App;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

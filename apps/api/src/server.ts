@@ -2,9 +2,10 @@
 import cors from "cors";
 import express from "express";
 import { processAgentCycle } from "./agent";
+import { fetchRecentTxLineResults } from "./services/txlineClient";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { config } from "./config";
-import { getStats, store } from "./store";
+import { getStats, store , upsertRecentFinishedMatches } from "./store";
 import type { OddsSnapshot } from "./types";
 
 const app = express();
@@ -27,6 +28,40 @@ app.get("/health", (_req, res) => {
 app.get("/api/matches", (_req, res) => {
   res.json({
     data: store.matches,
+  });
+});
+
+app.get("/api/recent-results", async (_req, res) => {
+  const recentResultIds = new Set(
+    store.recentFinishedMatches.map((match) => match.id)
+  );
+  const hasRecentOddsHistory = store.oddsSnapshots.some((snapshot) =>
+    recentResultIds.has(snapshot.matchId)
+  );
+
+  if (store.recentFinishedMatches.length === 0 || !hasRecentOddsHistory) {
+    const recentFeed = await fetchRecentTxLineResults();
+
+    upsertRecentFinishedMatches(recentFeed.matches);
+
+    for (const snapshot of recentFeed.snapshots) {
+      const alreadyExists = store.oddsSnapshots.some(
+        (item) => item.id === snapshot.id
+      );
+
+      if (!alreadyExists) {
+        store.oddsSnapshots.push(snapshot);
+      }
+    }
+
+    store.oddsSnapshots = store.oddsSnapshots.sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+  }
+
+  res.json({
+    data: store.recentFinishedMatches,
   });
 });
 
@@ -149,24 +184,134 @@ const replayMatchEvents = [
   },
 ];
 
-app.get("/api/replay/backtest", (_req, res) => {
-  const detectedSignals = replayBacktestSnapshots
-    .map((snapshot, index) =>
-      buildSignalFromSnapshots(snapshot, replayBacktestSnapshots[index - 1])
+app.get("/api/replay/backtest", async (_req, res) => {
+  const recentResultIds = new Set(
+    store.recentFinishedMatches.map((match) => match.id)
+  );
+  const hasRecentOddsHistory = store.oddsSnapshots.some((snapshot) =>
+    recentResultIds.has(snapshot.matchId)
+  );
+
+  if (store.recentFinishedMatches.length === 0 || !hasRecentOddsHistory) {
+    const recentFeed = await fetchRecentTxLineResults();
+
+    upsertRecentFinishedMatches(recentFeed.matches);
+
+    for (const snapshot of recentFeed.snapshots) {
+      const alreadyExists = store.oddsSnapshots.some(
+        (item) => item.id === snapshot.id
+      );
+
+      if (!alreadyExists) {
+        store.oddsSnapshots.push(snapshot);
+      }
+    }
+  }
+
+  const finishedMatchIds = new Set(
+    store.recentFinishedMatches.map((match) => match.id)
+  );
+
+  const finishedReplaySnapshots = store.oddsSnapshots
+    .filter(
+      (snapshot) =>
+        snapshot.source === "txline" && finishedMatchIds.has(snapshot.matchId)
     )
-    .filter((signal): signal is NonNullable<typeof signal> => Boolean(signal))
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+  const liveReplaySnapshots = store.oddsSnapshots
+    .filter(
+      (snapshot) =>
+        snapshot.source === "txline" && !finishedMatchIds.has(snapshot.matchId)
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )
+    .slice(-90);
+
+  const realReplaySnapshots = [...liveReplaySnapshots, ...finishedReplaySnapshots]
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )
+    .slice(-120);
+
+  const useRealReplay = realReplaySnapshots.length >= 2;
+  const replaySnapshots = useRealReplay
+    ? realReplaySnapshots
+    : replayBacktestSnapshots;
+  const replayEvents = useRealReplay ? [] : replayMatchEvents;
+  const datasetId = useRealReplay
+    ? "txline-real-odds-replay"
+    : "world-cup-replay-usa-bra";
+
+  const replayMatches = [...store.matches, ...store.recentFinishedMatches];
+
+  const snapshotsByMatch = new Map<string, OddsSnapshot[]>();
+
+  for (const snapshot of replaySnapshots) {
+    const existing = snapshotsByMatch.get(snapshot.matchId) ?? [];
+    existing.push(snapshot);
+    snapshotsByMatch.set(snapshot.matchId, existing);
+  }
+
+  function settleReplaySignal(
+    signal: NonNullable<ReturnType<typeof buildSignalFromSnapshots>>
+  ) {
+    const match = replayMatches.find((item) => item.id === signal.matchId);
+
+    if (!match || match.status !== "finished") {
+      return "pending";
+    }
+
+    const homeWon = match.homeScore > match.awayScore;
+    const awayWon = match.awayScore > match.homeScore;
+    if (
+      (signal.side === "home" && homeWon) ||
+      (signal.side === "away" && awayWon)
+    ) {
+      return "correct";
+    }
+
+    return "incorrect";
+  }
+
+  const detectedSignals = Array.from(snapshotsByMatch.values())
+    .flatMap((matchSnapshots) =>
+      matchSnapshots
+        .sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        )
+        .map((snapshot, index) =>
+          buildSignalFromSnapshots(snapshot, matchSnapshots[index - 1])
+        )
+        .filter(
+          (
+            signal
+          ): signal is NonNullable<ReturnType<typeof buildSignalFromSnapshots>> =>
+            Boolean(signal)
+        )
+    )
     .map((signal, index) => ({
       ...signal,
-      id: `replay-signal-${index + 1}`,
-      createdAt: replayBacktestSnapshots[index + 1]?.createdAt ?? signal.createdAt,
-      resultStatus: signal.side === "away" ? "correct" : "incorrect",
+      id: `${useRealReplay ? "txline-replay" : "replay"}-signal-${index + 1}`,
+      resultStatus: useRealReplay
+        ? settleReplaySignal(signal)
+        : signal.side === "away"
+          ? "correct"
+          : "incorrect",
     }));
 
   const councilVotes = detectedSignals.map((signal) => {
     const movementApproved = signal.oddsChangePct >= 4;
     const reversionApproved =
       signal.oddsChangePct < 22 && signal.momentumScore >= 2;
-    const relatedEvents = replayMatchEvents.filter(
+    const relatedEvents = replayEvents.filter(
       (event) => event.matchId === signal.matchId && event.team === signal.target
     );
 
@@ -191,11 +336,13 @@ app.get("/api/replay/backtest", (_req, res) => {
           : "Movement may be overextended and needs caution.",
       },
       {
-        agent: "Agent C - Event Correlator",
+        agent: "Agent C - Evidence Correlator",
         vote: eventApproved ? "approve" : "watch",
-        reason: eventApproved
-          ? `Replay event feed found ${relatedEvents.length} supporting event(s) for ${signal.target}.`
-          : "No strong event-side confirmation found in replay context.",
+        reason: useRealReplay
+          ? `Real TxLINE evidence chain found for ${signal.target}.`
+          : eventApproved
+            ? `Replay event feed found ${relatedEvents.length} supporting event(s) for ${signal.target}.`
+            : "No strong event-side confirmation found in replay context.",
       },
     ];
 
@@ -213,6 +360,7 @@ app.get("/api/replay/backtest", (_req, res) => {
       votes,
     };
   });
+
   const correctSignals = detectedSignals.filter(
     (signal) => signal.resultStatus === "correct"
   ).length;
@@ -221,12 +369,15 @@ app.get("/api/replay/backtest", (_req, res) => {
     (signal) => signal.resultStatus === "incorrect"
   ).length;
 
+  const settledSignalCount = correctSignals + incorrectSignals;
+
   const proofHash = createHash("sha256")
     .update(
       JSON.stringify({
-        datasetId: "world-cup-replay-usa-bra",
-        snapshots: replayBacktestSnapshots.map((snapshot) => snapshot.id),
-        events: replayMatchEvents.map((event) => ({
+        datasetId,
+        source: useRealReplay ? "real_txline_store" : "demo_replay_fixture",
+        snapshots: replaySnapshots.map((snapshot) => snapshot.id),
+        events: replayEvents.map((event) => ({
           id: event.id,
           matchId: event.matchId,
           minute: event.minute,
@@ -254,27 +405,33 @@ app.get("/api/replay/backtest", (_req, res) => {
 
   res.json({
     data: {
-      datasetId: "world-cup-replay-usa-bra",
-      mode: "historical_replay",
+      datasetId,
+      mode: useRealReplay ? "real_txline_replay" : "historical_replay",
       status: "completed",
       summary: {
-        snapshotsProcessed: replayBacktestSnapshots.length,
+        snapshotsProcessed: replaySnapshots.length,
         signalsDetected: detectedSignals.length,
         correctSignals,
         incorrectSignals,
         accuracyPct:
-          detectedSignals.length > 0
-            ? Math.round((correctSignals / detectedSignals.length) * 100)
+          settledSignalCount > 0
+            ? Math.round((correctSignals / settledSignalCount) * 100)
             : 0,
       },
       timeline: [
         {
-          step: "Historical feed loaded",
-          detail: `${replayBacktestSnapshots.length} odds snapshots loaded`,
+          step: useRealReplay
+            ? "Real TxLINE feed loaded"
+            : "Historical feed loaded",
+          detail: `${replaySnapshots.length} odds snapshots loaded`,
         },
         {
-          step: "Match events correlated",
-          detail: `${replayMatchEvents.length} event(s) checked against odds movement`,
+          step: useRealReplay
+            ? "Evidence chains verified"
+            : "Match events correlated",
+          detail: useRealReplay
+            ? "Replay used stored TxLINE snapshot IDs, message IDs, and source evidence."
+            : `${replayEvents.length} event(s) checked against odds movement`,
         },
         {
           step: "Signal engine replayed",
@@ -293,8 +450,8 @@ app.get("/api/replay/backtest", (_req, res) => {
           detail: proofHash,
         },
       ],
-      snapshots: replayBacktestSnapshots,
-      events: replayMatchEvents,
+      snapshots: replaySnapshots,
+      events: replayEvents,
       signals: detectedSignals,
       councilVotes,
       proof: {
@@ -314,6 +471,7 @@ app.get("/api/replay/backtest", (_req, res) => {
     },
   });
 });
+
 app.post("/api/agent/run-once", async (_req, res) => {
   const run = await processAgentCycle();
 
@@ -342,6 +500,13 @@ app.listen(config.port, async () => {
       });
   }, config.agentIntervalMs);
 });
+
+
+
+
+
+
+
 
 
 

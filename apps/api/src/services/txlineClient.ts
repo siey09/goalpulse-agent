@@ -31,6 +31,20 @@ interface TxLineOddsSnapshot {
   Pct?: string[];
 }
 
+interface TxLineScoreSnapshot {
+  FixtureId?: number;
+  Ts?: number;
+  GameState?: string | null;
+  Status?: string | null;
+  Score?: unknown;
+  Clock?: unknown;
+  HomeScore?: number;
+  AwayScore?: number;
+  Participant1Score?: number;
+  Participant2Score?: number;
+  Scores?: unknown;
+}
+
 let cachedGuestJwt = "";
 let cachedGuestJwtCreatedAt = 0;
 
@@ -41,6 +55,25 @@ const oddsUpdatesCache = new Map<
     data: TxLineOddsSnapshot[];
   }
 >();
+
+const RECENT_RESULT_FIXTURES: TxLineFixture[] = [
+  {
+    FixtureId: 17588325,
+    StartTime: 1782612000000,
+    Competition: "World Cup",
+    Participant1: "Jordan",
+    Participant2: "Argentina",
+    Participant1IsHome: true,
+  },
+  {
+    FixtureId: 17588326,
+    StartTime: 1782612000000,
+    Competition: "World Cup",
+    Participant1: "Algeria",
+    Participant2: "Austria",
+    Participant1IsHome: true,
+  },
+];
 
 async function getGuestJwt(): Promise<string> {
   const now = Date.now();
@@ -167,6 +200,242 @@ function normalizeFixture(fixture: TxLineFixture, nowIso: string): Match {
     awayScore: 0,
     minute: inferMinute(fixture.StartTime),
     status: inferStatus(fixture.StartTime),
+    lastUpdated: nowIso,
+  };
+}
+
+function toNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+}
+
+function readObjectNumber(
+  value: unknown,
+  keys: string[]
+): number | undefined {
+  if (!value || typeof value !== "object") return undefined;
+
+  const record = value as Record<string, unknown>;
+
+  for (const key of keys) {
+    const numberValue = toNumber(record[key]);
+    if (numberValue !== undefined) return numberValue;
+  }
+
+  return undefined;
+}
+
+function readNestedNumber(
+  value: unknown,
+  path: string[]
+): number | undefined {
+  let current: unknown = value;
+
+  for (const key of path) {
+    if (!current || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+
+  return toNumber(current);
+}
+
+function latestScoreEvent(
+  score: TxLineScoreSnapshot | TxLineScoreSnapshot[]
+): TxLineScoreSnapshot | undefined {
+  const events = Array.isArray(score) ? score : [score];
+
+  return events
+    .filter((event) => event && typeof event === "object")
+    .sort((a, b) => (b.Ts ?? 0) - (a.Ts ?? 0))[0];
+}
+
+function latestEventWithScore(
+  score: TxLineScoreSnapshot | TxLineScoreSnapshot[]
+): TxLineScoreSnapshot | undefined {
+  const events = Array.isArray(score) ? score : [score];
+
+  return events
+    .filter((event) => event && typeof event === "object" && event.Score)
+    .sort((a, b) => (b.Ts ?? 0) - (a.Ts ?? 0))[0];
+}
+
+function parseScoreText(value: unknown): [number, number] | undefined {
+  if (typeof value !== "string") return undefined;
+
+  const match = value.match(/(\d+)\s*[-:]\s*(\d+)/);
+  if (!match) return undefined;
+
+  return [Number(match[1]), Number(match[2])];
+}
+
+function extractScores(score: TxLineScoreSnapshot): {
+  homeScore: number;
+  awayScore: number;
+} {
+  const directHome =
+    toNumber(score.HomeScore) ?? toNumber(score.Participant1Score);
+  const directAway =
+    toNumber(score.AwayScore) ?? toNumber(score.Participant2Score);
+
+  if (directHome !== undefined && directAway !== undefined) {
+    return {
+      homeScore: directHome,
+      awayScore: directAway,
+    };
+  }
+
+  const scoreValue = score.Score ?? score.Scores;
+
+  const nestedHomeGoals =
+    readNestedNumber(scoreValue, ["Participant1", "Total", "Goals"]) ??
+    readNestedNumber(scoreValue, ["Participant1", "FT", "Goals"]) ??
+    readNestedNumber(scoreValue, ["Participant1", "H2", "Goals"]) ??
+    readNestedNumber(scoreValue, ["Participant1", "H1", "Goals"]);
+
+  const nestedAwayGoals =
+    readNestedNumber(scoreValue, ["Participant2", "Total", "Goals"]) ??
+    readNestedNumber(scoreValue, ["Participant2", "FT", "Goals"]) ??
+    readNestedNumber(scoreValue, ["Participant2", "H2", "Goals"]) ??
+    readNestedNumber(scoreValue, ["Participant2", "H1", "Goals"]);
+
+  if (nestedHomeGoals !== undefined || nestedAwayGoals !== undefined) {
+    return {
+      homeScore: nestedHomeGoals ?? 0,
+      awayScore: nestedAwayGoals ?? 0,
+    };
+  }
+
+  if (Array.isArray(scoreValue)) {
+    return {
+      homeScore: toNumber(scoreValue[0]) ?? 0,
+      awayScore: toNumber(scoreValue[1]) ?? 0,
+    };
+  }
+
+  const parsedText = parseScoreText(scoreValue);
+  if (parsedText) {
+    return {
+      homeScore: parsedText[0],
+      awayScore: parsedText[1],
+    };
+  }
+
+  const homeScore =
+    readObjectNumber(scoreValue, [
+      "home",
+      "Home",
+      "homeScore",
+      "HomeScore",
+      "participant1",
+      "Participant1",
+      "participant1Score",
+      "Participant1Score",
+      "part1",
+      "Part1",
+    ]) ?? 0;
+
+  const awayScore =
+    readObjectNumber(scoreValue, [
+      "away",
+      "Away",
+      "awayScore",
+      "AwayScore",
+      "participant2",
+      "Participant2",
+      "participant2Score",
+      "Participant2Score",
+      "part2",
+      "Part2",
+    ]) ?? 0;
+
+  return {
+    homeScore,
+    awayScore,
+  };
+}
+
+function extractMinute(clock: unknown, fallbackMinute: number): number {
+  const directMinute = toNumber(clock);
+  if (directMinute !== undefined) {
+    return Math.max(0, Math.min(130, directMinute));
+  }
+
+  const seconds =
+    readObjectNumber(clock, ["seconds", "Seconds", "gameSeconds", "GameSeconds"]) ??
+    undefined;
+
+  if (seconds !== undefined) {
+    return Math.max(0, Math.min(130, Math.floor(seconds / 60)));
+  }
+
+  const minute =
+    readObjectNumber(clock, ["minute", "Minute", "minutes", "Minutes"]) ??
+    undefined;
+
+  if (minute !== undefined) {
+    return Math.max(0, Math.min(130, minute));
+  }
+
+  return fallbackMinute;
+}
+
+function statusFromScoreState(
+  state: string | null | undefined,
+  fallbackStatus: Match["status"]
+): Match["status"] {
+  const normalized = (state ?? "").toLowerCase();
+
+  if (
+    normalized.includes("finish") ||
+    normalized.includes("ended") ||
+    normalized.includes("full") ||
+    normalized.includes("closed") ||
+    normalized.includes("complete")
+  ) {
+    return "finished";
+  }
+
+  if (
+    normalized.includes("live") ||
+    normalized.includes("running") ||
+    normalized.includes("progress") ||
+    normalized.includes("half") ||
+    normalized.includes("period")
+  ) {
+    return "live";
+  }
+
+  return fallbackStatus;
+}
+
+function applyScoreSnapshot(
+  match: Match,
+  score: TxLineScoreSnapshot | TxLineScoreSnapshot[] | undefined,
+  nowIso: string
+): Match {
+  if (!score) return match;
+
+  const scoreEvent = latestEventWithScore(score) ?? latestScoreEvent(score);
+
+  if (!scoreEvent) return match;
+
+  const scores = extractScores(scoreEvent);
+
+  return {
+    ...match,
+    homeScore: scores.homeScore,
+    awayScore: scores.awayScore,
+    minute: extractMinute(scoreEvent.Clock, match.minute),
+    status: statusFromScoreState(
+      scoreEvent.GameState ?? scoreEvent.Status,
+      match.status
+    ),
     lastUpdated: nowIso,
   };
 }
@@ -342,7 +611,21 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
   const snapshots: OddsSnapshot[] = [];
 
   for (const fixture of fixtures.slice(0, 14)) {
-    const match = normalizeFixture(fixture, nowIso);
+    let match = normalizeFixture(fixture, nowIso);
+
+    try {
+      const scoreSnapshot = await txlineGet<TxLineScoreSnapshot | TxLineScoreSnapshot[]>(
+        `/api/scores/snapshot/${fixture.FixtureId}`,
+        jwt
+      );
+
+      match = applyScoreSnapshot(match, scoreSnapshot, nowIso);
+    } catch (error) {
+      console.warn(
+        `TxLINE score enrichment skipped for fixture ${fixture.FixtureId}:`,
+        error instanceof Error ? error.message : error
+      );
+    }
 
     let latestOdds: TxLineOddsSnapshot | undefined;
     let movementOdds: TxLineOddsSnapshot[] = [];
@@ -401,3 +684,108 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
     snapshots: normalizedSnapshots,
   };
 }
+
+
+
+
+
+export async function fetchRecentTxLineResults(): Promise<TxLineFeedResult> {
+  if (!config.txlineApiKey) {
+    return {
+      matches: [],
+      snapshots: [],
+    };
+  }
+
+  const jwt = await getGuestJwt();
+  const nowIso = new Date().toISOString();
+  const matches: Match[] = [];
+  const snapshots: OddsSnapshot[] = [];
+
+  for (const fixture of RECENT_RESULT_FIXTURES) {
+    try {
+      let match = normalizeFixture(fixture, nowIso);
+
+      const scoreSnapshot = await txlineGet<TxLineScoreSnapshot | TxLineScoreSnapshot[]>(
+        `/api/scores/snapshot/${fixture.FixtureId}`,
+        jwt
+      );
+
+      match = applyScoreSnapshot(match, scoreSnapshot, nowIso);
+
+      if (match.status !== "finished") {
+        continue;
+      }
+
+      matches.push(match);
+
+      let latestOdds: TxLineOddsSnapshot | undefined;
+      let movementOdds: TxLineOddsSnapshot[] = [];
+
+      try {
+        const currentOdds = await txlineGet<TxLineOddsSnapshot[]>(
+          `/api/odds/snapshot/${fixture.FixtureId}`,
+          jwt
+        );
+
+        latestOdds = findLatest1x2Odds(currentOdds);
+      } catch (error) {
+        console.warn(
+          `TxLINE recent odds snapshot skipped for fixture ${fixture.FixtureId}:`,
+          error instanceof Error ? error.message : error
+        );
+      }
+
+      try {
+        const oddsUpdates = await getOddsUpdates(fixture.FixtureId, jwt);
+        movementOdds = selectMovementOdds(oddsUpdates);
+      } catch (error) {
+        console.warn(
+          `TxLINE recent odds updates skipped for fixture ${fixture.FixtureId}:`,
+          error instanceof Error ? error.message : error
+        );
+      }
+
+      const selectedOdds = [...movementOdds];
+
+      if (
+        latestOdds &&
+        !selectedOdds.some(
+          (item) =>
+            (item.MessageId && item.MessageId === latestOdds?.MessageId) ||
+            item.Ts === latestOdds?.Ts
+        )
+      ) {
+        selectedOdds.push(latestOdds);
+      }
+
+      for (const item of selectedOdds) {
+        const endpointUsed =
+          item.MessageId === latestOdds?.MessageId
+            ? `/api/odds/snapshot/${fixture.FixtureId}`
+            : `/api/odds/updates/${fixture.FixtureId}`;
+
+        snapshots.push(normalizeOddsSnapshot(match, item, endpointUsed));
+      }
+    } catch (error) {
+      console.warn(
+        `TxLINE recent result bootstrap skipped for fixture ${fixture.FixtureId}:`,
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
+  const uniqueSnapshots = new Map<string, OddsSnapshot>();
+
+  for (const snapshot of snapshots) {
+    uniqueSnapshots.set(snapshot.id, snapshot);
+  }
+
+  return {
+    matches,
+    snapshots: sortSnapshotsChronologically([...uniqueSnapshots.values()]),
+  };
+}
+
+
+
