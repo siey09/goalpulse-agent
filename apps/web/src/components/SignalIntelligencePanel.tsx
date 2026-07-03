@@ -195,6 +195,13 @@ export function SignalIntelligencePanel() {
 
   const confidence = calculateConfidence(bestSignal);
   const scoresContext = bestSignal?.evidence?.scoresContext;
+  const selectedFieldPressure = scoresContext?.fieldPressureScore ?? 0;
+  const fieldContextLabel =
+    selectedFieldPressure >= 22
+      ? "FIELD-BACKED MOVE"
+      : scoresContext
+        ? "MARKET-ONLY MOVE"
+        : "NO FIELD CONTEXT";
   const fieldBackedSignals = signals.filter(
     (signal) => (signal.evidence?.scoresContext?.fieldPressureScore ?? 0) >= 22
   ).length;
@@ -269,6 +276,9 @@ export function SignalIntelligencePanel() {
           <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
+                <div className="mb-2 inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-200">
+                  {fieldContextLabel}
+                </div>
                 <p className="text-[11px] uppercase tracking-[0.22em] text-stone-500">
                   Best current signal
                 </p>
@@ -451,7 +461,7 @@ function EvidenceRow({
   mono = false,
 }: {
   label: string;
-  value?: string;
+  value?: string | number;
   mono?: boolean;
 }) {
   return (
@@ -464,11 +474,12 @@ function EvidenceRow({
           mono ? "font-mono text-[11px]" : "text-sm font-medium"
         }`}
       >
-        {value || "—"}
+        {value !== undefined && value !== "" ? String(value) : "—"}
       </p>
     </div>
   );
 }
+
 
 
 
