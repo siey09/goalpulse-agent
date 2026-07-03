@@ -272,7 +272,7 @@ export function SignalIntelligencePanel() {
       </div>
 
       {bestSignal ? (
-        <div className="mt-5 grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="mt-5 grid gap-4 2xl:grid-cols-[1.15fr_0.85fr]">
           <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -297,7 +297,7 @@ export function SignalIntelligencePanel() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 lg:grid-cols-3">
               <div className="rounded-2xl bg-[#0b0806] p-4">
                 <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-stone-500">
                   <TrendingDown className="h-4 w-4" />
@@ -335,7 +335,7 @@ export function SignalIntelligencePanel() {
                 TXODDS field context
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3">
                 <EvidenceRow label="Latest Field Action" value={scoresContext?.actionLabel ?? scoresContext?.latestAction} />
                 <EvidenceRow label="Pressure Level" value={scoresContext?.pressureLevel} />
                 <EvidenceRow label="Pressure Score" value={scoresContext?.fieldPressureScore !== undefined ? `${scoresContext.fieldPressureScore}/45` : undefined} />
@@ -355,7 +355,7 @@ export function SignalIntelligencePanel() {
                 Agent decision path
               </div>
 
-              <div className="grid gap-2 text-sm text-stone-300 md:grid-cols-2">
+              <div className="grid gap-2 text-sm text-stone-300">
                 <DecisionStep number="01" text="Pulled TxLINE odds updates" />
                 <DecisionStep number="02" text="Selected 1X2 main market" />
                 <DecisionStep number="03" text="Compared previous/current snapshots" />
@@ -470,8 +470,8 @@ function EvidenceRow({
         {label}
       </p>
       <p
-        className={`mt-1 break-all text-stone-200 ${
-          mono ? "font-mono text-[11px]" : "text-sm font-medium"
+        className={`mt-1 break-words text-stone-200 ${
+          mono ? "font-mono text-[10px] leading-4" : "text-sm font-medium leading-5"
         }`}
       >
         {value !== undefined && value !== "" ? String(value) : "—"}
@@ -479,6 +479,7 @@ function EvidenceRow({
     </div>
   );
 }
+
 
 
 
