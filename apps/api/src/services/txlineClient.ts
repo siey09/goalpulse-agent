@@ -1,5 +1,5 @@
 ﻿import { config } from "../config";
-import { Match, OddsSnapshot } from "../types";
+import { Match, OddsSnapshot, TxLineScoresContext } from "../types";
 
 export interface TxLineFeedResult {
   matches: Match[];
@@ -36,13 +36,23 @@ interface TxLineScoreSnapshot {
   Ts?: number;
   GameState?: string | null;
   Status?: string | null;
-  Score?: unknown;
+  StatusId?: number;
+  Action?: string;
+  Confirmed?: boolean;
   Clock?: unknown;
+  Score?: unknown;
   HomeScore?: number;
   AwayScore?: number;
   Participant1Score?: number;
   Participant2Score?: number;
   Scores?: unknown;
+  Participant?: number | null;
+  Possession?: number | null;
+  PossessionType?: string | null;
+  PossibleEvent?: unknown;
+  Data?: Record<string, unknown> | null;
+  Seq?: number;
+  Id?: number;
 }
 
 let cachedGuestJwt = "";
@@ -56,6 +66,252 @@ const oddsUpdatesCache = new Map<
   }
 >();
 
+
+const STATUS_LABELS: Record<number, string> = {
+  1: "Not Started",
+  2: "1st Half",
+  3: "Half Time",
+  4: "2nd Half",
+  5: "Finished",
+  6: "Waiting for Extra Time",
+  7: "1st Half Extra Time",
+  8: "Half Time Extra Time",
+  9: "2nd Half Extra Time",
+  10: "Finished After Extra Time",
+  11: "Waiting for Penalty Shootout",
+  12: "Penalty Shootout",
+  13: "Finished After Penalty Shootout",
+  14: "Interrupted",
+  15: "Abandoned",
+  16: "Cancelled",
+  17: "TX Coverage Cancelled",
+  18: "TX Coverage Suspended",
+};
+
+function readString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function readBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function latestMeaningfulScoreEvent(
+  score: TxLineScoreSnapshot | TxLineScoreSnapshot[]
+): TxLineScoreSnapshot | undefined {
+  const importantActions = new Set([
+    "goal",
+    "shot",
+    "corner",
+    "free_kick",
+    "penalty",
+    "penalty_outcome",
+    "var",
+    "var_end",
+    "red_card",
+    "yellow_card",
+    "danger_possession",
+    "high_danger_possession",
+    "attack_possession",
+    "possible",
+    "suspend",
+    "unreliable_corners",
+    "unreliable_yellow_cards",
+    "score_adjustment",
+    "action_discarded",
+    "action_amend",
+  ]);
+
+  const events = Array.isArray(score) ? score : [score];
+
+  return events
+    .filter((event) => event && typeof event === "object")
+    .filter((event) => importantActions.has((event.Action ?? "").toLowerCase()))
+    .sort((a, b) => (b.Ts ?? 0) - (a.Ts ?? 0))[0];
+}
+
+function actionLabel(action?: string): string | undefined {
+  if (!action) return undefined;
+
+  return action
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function participantToSide(
+  participant: unknown,
+  fixture: TxLineFixture
+): TxLineScoresContext["actionTeam"] {
+  const participantNumber = toNumber(participant);
+
+  if (participantNumber !== 1 && participantNumber !== 2) {
+    return "unknown";
+  }
+
+  const participantOneIsHome = fixture.Participant1IsHome !== false;
+
+  if (participantNumber === 1) {
+    return participantOneIsHome ? "home" : "away";
+  }
+
+  return participantOneIsHome ? "away" : "home";
+}
+
+function pressureFromAction(
+  action?: string,
+  possessionType?: string
+): Pick<TxLineScoresContext, "pressureLevel" | "fieldPressureScore"> {
+  const normalizedAction = (action ?? "").toLowerCase();
+  const normalizedPossession = (possessionType ?? "").toLowerCase();
+
+  if (
+    normalizedAction.includes("goal") ||
+    normalizedAction.includes("penalty") ||
+    normalizedAction.includes("red_card") ||
+    normalizedAction.includes("var") ||
+    normalizedAction.includes("high_danger") ||
+    normalizedPossession.includes("highdanger")
+  ) {
+    return { pressureLevel: "HIGH_DANGER", fieldPressureScore: 45 };
+  }
+
+  if (
+    normalizedAction.includes("shot") ||
+    normalizedAction.includes("danger") ||
+    normalizedPossession.includes("danger")
+  ) {
+    return { pressureLevel: "DANGER", fieldPressureScore: 32 };
+  }
+
+  if (
+    normalizedAction.includes("corner") ||
+    normalizedAction.includes("free_kick") ||
+    normalizedAction.includes("attack") ||
+    normalizedPossession.includes("attack")
+  ) {
+    return { pressureLevel: "ATTACK", fieldPressureScore: 22 };
+  }
+
+  if (
+    normalizedAction.includes("safe_possession") ||
+    normalizedPossession.includes("safe")
+  ) {
+    return { pressureLevel: "SAFE", fieldPressureScore: 8 };
+  }
+
+  return { pressureLevel: "NONE", fieldPressureScore: 0 };
+}
+
+function reliabilityFromEvent(
+  event?: TxLineScoreSnapshot
+): Pick<TxLineScoresContext, "reliability" | "reliabilityReason"> {
+  if (!event) {
+    return {
+      reliability: "UNKNOWN",
+      reliabilityReason: "No scores event was available for this fixture.",
+    };
+  }
+
+  const action = (event.Action ?? "").toLowerCase();
+  const data = event.Data ?? {};
+  const reliableFlag = readBoolean(data.Reliable);
+  const unreliableFlag = readBoolean(data.Unreliable);
+
+  if (event.StatusId === 18 || action === "suspend" || reliableFlag === false) {
+    return {
+      reliability: "SUSPENDED",
+      reliabilityReason:
+        "TXODDS marked the fixture or coverage as suspended/unreliable.",
+    };
+  }
+
+  if (
+    unreliableFlag === true ||
+    action === "unreliable_corners" ||
+    action === "unreliable_yellow_cards" ||
+    action === "action_discarded" ||
+    action === "action_amend"
+  ) {
+    return {
+      reliability: "UNRELIABLE",
+      reliabilityReason:
+        "TXODDS emitted an amend, discard, or unreliable-stat event.",
+    };
+  }
+
+  return {
+    reliability: "RELIABLE",
+    reliabilityReason: "No TXODDS reliability warning was found.",
+  };
+}
+
+function buildScoresContext(
+  score: TxLineScoreSnapshot | TxLineScoreSnapshot[] | undefined,
+  fixture: TxLineFixture,
+  match: Match,
+  endpointUsed: string
+): TxLineScoresContext | undefined {
+  if (!score) return undefined;
+
+  const latestEvent = latestScoreEvent(score);
+  const meaningfulEvent = latestMeaningfulScoreEvent(score) ?? latestEvent;
+
+  if (!meaningfulEvent) return undefined;
+
+  const scoreEvent = latestEventWithScore(score) ?? latestEvent ?? meaningfulEvent;
+  const scores = scoreEvent ? extractScores(scoreEvent) : {
+    homeScore: match.homeScore,
+    awayScore: match.awayScore,
+  };
+
+  const data = meaningfulEvent.Data ?? {};
+  const statusId =
+    toNumber(meaningfulEvent.StatusId) ??
+    toNumber(data.StatusId) ??
+    toNumber(latestEvent?.StatusId);
+
+  const clockSeconds =
+    readObjectNumber(meaningfulEvent.Clock, ["Seconds", "seconds"]) ??
+    readObjectNumber(latestEvent?.Clock, ["Seconds", "seconds"]);
+
+  const possessionType =
+    readString(meaningfulEvent.PossessionType) ??
+    readString(data.PossessionType) ??
+    readString(data.FreeKickType) ??
+    readString(data.ThrowInType);
+
+  const pressure = pressureFromAction(meaningfulEvent.Action, possessionType);
+  const reliability = reliabilityFromEvent(meaningfulEvent);
+  const timestamp = meaningfulEvent.Ts
+    ? new Date(meaningfulEvent.Ts).toISOString()
+    : undefined;
+
+  return {
+    fixtureId: String(fixture.FixtureId),
+    endpointUsed,
+    latestAction: meaningfulEvent.Action,
+    actionLabel: actionLabel(meaningfulEvent.Action),
+    actionTeam: participantToSide(
+      meaningfulEvent.Participant ?? data.Participant ?? meaningfulEvent.Possession,
+      fixture
+    ),
+    statusId,
+    statusName: statusId ? STATUS_LABELS[statusId] : undefined,
+    clockSeconds,
+    minute: extractMinute(meaningfulEvent.Clock ?? latestEvent?.Clock, match.minute),
+    homeScore: scores.homeScore,
+    awayScore: scores.awayScore,
+    scoreline: `${match.homeTeam} ${scores.homeScore} - ${scores.awayScore} ${match.awayTeam}`,
+    possessionType,
+    ...pressure,
+    ...reliability,
+    confirmed: meaningfulEvent.Confirmed,
+    sequence: meaningfulEvent.Seq,
+    timestamp,
+    proofLabel: "Generated from real TXODDS Scores event context",
+  };
+}
 const RECENT_RESULT_FIXTURES: TxLineFixture[] = [
   {
     FixtureId: 17588325,
@@ -552,7 +808,8 @@ function selectMovementOdds(
 function normalizeOddsSnapshot(
   match: Match,
   odds: TxLineOddsSnapshot,
-  endpointUsed: string
+  endpointUsed: string,
+  scoresContext?: TxLineScoresContext
 ): OddsSnapshot {
   const createdAt = odds.Ts
     ? new Date(odds.Ts).toISOString()
@@ -583,7 +840,10 @@ function normalizeOddsSnapshot(
       marketPeriod: odds.MarketPeriod,
       marketParameters: odds.MarketParameters,
       currentTimestamp: createdAt,
-      proofLabel: "Generated from real TxLINE odds movement data",
+      scoresContext,
+      proofLabel: scoresContext
+        ? "Generated from real TxLINE odds movement data and TXODDS Scores event context"
+        : "Generated from real TxLINE odds movement data",
     },
   };
 }
@@ -612,9 +872,10 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
 
   for (const fixture of fixtures.slice(0, 14)) {
     let match = normalizeFixture(fixture, nowIso);
+    let scoreSnapshot: TxLineScoreSnapshot | TxLineScoreSnapshot[] | undefined;
 
     try {
-      const scoreSnapshot = await txlineGet<TxLineScoreSnapshot | TxLineScoreSnapshot[]>(
+      scoreSnapshot = await txlineGet<TxLineScoreSnapshot | TxLineScoreSnapshot[]>(
         `/api/scores/snapshot/${fixture.FixtureId}`,
         jwt
       );
@@ -653,6 +914,13 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
       continue;
     }
 
+    const scoresContext = buildScoresContext(
+      scoreSnapshot,
+      fixture,
+      match,
+      `/api/scores/snapshot/${fixture.FixtureId}`
+    );
+
     matches.push(match);
 
     for (const item of selectedOdds) {
@@ -661,7 +929,7 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
           ? `/api/odds/snapshot/${fixture.FixtureId}`
           : `/api/odds/updates/${fixture.FixtureId}`;
 
-      snapshots.push(normalizeOddsSnapshot(match, item, endpointUsed));
+      snapshots.push(normalizeOddsSnapshot(match, item, endpointUsed, scoresContext));
     }
   }
 
@@ -717,6 +985,13 @@ export async function fetchRecentTxLineResults(): Promise<TxLineFeedResult> {
         continue;
       }
 
+      const scoresContext = buildScoresContext(
+        scoreSnapshot,
+        fixture,
+        match,
+        `/api/scores/snapshot/${fixture.FixtureId}`
+      );
+
       matches.push(match);
 
       let latestOdds: TxLineOddsSnapshot | undefined;
@@ -765,7 +1040,7 @@ export async function fetchRecentTxLineResults(): Promise<TxLineFeedResult> {
             ? `/api/odds/snapshot/${fixture.FixtureId}`
             : `/api/odds/updates/${fixture.FixtureId}`;
 
-        snapshots.push(normalizeOddsSnapshot(match, item, endpointUsed));
+        snapshots.push(normalizeOddsSnapshot(match, item, endpointUsed, scoresContext));
       }
     } catch (error) {
       console.warn(
@@ -786,6 +1061,10 @@ export async function fetchRecentTxLineResults(): Promise<TxLineFeedResult> {
     snapshots: sortSnapshotsChronologically([...uniqueSnapshots.values()]),
   };
 }
+
+
+
+
 
 
 

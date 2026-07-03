@@ -4,6 +4,30 @@ export type Severity = "HIGH" | "MEDIUM" | "LOW" | "NONE";
 
 export type MatchStatus = "scheduled" | "live" | "finished";
 
+export interface TxLineScoresContext {
+  fixtureId?: string;
+  endpointUsed?: string;
+  latestAction?: string;
+  actionLabel?: string;
+  actionTeam?: "home" | "away" | "neutral" | "unknown";
+  statusId?: number;
+  statusName?: string;
+  clockSeconds?: number;
+  minute?: number;
+  homeScore?: number;
+  awayScore?: number;
+  scoreline?: string;
+  possessionType?: string;
+  pressureLevel?: "NONE" | "SAFE" | "ATTACK" | "DANGER" | "HIGH_DANGER";
+  fieldPressureScore?: number;
+  reliability?: "RELIABLE" | "UNRELIABLE" | "SUSPENDED" | "UNKNOWN";
+  reliabilityReason?: string;
+  confirmed?: boolean;
+  sequence?: number;
+  timestamp?: string;
+  proofLabel?: string;
+}
+
 export interface TxLineEvidence {
   source: "txline" | "simulated_txline";
   fixtureId?: string;
@@ -17,6 +41,7 @@ export interface TxLineEvidence {
   currentSnapshotId?: string;
   previousTimestamp?: string;
   currentTimestamp?: string;
+  scoresContext?: TxLineScoresContext;
   proofLabel?: string;
 }
 
@@ -76,3 +101,5 @@ export interface AgentRun {
   status: "success" | "error";
   message: string;
 }
+
+

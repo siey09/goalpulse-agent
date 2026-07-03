@@ -1,7 +1,11 @@
-﻿import { AgentSignal, OddsSnapshot, Severity, TeamSide } from "../types";
+﻿import { AgentSignal, OddsSnapshot, Severity, TeamSide, TxLineScoresContext } from "../types";
 
 function round(value: number, decimals = 2) {
   return Number(value.toFixed(decimals));
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 function getSeverity(changePct: number): Severity {
@@ -18,13 +22,85 @@ function calculateCompressionPct(previousOdds: number, currentOdds: number) {
 function calculateMomentumScore(
   changePct: number,
   minute: number,
-  scoreChanged: boolean
+  scoreChanged: boolean,
+  scoresContext?: TxLineScoresContext
 ) {
   const oddsWeight = changePct * 0.55;
   const scoreImpact = scoreChanged ? 20 * 0.25 : 0;
   const timePressure = Math.min(minute / 90, 1) * 20 * 0.2;
+  const fieldPressure = (scoresContext?.fieldPressureScore ?? 0) * 0.35;
+  const reliabilityPenalty =
+    scoresContext?.reliability === "SUSPENDED"
+      ? 18
+      : scoresContext?.reliability === "UNRELIABLE"
+        ? 10
+        : 0;
 
-  return round(oddsWeight + scoreImpact + timePressure);
+  return round(clamp(oddsWeight + scoreImpact + timePressure + fieldPressure - reliabilityPenalty, 0, 100));
+}
+
+function sideLabel(side?: TxLineScoresContext["actionTeam"]) {
+  if (side === "home") return "home side";
+  if (side === "away") return "away side";
+  if (side === "neutral") return "neutral event";
+  return "unknown side";
+}
+
+function buildContextExplanation(
+  target: string,
+  signalSide: TeamSide,
+  scoresContext?: TxLineScoresContext
+) {
+  if (!scoresContext) {
+    return " No matching TXODDS Scores event context was available, so this is treated as a market-only movement.";
+  }
+
+  const action = scoresContext.actionLabel ?? scoresContext.latestAction ?? "field event";
+  const pressure = scoresContext.pressureLevel ?? "NONE";
+  const pressureScore = scoresContext.fieldPressureScore ?? 0;
+  const scoreline = scoresContext.scoreline ? ` Scoreline: ${scoresContext.scoreline}.` : "";
+  const status = scoresContext.statusName ? ` Match phase: ${scoresContext.statusName}.` : "";
+  const sameSide =
+    scoresContext.actionTeam === signalSide ||
+    scoresContext.actionTeam === "unknown" ||
+    scoresContext.actionTeam === undefined;
+
+  const pressureSentence =
+    pressureScore >= 32
+      ? ` The move is field-backed by a ${action} event with ${pressure.toLowerCase()} pressure.`
+      : pressureScore >= 22
+        ? ` The move has moderate field context from a ${action} event.`
+        : pressureScore > 0
+          ? ` The latest field context is low pressure: ${action}.`
+          : ` The latest Scores event did not show strong field pressure: ${action}.`;
+
+  const sideSentence = sameSide
+    ? ` The event context aligns with ${target} or has no clear side conflict.`
+    : ` Caution: the latest field event came from the ${sideLabel(scoresContext.actionTeam)}, not the signal side.`;
+
+  const reliabilitySentence =
+    scoresContext.reliability === "SUSPENDED" || scoresContext.reliability === "UNRELIABLE"
+      ? ` Reliability warning: ${scoresContext.reliabilityReason ?? "TXODDS marked the event context as unreliable."}`
+      : ` Reliability check: ${scoresContext.reliabilityReason ?? "No TXODDS reliability warning was found."}`;
+
+  return `${pressureSentence}${sideSentence}${status}${scoreline} ${reliabilitySentence}`;
+}
+function buildBaseExplanation(
+  severity: Severity,
+  target: string,
+  changePct: number,
+  oddsBefore: number,
+  oddsAfter: number
+) {
+  if (severity === "HIGH") {
+    return `${target} odds compressed by ${round(changePct)}% from ${oddsBefore} to ${oddsAfter}. The agent flags this as a high-severity sharp movement.`;
+  }
+
+  if (severity === "MEDIUM") {
+    return `${target} odds moved by ${round(changePct)}% with sustained market direction. The agent flags this as a momentum shift.`;
+  }
+
+  return `${target} odds moved by ${round(changePct)}%. The agent will continue watching this match for continuation.`;
 }
 
 export function buildSignalFromSnapshots(
@@ -57,43 +133,44 @@ export function buildSignalFromSnapshots(
   const target = side === "home" ? current.homeTeam : current.awayTeam;
   const oddsBefore = side === "home" ? previous.homeOdds : previous.awayOdds;
   const oddsAfter = side === "home" ? current.homeOdds : current.awayOdds;
+  const scoresContext =
+    current.evidence?.scoresContext ?? previous.evidence?.scoresContext;
 
   const momentumScore = calculateMomentumScore(
     bestChangePct,
     current.minute,
-    scoreChanged
+    scoreChanged,
+    scoresContext
   );
 
   const signalType =
     severity === "HIGH"
       ? "SHARP_MOVE"
       : severity === "MEDIUM"
-      ? "MOMENTUM_SHIFT"
-      : "WATCH";
+        ? "MOMENTUM_SHIFT"
+        : "WATCH";
 
-  const explanation =
-    severity === "HIGH"
-      ? `${target} odds compressed by ${round(
-          bestChangePct
-        )}% from ${oddsBefore} to ${oddsAfter}. The agent flags this as a high-severity sharp movement.`
-      : severity === "MEDIUM"
-      ? `${target} odds moved by ${round(
-          bestChangePct
-        )}% with sustained market direction. The agent flags this as a momentum shift.`
-      : `${target} odds moved by ${round(
-          bestChangePct
-        )}%. The agent will continue watching this match for continuation.`;
+  const explanation = `${buildBaseExplanation(
+    severity,
+    target,
+    bestChangePct,
+    oddsBefore,
+    oddsAfter
+  )}${buildContextExplanation(target, side, scoresContext)}`;
 
   const evidence = {
     ...(current.evidence ?? previous.evidence),
     source: current.source,
+    scoresContext,
     previousSnapshotId: previous.id,
     currentSnapshotId: current.id,
     previousTimestamp: previous.createdAt,
     currentTimestamp: current.createdAt,
     proofLabel:
       current.source === "txline"
-        ? "Generated from real TxLINE odds movement data"
+        ? scoresContext
+          ? "Generated from real TxLINE odds movement data and TXODDS Scores event context"
+          : "Generated from real TxLINE odds movement data"
         : "Generated from simulated sandbox feed",
   } as AgentSignal["evidence"];
 

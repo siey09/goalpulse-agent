@@ -14,6 +14,30 @@ import { useEffect, useMemo, useState } from "react";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
 
+type TxLineScoresContext = {
+  fixtureId?: string;
+  endpointUsed?: string;
+  latestAction?: string;
+  actionLabel?: string;
+  actionTeam?: "home" | "away" | "neutral" | "unknown";
+  statusId?: number;
+  statusName?: string;
+  clockSeconds?: number;
+  minute?: number;
+  homeScore?: number;
+  awayScore?: number;
+  scoreline?: string;
+  possessionType?: string;
+  pressureLevel?: "NONE" | "SAFE" | "ATTACK" | "DANGER" | "HIGH_DANGER";
+  fieldPressureScore?: number;
+  reliability?: "RELIABLE" | "UNRELIABLE" | "SUSPENDED" | "UNKNOWN";
+  reliabilityReason?: string;
+  confirmed?: boolean;
+  sequence?: number;
+  timestamp?: string;
+  proofLabel?: string;
+};
+
 type SignalEvidence = {
   source?: string;
   fixtureId?: string;
@@ -25,6 +49,7 @@ type SignalEvidence = {
   currentSnapshotId?: string;
   previousTimestamp?: string;
   currentTimestamp?: string;
+  scoresContext?: TxLineScoresContext;
   proofLabel?: string;
 };
 
@@ -69,8 +94,30 @@ function calculateConfidence(signal?: AgentSignal) {
     signal.severity === "HIGH" ? 25 : signal.severity === "MEDIUM" ? 16 : 8;
   const evidenceScore = signal.evidence?.messageId ? 15 : 5;
   const sourceScore = signal.evidence?.source === "txline" ? 5 : 0;
+  const fieldPressureScore = clamp(
+    (signal.evidence?.scoresContext?.fieldPressureScore ?? 0) * 0.35,
+    0,
+    16
+  );
+  const reliabilityPenalty =
+    signal.evidence?.scoresContext?.reliability === "SUSPENDED"
+      ? 14
+      : signal.evidence?.scoresContext?.reliability === "UNRELIABLE"
+        ? 8
+        : 0;
 
-  return Math.round(clamp(movementScore + severityScore + evidenceScore + sourceScore, 0, 100));
+  return Math.round(
+    clamp(
+      movementScore +
+        severityScore +
+        evidenceScore +
+        sourceScore +
+        fieldPressureScore -
+        reliabilityPenalty,
+      0,
+      100
+    )
+  );
 }
 
 function compact(value?: string, max = 48) {
@@ -147,6 +194,10 @@ export function SignalIntelligencePanel() {
   }, [signals]);
 
   const confidence = calculateConfidence(bestSignal);
+  const scoresContext = bestSignal?.evidence?.scoresContext;
+  const fieldBackedSignals = signals.filter(
+    (signal) => (signal.evidence?.scoresContext?.fieldPressureScore ?? 0) >= 22
+  ).length;
   const isRealFeed = health?.useSimulatedFeed === false;
   const verifiedSnapshots = stats?.txlineUpdates ?? 0;
   const generatedSignals = stats?.signalsGenerated ?? signals.length;
@@ -207,8 +258,8 @@ export function SignalIntelligencePanel() {
         />
         <MetricCard
           icon={<Activity className="h-4 w-4" />}
-          label="High severity"
-          value={isLoading ? "..." : String(stats?.highSeverity ?? 0)}
+          label="Field-backed"
+          value={isLoading ? "..." : String(fieldBackedSignals)}
           tone="rose"
         />
       </div>
@@ -268,6 +319,26 @@ export function SignalIntelligencePanel() {
               </div>
             </div>
 
+            <div className="mt-4 rounded-2xl border border-emerald-400/10 bg-emerald-400/5 p-4">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                <Radar className="h-4 w-4" />
+                TXODDS field context
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <EvidenceRow label="Latest Field Action" value={scoresContext?.actionLabel ?? scoresContext?.latestAction} />
+                <EvidenceRow label="Pressure Level" value={scoresContext?.pressureLevel} />
+                <EvidenceRow label="Pressure Score" value={scoresContext?.fieldPressureScore !== undefined ? `${scoresContext.fieldPressureScore}/45` : undefined} />
+                <EvidenceRow label="Reliability" value={scoresContext?.reliability} />
+                <EvidenceRow label="Match Phase" value={scoresContext?.statusName} />
+                <EvidenceRow label="Scoreline" value={scoresContext?.scoreline} />
+              </div>
+
+              <p className="mt-3 text-xs leading-5 text-stone-400">
+                GoalPulse now checks whether market movement is supported by on-field context such as goals, shots, VAR, cards, penalties, or danger possession.
+              </p>
+            </div>
+
             <div className="mt-4 rounded-2xl border border-sky-400/10 bg-sky-400/5 p-4">
               <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">
                 <GitBranch className="h-4 w-4" />
@@ -279,8 +350,8 @@ export function SignalIntelligencePanel() {
                 <DecisionStep number="02" text="Selected 1X2 main market" />
                 <DecisionStep number="03" text="Compared previous/current snapshots" />
                 <DecisionStep number="04" text="Calculated odds compression" />
-                <DecisionStep number="05" text="Applied severity threshold" />
-                <DecisionStep number="06" text="Stored evidence trail for review" />
+                <DecisionStep number="05" text="Correlated TXODDS field context" />
+                <DecisionStep number="06" text="Applied reliability and pressure scoring" />
               </div>
             </div>
           </div>
@@ -306,6 +377,18 @@ export function SignalIntelligencePanel() {
                 label="Current Snapshot"
                 value={compact(bestSignal.evidence?.currentSnapshotId, 72)}
                 mono
+              />
+              <EvidenceRow
+                label="Scores Endpoint"
+                value={bestSignal.evidence?.scoresContext?.endpointUsed}
+              />
+              <EvidenceRow
+                label="Latest Scores Action"
+                value={bestSignal.evidence?.scoresContext?.actionLabel ?? bestSignal.evidence?.scoresContext?.latestAction}
+              />
+              <EvidenceRow
+                label="Scores Proof"
+                value={bestSignal.evidence?.scoresContext?.proofLabel}
               />
             </div>
           </div>
@@ -386,5 +469,7 @@ function EvidenceRow({
     </div>
   );
 }
+
+
 
 
