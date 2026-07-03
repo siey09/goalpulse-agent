@@ -97,14 +97,27 @@ export function SignalIntelligencePanel() {
         ]);
 
         const healthData = (await healthResponse.json()) as Health;
-        const statsData = (await statsResponse.json()) as Stats;
-        const signalsData = (await signalsResponse.json()) as AgentSignal[];
+        const statsEnvelope = (await statsResponse.json()) as Stats | { data?: Stats };
+        const signalsEnvelope = (await signalsResponse.json()) as
+          | AgentSignal[]
+          | { data?: AgentSignal[] };
+
+        const statsData: Stats =
+          "data" in statsEnvelope && statsEnvelope.data
+            ? statsEnvelope.data
+            : (statsEnvelope as Stats);
+
+        const signalsData = Array.isArray(signalsEnvelope)
+          ? signalsEnvelope
+          : Array.isArray(signalsEnvelope.data)
+            ? signalsEnvelope.data
+            : [];
 
         if (!mounted) return;
 
         setHealth(healthData);
         setStats(statsData);
-        setSignals(Array.isArray(signalsData) ? signalsData : []);
+        setSignals(signalsData);
       } catch (error) {
         console.error("Unable to load signal intelligence panel", error);
       } finally {
@@ -373,3 +386,5 @@ function EvidenceRow({
     </div>
   );
 }
+
+
