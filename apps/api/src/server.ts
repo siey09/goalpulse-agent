@@ -65,6 +65,151 @@ app.get("/api/recent-results", async (_req, res) => {
   });
 });
 
+app.get("/api/live/replay-stream", (req, res) => {
+  const matchId = String(req.query.matchId ?? "");
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  const allSnapshots = (matchId
+    ? store.oddsSnapshots.filter((snapshot) => snapshot.matchId === matchId)
+    : store.oddsSnapshots
+  )
+    .slice(0, 100)
+    .reverse();
+
+  const match = matchId
+    ? store.matches.find((item) => item.id === matchId) ??
+      store.recentFinishedMatches.find((item) => item.id === matchId)
+    : store.matches[0];
+
+  const relatedSignals = matchId
+    ? store.signals.filter((signal) => signal.matchId === matchId).slice(0, 10)
+    : store.signals.slice(0, 10);
+
+  if (allSnapshots.length === 0) {
+    res.write(
+      `event: odds-update\ndata: ${JSON.stringify({
+        matchId,
+        timestamp: new Date().toISOString(),
+        match,
+        latestSnapshot: null,
+        history: [],
+        signals: relatedSignals,
+        stats: getStats(),
+        streamMode: "replay_test",
+        replayComplete: true,
+      })}\n\n`
+    );
+    res.end();
+    return;
+  }
+
+  let cursor = 1;
+
+  const sendReplayTick = () => {
+    const replayHistory = allSnapshots.slice(0, cursor);
+    const latestSnapshot = replayHistory[replayHistory.length - 1];
+
+    res.write(
+      `event: odds-update\ndata: ${JSON.stringify({
+        matchId,
+        timestamp: new Date().toISOString(),
+        match,
+        latestSnapshot,
+        history: replayHistory,
+        signals: relatedSignals,
+        stats: getStats(),
+        streamMode: "replay_test",
+        replayCursor: cursor,
+        replayTotal: allSnapshots.length,
+        replayComplete: cursor >= allSnapshots.length,
+      })}\n\n`
+    );
+
+    cursor += 1;
+
+    if (cursor > allSnapshots.length) {
+      cursor = 1;
+    }
+  };
+
+  sendReplayTick();
+
+  const interval = setInterval(sendReplayTick, 1000);
+
+  req.on("close", () => {
+    clearInterval(interval);
+    res.end();
+  });
+});
+app.get("/api/live/odds-stream", (req, res) => {
+  const matchId = String(req.query.matchId ?? "");
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  let lastSignature = "";
+
+  const sendSnapshot = () => {
+    const snapshots = (matchId
+      ? store.oddsSnapshots.filter((snapshot) => snapshot.matchId === matchId)
+      : store.oddsSnapshots
+    )
+      .slice(0, 100)
+      .reverse();
+
+    const latestSnapshot = snapshots[snapshots.length - 1];
+    const match = matchId
+      ? store.matches.find((item) => item.id === matchId) ??
+        store.recentFinishedMatches.find((item) => item.id === matchId)
+      : store.matches[0];
+
+    const relatedSignals = matchId
+      ? store.signals.filter((signal) => signal.matchId === matchId).slice(0, 10)
+      : store.signals.slice(0, 10);
+
+    const signature = JSON.stringify({
+      latestSnapshotId: latestSnapshot?.id ?? null,
+      snapshotCount: snapshots.length,
+      matchStatus: match?.status ?? null,
+      homeScore: match?.homeScore ?? null,
+      awayScore: match?.awayScore ?? null,
+      signalCount: relatedSignals.length,
+    });
+
+    if (signature === lastSignature) {
+      return;
+    }
+
+    lastSignature = signature;
+
+    res.write(
+      `event: odds-update\ndata: ${JSON.stringify({
+        matchId,
+        timestamp: new Date().toISOString(),
+        match,
+        latestSnapshot,
+        history: snapshots,
+        signals: relatedSignals,
+        stats: getStats(),
+      })}\n\n`
+    );
+  };
+
+  sendSnapshot();
+
+  const interval = setInterval(sendSnapshot, 1000);
+
+  req.on("close", () => {
+    clearInterval(interval);
+    res.end();
+  });
+});
 app.get("/api/signals", (_req, res) => {
   res.json({
     data: store.signals,
@@ -280,6 +425,102 @@ app.get("/api/replay/backtest", async (_req, res) => {
     return "incorrect";
   }
 
+  function checkScoreReality(
+    signal: NonNullable<ReturnType<typeof buildSignalFromSnapshots>>,
+    resultStatus: "pending" | "correct" | "incorrect"
+  ) {
+    const match = replayMatches.find((item) => item.id === signal.matchId);
+
+    if (!match || match.status !== "finished") {
+      return {
+        finalScore: "Not settled yet",
+        scoreRealityStatus: "WAITING_FOR_FINAL_SCORE",
+        scoreRealityReason:
+          "The match is still pending, so GoalPulse cannot compare the odds move against the final score yet.",
+      };
+    }
+
+    const finalScore = `${match.homeTeam} ${match.homeScore} - ${match.awayScore} ${match.awayTeam}`;
+    const targetWon =
+      (signal.side === "home" && match.homeScore > match.awayScore) ||
+      (signal.side === "away" && match.awayScore > match.homeScore);
+
+    if (targetWon && resultStatus === "correct") {
+      return {
+        finalScore,
+        scoreRealityStatus: "CONFIRMED_BY_SCORE",
+        scoreRealityReason: `${signal.target} was backed by the odds movement and the final score confirmed it: ${finalScore}.`,
+      };
+    }
+
+    return {
+      finalScore,
+      scoreRealityStatus: "REJECTED_BY_SCORE",
+      scoreRealityReason: `${signal.target} was backed by the odds movement, but the final score did not confirm it: ${finalScore}. GoalPulse marks this as score-vs-odds disagreement.`,
+    };
+  }
+  function classifyMarketTrap(
+    signal: NonNullable<ReturnType<typeof buildSignalFromSnapshots>>,
+    resultStatus: "pending" | "correct" | "incorrect"
+  ) {
+    const movement = Math.abs(signal.oddsChangePct);
+
+    if (resultStatus === "pending") {
+      return {
+        trapStatus: "WATCHING",
+        trapScore: Math.min(100, Math.round(movement * 2.2)),
+        trapReason:
+          "The match is not settled yet, so the agent is watching whether the odds movement gets confirmed or rejected.",
+        reversalRisk: movement >= 25 ? "OVEREXTENDED_WATCH" : "NORMAL_WATCH",
+        reversalReason:
+          movement >= 25
+            ? "The odds move is already large, so GoalPulse watches for possible reversal or failed confirmation."
+            : "The odds move is still within a normal watch range.",
+      };
+    }
+
+    if (resultStatus === "correct") {
+      return {
+        trapStatus: "VALIDATED_MOVE",
+        trapScore: 0,
+        trapReason:
+          "The final result confirmed the odds movement, so this was treated as a validated market move.",
+        reversalRisk: "VALIDATED",
+        reversalReason:
+          "The final result confirmed the move, so no reversal warning was raised.",
+      };
+    }
+
+    if (movement >= 15) {
+      return {
+        trapStatus: "CONFIRMED_TRAP",
+        trapScore: Math.min(100, Math.round(55 + movement)),
+        trapReason: `${signal.target} had a sharp ${movement}% odds compression, but the final result rejected the move. GoalPulse flags this as a possible smart money trap or false market move.`,
+        reversalRisk: movement >= 35 ? "EXTREME_REVERSAL" : "HIGH_REVERSAL",
+        reversalReason: `${signal.target} had an overextended ${movement}% odds compression that was rejected by the final result. GoalPulse marks this as a reversal warning.`,
+      };
+    }
+
+    if (movement >= 8) {
+      return {
+        trapStatus: "POSSIBLE_TRAP",
+        trapScore: Math.min(100, Math.round(35 + movement)),
+        trapReason: `${signal.target} had a meaningful ${movement}% odds movement, but the outcome did not confirm it. The agent marks it as a possible trap for review.`,
+        reversalRisk: "MODERATE_REVERSAL",
+        reversalReason: `${signal.target} had a meaningful ${movement}% move that failed outcome confirmation, so the radar marks it as moderate reversal risk.`,
+      };
+    }
+
+    return {
+      trapStatus: "LOW_TRAP_RISK",
+      trapScore: Math.round(movement),
+      trapReason:
+        "The rejected movement was small, so the agent does not treat it as a strong trap pattern.",
+      reversalRisk: "LOW_REVERSAL",
+      reversalReason:
+        "The rejected odds movement was small, so reversal risk is low.",
+    };
+  }
   const detectedSignals = Array.from(snapshotsByMatch.values())
     .flatMap((matchSnapshots) =>
       matchSnapshots
@@ -297,15 +538,23 @@ app.get("/api/replay/backtest", async (_req, res) => {
             Boolean(signal)
         )
     )
-    .map((signal, index) => ({
-      ...signal,
-      id: `${useRealReplay ? "txline-replay" : "replay"}-signal-${index + 1}`,
-      resultStatus: useRealReplay
+    .map((signal, index) => {
+      const resultStatus = useRealReplay
         ? settleReplaySignal(signal)
         : signal.side === "away"
           ? "correct"
-          : "incorrect",
-    }));
+          : "incorrect";
+      const trapAssessment = classifyMarketTrap(signal, resultStatus);
+      const scoreRealityCheck = checkScoreReality(signal, resultStatus);
+
+      return {
+        ...signal,
+        id: `${useRealReplay ? "txline-replay" : "replay"}-signal-${index + 1}`,
+        resultStatus,
+        ...trapAssessment,
+        ...scoreRealityCheck,
+      };
+    });
 
   const councilVotes = detectedSignals.map((signal) => {
     const movementApproved = signal.oddsChangePct >= 4;
@@ -371,6 +620,16 @@ app.get("/api/replay/backtest", async (_req, res) => {
 
   const settledSignalCount = correctSignals + incorrectSignals;
 
+  const confirmedTraps = detectedSignals.filter(
+    (signal) => signal.trapStatus === "CONFIRMED_TRAP"
+  ).length;
+
+  const possibleTraps = detectedSignals.filter(
+    (signal) => signal.trapStatus === "POSSIBLE_TRAP"
+  ).length;
+
+  const smartMoneyTraps = confirmedTraps + possibleTraps;
+
   const proofHash = createHash("sha256")
     .update(
       JSON.stringify({
@@ -392,6 +651,11 @@ app.get("/api/replay/backtest", async (_req, res) => {
           oddsAfter: signal.oddsAfter,
           oddsChangePct: signal.oddsChangePct,
           resultStatus: signal.resultStatus,
+          trapStatus: signal.trapStatus,
+          trapScore: signal.trapScore,
+          reversalRisk: signal.reversalRisk,
+          finalScore: signal.finalScore,
+          scoreRealityStatus: signal.scoreRealityStatus,
         })),
         councilVotes: councilVotes.map((councilVote) => ({
           signalId: councilVote.signalId,
@@ -417,6 +681,9 @@ app.get("/api/replay/backtest", async (_req, res) => {
           settledSignalCount > 0
             ? Math.round((correctSignals / settledSignalCount) * 100)
             : 0,
+        smartMoneyTraps,
+        confirmedTraps,
+        possibleTraps,
       },
       timeline: [
         {
@@ -443,7 +710,11 @@ app.get("/api/replay/backtest", async (_req, res) => {
         },
         {
           step: "Outcomes verified",
-          detail: `${correctSignals} correct and ${incorrectSignals} incorrect signal(s)`,
+          detail: `${correctSignals} confirmed and ${incorrectSignals} rejected signal(s)`,
+        },
+        {
+          step: "Smart money traps detected",
+          detail: `${confirmedTraps} confirmed trap(s) and ${possibleTraps} possible trap(s) found from rejected market moves`,
         },
         {
           step: "Proof hash generated",
@@ -500,15 +771,4 @@ app.listen(config.port, async () => {
       });
   }, config.agentIntervalMs);
 });
-
-
-
-
-
-
-
-
-
-
-
 

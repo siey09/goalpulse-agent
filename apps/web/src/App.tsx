@@ -61,6 +61,14 @@ type AgentSignal = {
   reason?: string;
   createdAt?: string;
   resultStatus?: string;
+  trapStatus?: string;
+  trapScore?: number;
+  trapReason?: string;
+  reversalRisk?: string;
+  reversalReason?: string;
+  finalScore?: string;
+  scoreRealityStatus?: string;
+  scoreRealityReason?: string;
 };
 
 type AgentRun = {
@@ -100,6 +108,9 @@ type ReplayBacktest = {
     correctSignals?: number;
     incorrectSignals?: number;
     accuracyPct?: number;
+    smartMoneyTraps?: number;
+    confirmedTraps?: number;
+    possibleTraps?: number;
   };
   timeline?: {
     step?: string;
@@ -273,6 +284,11 @@ function App() {
   const [runs, setRuns] = useState<AgentRun[]>([]);
   const [stats, setStats] = useState<AgentStats | null>(null);
   const [oddsHistory, setOddsHistory] = useState<OddsSnapshot[]>([]);
+  const [isOddsStreamLive, setIsOddsStreamLive] = useState(false);
+  const [oddsStreamLastUpdate, setOddsStreamLastUpdate] = useState("");
+  const [isReplayStreamMode, setIsReplayStreamMode] = useState(false);
+  const [replayStreamProgress, setReplayStreamProgress] = useState("");
+  const [streamProgressPercent, setStreamProgressPercent] = useState(0);
   const [selectedMatchId, setSelectedMatchId] = useState("");
   const [selectedSignal, setSelectedSignal] = useState<AgentSignal | null>(null);
   const [activeSection, setActiveSection] = useState("overview");
@@ -280,6 +296,17 @@ function App() {
   const [matchStatusFilter, setMatchStatusFilter] = useState<"all" | Match["status"]>("all");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [replayStep, setReplayStep] = useState(-1);
+  const [isAnalystChatOpen, setIsAnalystChatOpen] = useState(false);
+  const [analystQuestion, setAnalystQuestion] = useState("");
+  const [analystMessages, setAnalystMessages] = useState<
+    { role: "user" | "assistant"; content: string }[]
+  >([
+    {
+      role: "assistant",
+      content:
+        "Ask me about the latest signal, smart money traps, reversal radar, score reality checks, or the outcome audit.",
+    },
+  ]);
   const [isJudgeMode, setIsJudgeMode] = useState(false);
   const [judgeStep, setJudgeStep] = useState(0);
   const [guidePanelPosition, setGuidePanelPosition] = useState({ top: 16, left: 16 });
@@ -289,7 +316,6 @@ function App() {
   const [replayBacktest, setReplayBacktest] = useState<ReplayBacktest | null>(null);
   const [isReplayRunning, setIsReplayRunning] = useState(false);
   const hasLoadedOnceRef = useRef(false);
-  const latestOddsRequestRef = useRef(0);
 
   const judgeDemoSteps = [
     {
@@ -302,7 +328,7 @@ function App() {
     },
     {
       title: "3. Market board",
-      detail: "Live matches are normalized here with home, draw, and away odds for quick market scanning.",
+      detail: "Market feed items are normalized here with home, draw, and away odds for quick scanning across live, upcoming, and finished matches.",
     },
     {
       title: "4. Latest signals",
@@ -361,6 +387,81 @@ function App() {
 
     return [...replayItems, ...liveItems].slice(0, 5);
   }, [signals, replayBacktest]);
+  function generateAnalystReply(question: string) {
+    const normalizedQuestion = question.toLowerCase();
+    const replaySignals = replayBacktest?.signals ?? [];
+    const trapSignals = replaySignals
+      .filter(
+        (signal) =>
+          signal.trapStatus === "CONFIRMED_TRAP" ||
+          signal.trapStatus === "POSSIBLE_TRAP"
+      )
+      .sort((a, b) => (b.trapScore ?? 0) - (a.trapScore ?? 0));
+    const topTrap = trapSignals[0];
+    const latestSignal = signals[0];
+    const summary = replayBacktest?.summary;
+
+    if (normalizedQuestion.includes("trap") || normalizedQuestion.includes("suspicious")) {
+      if (!topTrap) {
+        return "I do not see a confirmed trap pattern yet. Run the Outcome Audit first so I can inspect rejected market moves.";
+      }
+
+      return `Top suspicious move: ${topTrap.match ?? topTrap.matchId ?? "Unknown match"} · ${getSignalTarget(topTrap)}. Trap score ${topTrap.trapScore ?? 0}. ${topTrap.trapReason ?? "The odds movement was rejected by the final result."}`;
+    }
+
+    if (normalizedQuestion.includes("reversal")) {
+      if (!topTrap) {
+        return "No reversal pattern is available yet. Run the Outcome Audit first.";
+      }
+
+      return `Market Reversal Radar shows ${(topTrap.reversalRisk ?? "REVERSAL_SCAN").replaceAll("_", " ")} for ${getSignalTarget(topTrap)}. ${topTrap.reversalReason ?? "The move may have become overextended or failed score confirmation."}`;
+    }
+
+    if (normalizedQuestion.includes("score") || normalizedQuestion.includes("final")) {
+      if (!topTrap) {
+        return "Score Reality Check needs a finished match. Run the Outcome Audit to compare odds moves against final scores.";
+      }
+
+      return `Score Reality Check: ${(topTrap.scoreRealityStatus ?? "WAITING_FOR_FINAL_SCORE").replaceAll("_", " ")}. Final score: ${topTrap.finalScore ?? "pending"}. ${topTrap.scoreRealityReason ?? "GoalPulse compares the odds move against the final result."}`;
+    }
+
+    if (normalizedQuestion.includes("audit") || normalizedQuestion.includes("outcome")) {
+      if (!summary) {
+        return "The Outcome Audit has not been run yet. Click Run audit to replay stored TxLINE odds snapshots and verify what happened.";
+      }
+
+      return `Outcome Audit processed ${summary.signalsDetected ?? 0} signal(s), found ${summary.smartMoneyTraps ?? 0} smart money trap pattern(s), with ${summary.confirmedTraps ?? 0} confirmed and ${summary.possibleTraps ?? 0} possible.`;
+    }
+
+    if (normalizedQuestion.includes("latest") || normalizedQuestion.includes("signal")) {
+      if (!latestSignal) {
+        return "There is no latest live signal yet. The agent is waiting for a meaningful odds movement threshold.";
+      }
+
+      return `Latest live signal: ${latestSignal.match ?? latestSignal.matchId ?? "Unknown match"} · ${getSignalTarget(latestSignal)}. Odds moved from ${formatOdds(latestSignal.oddsBefore)} to ${formatOdds(latestSignal.oddsAfter)}, a ${formatOddsChange(latestSignal.oddsChangePct)} move.`;
+    }
+
+    if (normalizedQuestion.includes("advice") || normalizedQuestion.includes("bet")) {
+      return "GoalPulse is analytics only. It explains odds movement, trap risk, reversal risk, and score reality checks. It does not recommend bets.";
+    }
+
+    return "I can explain the latest signal, smart money traps, market reversal radar, score reality checks, or the outcome audit. Try asking: 'What is the biggest trap?'";
+  }
+
+  function sendAnalystMessage() {
+    const trimmedQuestion = analystQuestion.trim();
+
+    if (!trimmedQuestion) return;
+
+    const reply = generateAnalystReply(trimmedQuestion);
+
+    setAnalystMessages((currentMessages) => [
+      ...currentMessages,
+      { role: "user", content: trimmedQuestion },
+      { role: "assistant", content: reply },
+    ]);
+    setAnalystQuestion("");
+  }
   async function runReplayBacktest() {
     try {
       setIsReplayRunning(true);
@@ -405,9 +506,8 @@ function App() {
     "ring-2",
     "ring-orange-400/70",
     "shadow-2xl",
-    "shadow-orange-500/30",
+    "shadow-orange-500/20",
   ];
-
   function clearGuideSpotlight() {
     document.querySelectorAll("[data-guide-active='true']").forEach((element) => {
       element.classList.remove(...guideSpotlightClasses);
@@ -643,34 +743,100 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const currentRequestId = Date.now();
-    latestOddsRequestRef.current = currentRequestId;
-
-    async function loadSelectedOddsHistory() {
-      if (!selectedMatchId) {
-        setOddsHistory([]);
-        return;
-      }
-
-      try {
-        const oddsPayload = await request<unknown>(
-          `/api/odds-history?matchId=${selectedMatchId}`
-        );
-
-        if (latestOddsRequestRef.current === currentRequestId) {
-          setOddsHistory(
-            asArray<OddsSnapshot>(oddsPayload, ["history", "snapshots", "data"])
-          );
-        }
-      } catch (currentError) {
-        if (latestOddsRequestRef.current === currentRequestId) {
-          console.error("Unable to load selected odds history", currentError);
-        }
-      }
+    if (!selectedMatchId) {
+      setOddsHistory([]);
+      setIsOddsStreamLive(false);
+      return;
     }
 
-    void loadSelectedOddsHistory();
-  }, [selectedMatchId]);
+    const streamEndpoint = isReplayStreamMode
+      ? "/api/live/replay-stream"
+      : "/api/live/odds-stream";
+    const streamUrl = `${API_BASE_URL}${streamEndpoint}?matchId=${encodeURIComponent(
+      selectedMatchId
+    )}`;
+    const stream = new EventSource(streamUrl);
+
+    stream.addEventListener("open", () => {
+      setIsOddsStreamLive(true);
+    });
+
+    stream.addEventListener("odds-update", (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent).data) as {
+          history?: OddsSnapshot[];
+          match?: Match;
+          signals?: AgentSignal[];
+          stats?: AgentStats;
+          timestamp?: string;
+          streamMode?: "live" | "replay_test";
+          replayCursor?: number;
+          replayTotal?: number;
+          replayComplete?: boolean;
+        };
+
+        if (payload.history) {
+          setOddsHistory(payload.history);
+        }
+
+        if (payload.match) {
+          setMatches((currentMatches) => {
+            const existingIndex = currentMatches.findIndex(
+              (match) => match.id === payload.match?.id
+            );
+
+            if (existingIndex < 0) {
+              return [payload.match as Match, ...currentMatches];
+            }
+
+            return currentMatches.map((match, index) =>
+              index === existingIndex ? (payload.match as Match) : match
+            );
+          });
+        }
+
+        if (payload.signals?.length) {
+          setSignals((currentSignals) => {
+            const mergedSignals = [...payload.signals!, ...currentSignals];
+            const uniqueSignals = new Map<string, AgentSignal>();
+
+            for (const signal of mergedSignals) {
+              uniqueSignals.set(signal.id ?? `${signal.matchId}-${signal.createdAt}`, signal);
+            }
+
+            return Array.from(uniqueSignals.values()).slice(0, 100);
+          });
+        }
+
+        if (payload.stats) {
+          setStats(payload.stats);
+        }
+
+        if (payload.streamMode === "replay_test" && payload.replayCursor && payload.replayTotal) {
+          setReplayStreamProgress(`Demo tick ${payload.replayCursor}/${payload.replayTotal}`);
+          setStreamProgressPercent(
+            Math.min(100, Math.round((payload.replayCursor / payload.replayTotal) * 100))
+          );
+        } else {
+          setReplayStreamProgress("");
+        }
+
+        setOddsStreamLastUpdate(formatTime(payload.timestamp));
+        setIsOddsStreamLive(true);
+      } catch (currentError) {
+        console.error("Unable to parse odds stream update", currentError);
+      }
+    });
+
+    stream.addEventListener("error", () => {
+      setIsOddsStreamLive(false);
+    });
+
+    return () => {
+      stream.close();
+      setIsOddsStreamLive(false);
+    };
+  }, [selectedMatchId, isReplayStreamMode]);
 
   function goToSection(sectionId: string) {
     setActiveSection(sectionId);
@@ -784,9 +950,15 @@ function App() {
     () =>
       oddsHistory.slice(-18).map((snapshot, index) => {
         const odds = snapshot.market ?? snapshot;
+        const snapshotNumber = index + 1;
+        const hasTimestamp = Boolean(snapshot.timestamp);
 
         return {
-          name: snapshot.timestamp ? formatTime(snapshot.timestamp) : `${index + 1}`,
+          name: hasTimestamp ? formatTime(snapshot.timestamp) : `S${snapshotNumber}`,
+          snapshotLabel: `TxLINE snapshot ${snapshotNumber}`,
+          timelineLabel: hasTimestamp
+            ? `Captured at ${formatTime(snapshot.timestamp)}`
+            : `Replay snapshot ${snapshotNumber}`,
           rawTimestamp: snapshot.timestamp ?? "",
           home: odds.homeOdds,
           draw: odds.drawOdds,
@@ -818,9 +990,117 @@ function App() {
         y: Number(signal.oddsAfter ?? nearestPoint[dataKey]),
         dataKey,
         label: signalTypeLabel(getSignalType(signal)),
+        target: getSignalTarget(signal),
+        oddsBefore: signal.oddsBefore,
+        oddsAfter: signal.oddsAfter,
+        oddsChangePct: signal.oddsChangePct,
+        trapStatus: signal.trapStatus,
+        reversalRisk: signal.reversalRisk,
+        scoreRealityStatus: signal.scoreRealityStatus,
       };
     });
   }, [selectedMatch, chartData, signals]);
+  const chartMarketStory = useMemo(() => {
+    if (!selectedMatch || chartData.length < 2) {
+      return {
+        title: "Waiting for market story",
+        detail: "GoalPulse needs at least two TxLINE odds snapshots to explain movement.",
+        badge: "Learning",
+      };
+    }
+
+    const firstPoint = chartData[0];
+    const latestPoint = chartData[chartData.length - 1];
+
+    const homeStart = Number(firstPoint.home);
+    const homeEnd = Number(latestPoint.home);
+    const awayStart = Number(firstPoint.away);
+    const awayEnd = Number(latestPoint.away);
+
+    const homeCompression =
+      Number.isFinite(homeStart) && homeStart > 0 && Number.isFinite(homeEnd)
+        ? ((homeStart - homeEnd) / homeStart) * 100
+        : 0;
+    const awayCompression =
+      Number.isFinite(awayStart) && awayStart > 0 && Number.isFinite(awayEnd)
+        ? ((awayStart - awayEnd) / awayStart) * 100
+        : 0;
+
+    const strongerSide =
+      homeCompression >= awayCompression
+        ? selectedMatch.homeTeam ?? "Home"
+        : selectedMatch.awayTeam ?? "Away";
+    const strongerCompression = Math.max(homeCompression, awayCompression);
+
+    if (strongerCompression <= 3) {
+      return {
+        title: "Market is still balanced",
+        detail:
+          "No major odds compression yet. GoalPulse is watching for sharp movement.",
+        badge: "Watching",
+      };
+    }
+
+    return {
+      title: `${strongerSide} odds compressed ${strongerCompression.toFixed(1)}%`,
+      detail:
+        "Lower odds usually mean stronger market confidence. A sharp drop may trigger a signal.",
+      badge: "Market move",
+    };
+  }, [selectedMatch, chartData]);
+  const chartReadout = useMemo(() => {
+    const latestPoint = chartData[chartData.length - 1];
+    const firstPoint = chartData[0];
+
+    if (!selectedMatch || !latestPoint || !firstPoint) {
+      return {
+        homeCurrent: "—",
+        awayCurrent: "—",
+        dominantSide: "Waiting",
+        dominantMove: "—",
+        meaning: "Select a market with odds history to see the readout.",
+        signalStatus: "No chart signal yet",
+      };
+    }
+
+    const homeStart = Number(firstPoint.home);
+    const homeEnd = Number(latestPoint.home);
+    const awayStart = Number(firstPoint.away);
+    const awayEnd = Number(latestPoint.away);
+
+    const homeCompression =
+      Number.isFinite(homeStart) && homeStart > 0 && Number.isFinite(homeEnd)
+        ? ((homeStart - homeEnd) / homeStart) * 100
+        : 0;
+    const awayCompression =
+      Number.isFinite(awayStart) && awayStart > 0 && Number.isFinite(awayEnd)
+        ? ((awayStart - awayEnd) / awayStart) * 100
+        : 0;
+
+    const isAwayDominant = awayCompression > homeCompression;
+    const dominantSide = isAwayDominant
+      ? selectedMatch.awayTeam ?? "Away"
+      : selectedMatch.homeTeam ?? "Home";
+    const dominantMove = Math.max(homeCompression, awayCompression);
+
+    const relatedMarkers = chartSignalMarkers.length;
+
+    return {
+      homeCurrent: formatOdds(homeEnd),
+      awayCurrent: formatOdds(awayEnd),
+      dominantSide,
+      dominantMove:
+        dominantMove > 0 ? `${dominantMove.toFixed(1)}% compression` : "No compression",
+      meaning:
+        dominantMove > 8
+          ? "Sharp odds compression detected. This may indicate stronger market confidence."
+          : "Movement is mild. GoalPulse is still watching for a stronger signal.",
+      signalStatus:
+        relatedMarkers > 0
+          ? `${relatedMarkers} historical signal marker(s)`
+          : "No signal marker on this chart yet",
+    };
+  }, [selectedMatch, chartData, chartSignalMarkers]);
   const agentTimeline = useMemo(() => {
     const latestRun = runs[0];
     const latestSignal = signals[0];
@@ -846,7 +1126,7 @@ function App() {
       },
       {
         title: "Outcomes evaluated",
-        detail: `${stats?.correctSignals ?? 0} correct • ${stats?.incorrectSignals ?? 0} incorrect`,
+        detail: `${stats?.correctSignals ?? 0} confirmed • ${stats?.incorrectSignals ?? 0} rejected`,
         time: runTime,
       },
     ];
@@ -854,6 +1134,77 @@ function App() {
 
   return (
     <main className="min-h-screen bg-[#0b0806] p-3 text-stone-100">
+      <button
+        onClick={() => setIsAnalystChatOpen((isOpen) => !isOpen)}
+        className="fixed bottom-4 left-4 z-[80] rounded-full border border-sky-400/30 bg-sky-500 px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-sky-500/25 transition hover:bg-sky-400"
+      >
+        Ask GoalPulse
+      </button>
+
+      {isAnalystChatOpen && (
+        <div className="fixed bottom-20 left-4 z-[80] flex max-h-[560px] w-[380px] flex-col overflow-hidden rounded-[26px] border border-sky-400/25 bg-[#11100f]/95 shadow-2xl shadow-sky-500/20 backdrop-blur-xl ring-1 ring-white/10">
+          <div className="border-b border-white/10 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.24em] text-sky-200/70">
+                  GoalPulse Analyst Chat
+                </p>
+                <h2 className="mt-1 text-sm font-semibold text-white">
+                  Ask the audit agent
+                </h2>
+              </div>
+              <button
+                onClick={() => setIsAnalystChatOpen(false)}
+                className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-stone-300 transition hover:bg-white/10 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] leading-5 text-stone-400">
+              Deterministic analyst replies using the current signals, TxLINE replay audit,
+              trap detector, reversal radar, and score reality checks.
+            </p>
+          </div>
+
+          <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            {analystMessages.map((message, index) => (
+              <div
+                key={`${message.role}-${index}`}
+                className={`rounded-2xl border p-3 text-xs leading-5 ${
+                  message.role === "assistant"
+                    ? "border-sky-400/15 bg-sky-400/10 text-sky-50"
+                    : "ml-8 border-white/10 bg-white/5 text-stone-200"
+                }`}
+              >
+                <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-stone-400">
+                  {message.role === "assistant" ? "GoalPulse" : "You"}
+                </p>
+                {message.content}
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-white/10 p-3">
+            <div className="flex gap-2">
+              <input
+                value={analystQuestion}
+                onChange={(event) => setAnalystQuestion(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") sendAnalystMessage();
+                }}
+                placeholder="Ask about traps, reversals, score checks..."
+                className="min-w-0 flex-1 rounded-full border border-white/10 bg-black/30 px-3 py-2 text-xs text-white outline-none placeholder:text-stone-500 focus:border-sky-400/40"
+              />
+              <button
+                onClick={sendAnalystMessage}
+                className="rounded-full border border-sky-400/30 bg-sky-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-sky-400"
+              >
+                Ask
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {isJudgeMode && (
         <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] transition-opacity duration-500 pointer-events-none" />
       )}
@@ -1121,7 +1472,7 @@ function App() {
                         health?.useSimulatedFeed ? "text-amber-200" : "text-emerald-200"
                       }`}
                     >
-                      {health?.useSimulatedFeed ? "LAB MODE" : "LIVE MODE"}
+                      {health?.useSimulatedFeed ? "LAB MODE" : "DATA FEED ONLINE"}
                     </p>
                     <p className="mt-0.5 text-[10px] text-stone-400">
                       {health?.useSimulatedFeed ? "Demo feed" : "Real TxLINE API"}
@@ -1161,13 +1512,34 @@ function App() {
               <div className="overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(251,146,60,0.22),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.055),rgba(0,0,0,0.18))] p-4">
                 <div className="mb-3 flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs text-stone-400">Selected market</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs text-stone-400">Selected market</p>
+                      <span className="rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-300">
+                        {isReplayStreamMode
+                          ? "Demo replay"
+                          : selectedMatch?.status === "scheduled"
+                            ? "Pre-match odds"
+                            : selectedMatch?.status === "live"
+                              ? "Live odds"
+                              : selectedMatch?.status === "finished"
+                                ? "Finished audit"
+                                : "Waiting"}
+                      </span>
+                    </div>
                     <div className="mt-1 flex items-end gap-3">
                       <p className="text-3xl font-semibold tracking-tight text-white">
                         {formatOdds(chartData[chartData.length - 1]?.home)}
                       </p>
                       <span className="mb-1 rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
-                        Home odds
+                        {isReplayStreamMode
+                          ? "Demo replay tracked odds"
+                          : selectedMatch?.status === "scheduled"
+                            ? "Pre-match tracked odds"
+                            : selectedMatch?.status === "live"
+                              ? "Live tracked odds"
+                              : selectedMatch?.status === "finished"
+                                ? "Finished audit tracked odds"
+                                : "Primary tracked odds"}
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-stone-500">
@@ -1175,24 +1547,112 @@ function App() {
                         ? `${selectedMatch.homeTeam} vs ${selectedMatch.awayTeam}`
                         : "Waiting for match selection"}
                     </p>
+                    <p className="mt-2 max-w-md text-[11px] leading-5 text-stone-500">
+                      Lower odds usually mean stronger market confidence. GoalPulse explains movement for analytics only.
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-2 text-[10px]">
-                    <span className="rounded-full bg-white/8 px-3 py-1.5 text-stone-300">
-                      1 min
-                    </span>
-                    <span className="rounded-full bg-orange-400/15 px-3 py-1.5 text-orange-100">
-                      5 min
-                    </span>
-                    <span className="rounded-full bg-white/8 px-3 py-1.5 text-stone-300">
-                      15 min
-                    </span>
-                    <span className="rounded-full bg-white/8 px-3 py-1.5 text-stone-300">
-                      Live
-                    </span>
+                  <div className="max-w-[260px] rounded-2xl border border-white/10 bg-black/25 px-3 py-2 text-right">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
+                      Timeline view
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-white">
+                      Last {chartData.length} TxLINE snapshots
+                    </p>
+                    <p className="mt-1 text-[10px] leading-4 text-stone-500">
+                      S1-S{chartData.length} are odds captures, not match minutes.
+                    </p>
+                    <p className={`mt-2 text-[10px] font-semibold ${isReplayStreamMode ? "text-sky-200" : isOddsStreamLive ? "text-emerald-200" : "text-amber-200"}`}>
+                      {isReplayStreamMode ? "DEMO REPLAY STREAM" : isOddsStreamLive ? "DATA STREAM ACTIVE" : "CONNECTING DATA STREAM"}
+                    </p>
+                    {oddsStreamLastUpdate && (
+                      <p className="mt-1 text-[10px] text-stone-500">
+                        Last tick: {oddsStreamLastUpdate}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsReplayStreamMode((current) => !current)}
+                      className={`mt-3 w-full rounded-xl border px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] transition ${
+                        isReplayStreamMode
+                          ? "border-sky-400/40 bg-sky-500/15 text-sky-100"
+                          : "border-white/10 bg-white/5 text-stone-300 hover:border-white/20"
+                      }`}
+                    >
+                      {isReplayStreamMode ? "Stop demo replay" : "Start demo replay"}
+                    </button>
+                    {isReplayStreamMode && (
+                      <p className="mt-2 rounded-xl border border-sky-400/20 bg-sky-500/10 px-3 py-2 text-[10px] leading-4 text-sky-100">
+                        {replayStreamProgress || "Demo replay using saved real TxLINE snapshots"}
+                      </p>
+                    )}
                   </div>
                 </div>
 
+                <div className="mb-3 grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
+                  <div className="rounded-2xl border border-orange-400/15 bg-orange-400/10 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-orange-200/70">
+                          Market command center
+                        </p>
+                        <h3 className="mt-1 text-base font-semibold text-white">
+                          {chartMarketStory.title}
+                        </h3>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-orange-100">
+                        {chartMarketStory.badge}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-[11px] leading-5 text-orange-50/80">
+                      {chartMarketStory.detail}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
+                        Current odds
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-white">
+                        {selectedMatch?.homeTeam ?? "Home"} {chartReadout.homeCurrent}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-emerald-200">
+                        {selectedMatch?.awayTeam ?? "Away"} {chartReadout.awayCurrent}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
+                        Dominant move
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-white">
+                        {chartReadout.dominantSide}
+                      </p>
+                      <p className="mt-1 text-[11px] text-sky-200">
+                        {chartReadout.dominantMove}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
+                        What it means
+                      </p>
+                      <p className="mt-2 text-[11px] leading-5 text-stone-300">
+                        {chartReadout.meaning}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
+                        Signal status
+                      </p>
+                      <p className="mt-2 text-[11px] leading-5 text-orange-100">
+                        {chartReadout.signalStatus}
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 <div className="h-[285px] w-full rounded-[22px] bg-black/18 p-2">
                   {chartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -1240,16 +1700,62 @@ function App() {
                             stroke: "rgba(255,255,255,0.35)",
                             strokeWidth: 1,
                           }}
-                          formatter={(value) => Number(value).toFixed(2)}
-                          contentStyle={{
-                            background: "rgba(255,255,255,0.96)",
-                            border: "0",
-                            borderRadius: "14px",
-                            color: "#111827",
-                            boxShadow: "0 18px 50px rgba(0,0,0,0.35)",
-                            fontSize: "12px",
+                          wrapperStyle={{ zIndex: 50 }}
+                          content={(tooltipProps) => {
+                            const payload = tooltipProps.payload ?? [];
+                            const point = payload[0]?.payload;
+                            const marker = chartSignalMarkers.find(
+                              (currentMarker) => currentMarker.x === tooltipProps.label
+                            );
+
+                            if (!point) return null;
+
+                            return (
+                              <div className="w-[240px] rounded-2xl border border-white/10 bg-[#11100f]/95 p-3 text-xs text-stone-100 shadow-2xl shadow-black/50">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <p className="text-[10px] uppercase tracking-[0.18em] text-sky-200/70">
+                                      {point.snapshotLabel ?? "TxLINE snapshot"}
+                                    </p>
+                                    <p className="mt-1 text-[11px] text-stone-400">
+                                      {point.timelineLabel ?? "Odds history point"}
+                                    </p>
+                                  </div>
+                                  {marker && (
+                                    <span className="rounded-full bg-orange-400/15 px-2 py-1 text-[10px] font-semibold text-orange-100">
+                                      Signal
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="mt-3 grid gap-1.5">
+                                  <div className="flex justify-between rounded-xl bg-white/5 px-3 py-2">
+                                    <span className="text-stone-400">{selectedMatch?.homeTeam ?? "Home"}</span>
+                                    <span className="font-semibold text-orange-200">{formatOdds(point.home)}</span>
+                                  </div>
+                                  <div className="flex justify-between rounded-xl bg-white/5 px-3 py-2">
+                                    <span className="text-stone-400">{selectedMatch?.awayTeam ?? "Away"}</span>
+                                    <span className="font-semibold text-emerald-200">{formatOdds(point.away)}</span>
+                                  </div>
+                                </div>
+
+                                <p className="mt-2 rounded-xl bg-sky-400/10 px-3 py-2 text-[11px] leading-5 text-sky-100">
+                                  Lower odds = stronger market confidence.
+                                </p>
+
+                                {marker && (
+                                  <div className="mt-2 rounded-xl border border-orange-400/20 bg-orange-400/10 px-3 py-2 text-[11px] leading-5 text-orange-50/90">
+                                    <p className="font-semibold text-orange-100">{marker.label}</p>
+                                    <p>Target: {marker.target ?? "Tracked side"}</p>
+                                    <p>
+                                      Odds: {formatOdds(marker.oddsBefore)} → {formatOdds(marker.oddsAfter)}
+                                    </p>
+                                    <p>Move: {formatOddsChange(marker.oddsChangePct)}</p>
+                                  </div>
+                                )}
+                              </div>
+                            );
                           }}
-                          labelStyle={{ color: "#111827", fontWeight: 700 }}
                         />
 
                         <Area
@@ -1260,8 +1766,10 @@ function App() {
                           fill="url(#referenceHome)"
                           dot={false}
                           activeDot={{ r: 5, strokeWidth: 2 }}
-                          isAnimationActive={false}
-                          name="Home odds"
+                          isAnimationActive={true}
+                          animationDuration={650}
+                          animationEasing="ease-out"
+                          name="Primary tracked odds"
                         />
 
                         <Area
@@ -1272,7 +1780,9 @@ function App() {
                           fill="url(#referenceAway)"
                           dot={false}
                           activeDot={{ r: 4 }}
-                          isAnimationActive={false}
+                          isAnimationActive={true}
+                          animationDuration={650}
+                          animationEasing="ease-out"
                           name="Away odds"
                         />
                         {chartSignalMarkers.map((marker) => (
@@ -1297,33 +1807,48 @@ function App() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="flex h-full items-center justify-center rounded-3xl bg-black/25 text-sm text-stone-500">
-                      Waiting for odds history
+                      Select a market or start demo replay to load TxLINE snapshots
                     </div>
                   )}
                 </div>
 
                 <div className="mt-3 flex items-center justify-between gap-4">
                   <div className="flex flex-1 items-center gap-2">
-                    <div className="h-2 flex-1 rounded-full bg-white/8">
-                      <div className="h-2 w-[72%] rounded-full bg-gradient-to-r from-orange-500 to-emerald-400" />
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/8">
+                      <div
+                        className="h-2 rounded-full bg-gradient-to-r from-orange-500 to-emerald-400 transition-all duration-700 ease-out"
+                        style={{
+                          width: isReplayStreamMode
+                            ? `${streamProgressPercent}%`
+                            : isOddsStreamLive
+                              ? "100%"
+                              : "8%",
+                        }}
+                      />
                     </div>
-                    <span className="text-[10px] text-stone-500">Live odds stream</span>
+                    <span className="text-[10px] text-stone-500">
+                      {isReplayStreamMode
+                        ? replayStreamProgress || "Demo replay ready"
+                        : isOddsStreamLive
+                          ? "Data stream active"
+                          : "Data stream connecting"}
+                    </span>
                   </div>
 
                   <div className="flex gap-4 text-[11px] text-stone-400">
                     <span className="flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full bg-orange-400" />
-                      Home
+                      {selectedMatch?.homeTeam ?? "Home"}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                      Away
+                      {selectedMatch?.awayTeam ?? "Away"}
                     </span>
                                         <span className="flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full border border-orange-100 bg-orange-400" />
                       Signal marker
                     </span>
-                    <span>{(stats?.correctSignals ?? 0)} correct • {(stats?.closedSignals ?? 0)} closed</span>
+                    <span>Outcome audit: {(stats?.correctSignals ?? 0)} confirmed • {(stats?.closedSignals ?? 0)} closed</span>
                   </div>
                 </div>
               </div>
@@ -1339,12 +1864,17 @@ function App() {
             >
               <div className="mb-3 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-stone-500">Live matches</p>
+                  <p className="text-xs text-stone-500">Market feed</p>
                   <h2 className="text-xl font-semibold">Market board</h2>
                 </div>
                 <Radio className="h-4 w-4 text-emerald-300" />
               </div>
-
+
+
+              <p className="mb-3 rounded-2xl border border-white/10 bg-black/25 px-3 py-2 text-[11px] leading-5 text-stone-400">
+                Odds shown here are market prices, not match scores. Upcoming matches show pre-match odds before kickoff.
+              </p>
+
               <div className="mb-3 grid grid-cols-4 gap-1.5 rounded-2xl bg-black/20 p-1">
                 {(["all", "live", "scheduled", "finished"] as const).map((status) => (
                   <button
@@ -1386,11 +1916,19 @@ function App() {
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="rounded-full bg-white/8 px-2 py-1 text-[10px] font-semibold text-stone-300">
-                            {statusLabel(match.status)}
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+                            match.status === "live"
+                              ? "bg-emerald-400/15 text-emerald-200"
+                              : match.status === "scheduled"
+                                ? "bg-sky-400/15 text-sky-200"
+                                : match.status === "finished"
+                                  ? "bg-stone-400/15 text-stone-300"
+                                  : "bg-white/8 text-stone-300"
+                          }`}>
+                            {match.status === "scheduled" ? "PRE-MATCH" : match.status === "live" ? "LIVE" : match.status === "finished" ? "FINISHED" : statusLabel(match.status)}
                           </span>
                           <span className="text-xs text-stone-500">
-                            {match.minute ?? 0}'
+                            {match.status === "scheduled" ? "Pre-match" : match.status === "finished" ? "Final" : `${match.minute ?? 0}'`}
                           </span>
                         </div>
 
@@ -1400,26 +1938,26 @@ function App() {
                             <p className="text-sm font-medium text-white">{match.awayTeam}</p>
                           </div>
                           <div className="space-y-1 text-right text-lg font-semibold">
-                            <p>{match.homeScore ?? 0}</p>
-                            <p>{match.awayScore ?? 0}</p>
+                            <p>{match.status === "scheduled" ? "—" : match.homeScore ?? 0}</p>
+                            <p>{match.status === "scheduled" ? "—" : match.awayScore ?? 0}</p>
                           </div>
                         </div>
 
                         <div className="mt-2 grid grid-cols-3 gap-1.5 text-center text-[10px]">
                           <div className="rounded-lg bg-black/25 px-2 py-1.5">
-                            <p className="text-stone-500">Home</p>
+                            <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Home" : "Home"}</p>
                             <p className="font-semibold text-orange-200">
                               {formatOdds(odds.homeOdds)}
                             </p>
                           </div>
                           <div className="rounded-lg bg-black/25 px-2 py-1.5">
-                            <p className="text-stone-500">Draw</p>
+                            <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Draw" : "Draw"}</p>
                             <p className="font-semibold text-stone-200">
                               {formatOdds(odds.drawOdds)}
                             </p>
                           </div>
                           <div className="rounded-lg bg-black/25 px-2 py-1.5">
-                            <p className="text-stone-500">Away</p>
+                            <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Away" : "Away"}</p>
                             <p className="font-semibold text-emerald-200">
                               {formatOdds(odds.awayOdds)}
                             </p>
@@ -1604,21 +2142,29 @@ function App() {
               <div className="flex items-center justify-between text-sm text-stone-300">
                 <span>{selectedMatch?.homeTeam ?? "Home"}</span>
                 <span className="text-xl font-semibold text-white">
-                  {selectedMatch?.homeScore ?? 0}
+                  {selectedMatch?.status === "scheduled" ? "—" : selectedMatch?.homeScore ?? 0}
                 </span>
               </div>
               <div className="mt-3 flex items-center justify-between text-sm text-stone-300">
                 <span>{selectedMatch?.awayTeam ?? "Away"}</span>
                 <span className="text-xl font-semibold text-white">
-                  {selectedMatch?.awayScore ?? 0}
+                  {selectedMatch?.status === "scheduled" ? "—" : selectedMatch?.awayScore ?? 0}
                 </span>
               </div>
             </div>
 
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div className="rounded-xl bg-white/15 p-2.5">
-                <p className="text-xs text-white/70">Minute</p>
-                <p className="text-xl font-semibold">{selectedMatch?.minute ?? 0}'</p>
+                <p className="text-xs text-white/70">
+                  {selectedMatch?.status === "live" ? "Minute" : "Timing"}
+                </p>
+                <p className="text-xl font-semibold">
+                  {selectedMatch?.status === "scheduled"
+                    ? "Pre-match"
+                    : selectedMatch?.status === "finished"
+                      ? "Final"
+                      : `${selectedMatch?.minute ?? 0}'`}
+                </p>
               </div>
               <div className="rounded-xl bg-white/15 p-2.5">
                 <p className="text-xs text-white/70">Status</p>
@@ -1775,6 +2321,60 @@ function App() {
                   </div>
                 </div>
 
+                <div className="rounded-xl border border-red-400/20 bg-red-400/10 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-red-200/70">
+                        Smart Money Trap Detector
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-white">
+                        {replayBacktest.summary?.smartMoneyTraps ?? 0} trap pattern(s) detected
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-red-100">
+                      {(replayBacktest.summary?.confirmedTraps ?? 0)} confirmed •{" "}
+                      {(replayBacktest.summary?.possibleTraps ?? 0)} possible
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-[11px] leading-5 text-stone-300">
+                    GoalPulse checks whether sharp odds movements were later rejected by the final result.
+                    This helps expose possible false market moves instead of treating every strong move as a good signal.
+                  </p>
+
+                  <div className="mt-3 space-y-2">
+                    {(replayBacktest.signals ?? [])
+                      .filter(
+                        (signal) =>
+                          signal.trapStatus === "CONFIRMED_TRAP" ||
+                          signal.trapStatus === "POSSIBLE_TRAP"
+                      )
+                      .sort((a, b) => (b.trapScore ?? 0) - (a.trapScore ?? 0))
+                      .slice(0, 5)
+                      .map((signal, index) => (
+                        <button
+                          key={`${signal.id ?? "trap"}-${index}`}
+                          onClick={() => setSelectedSignal(signal)}
+                          className="w-full rounded-lg bg-black/25 p-2 text-left transition hover:bg-red-400/10"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="truncate text-[11px] font-semibold text-white">
+                              #{index + 1} · {signal.match ?? signal.matchId ?? "Unknown match"} · {getSignalTarget(signal)}
+                            </p>
+                            <span className="shrink-0 rounded-full bg-red-400/10 px-2 py-0.5 text-[10px] font-semibold text-red-100">
+                              Trap score {signal.trapScore ?? 0}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[10px] font-semibold text-purple-200">
+                            {(signal.reversalRisk ?? "REVERSAL_SCAN").replaceAll("_", " ")}
+                          </p>
+                          <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-stone-400">
+                            {signal.trapReason ?? "Rejected market move flagged for review."}
+                          </p>
+                        </button>
+                      ))}
+                  </div>
+                </div>
                 <div
                   id="guide-proof-readiness"
                   className={`rounded-xl border border-emerald-400/15 bg-emerald-400/10 p-3 transition-all ${
@@ -1915,7 +2515,7 @@ function App() {
             ) : (
               <p className="text-[11px] leading-5 text-stone-500">
                 Replay a saved World Cup odds sequence through the same signal engine to prove
-                the logic still works even when live matches are unavailable.
+                the logic still works even when real-time matches are unavailable.
               </p>
             )}
           </div>
@@ -2022,6 +2622,71 @@ function App() {
               </span>
             </div>
 
+            {(selectedSignal.trapStatus || selectedSignal.scoreRealityStatus) && (
+              <div className="mb-4 rounded-2xl border border-orange-400/25 bg-orange-400/10 p-4">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-orange-200/70">
+                  Agent verdict
+                </p>
+                <h3 className="mt-1 text-lg font-black text-white">
+                  {selectedSignal.scoreRealityStatus === "REJECTED_BY_SCORE" &&
+                  selectedSignal.trapStatus === "CONFIRMED_TRAP"
+                    ? "False market move exposed"
+                    : selectedSignal.scoreRealityStatus === "CONFIRMED_BY_SCORE"
+                      ? "Market move validated"
+                      : selectedSignal.trapStatus === "POSSIBLE_TRAP"
+                        ? "Possible trap under review"
+                        : "Market move under review"}
+                </h3>
+                <p className="mt-2 text-xs leading-5 text-stone-300">
+                  {selectedSignal.scoreRealityStatus === "REJECTED_BY_SCORE"
+                    ? "GoalPulse compared the odds movement against the final score and found that reality did not confirm the market move."
+                    : selectedSignal.scoreRealityStatus === "CONFIRMED_BY_SCORE"
+                      ? "GoalPulse compared the odds movement against the final score and found that the result confirmed the market move."
+                      : "GoalPulse is still tracking this movement until enough outcome evidence is available."}
+                </p>
+              </div>
+            )}
+            {(selectedSignal.trapStatus || selectedSignal.reversalRisk || selectedSignal.scoreRealityStatus) && (
+              <div className="mb-4 rounded-2xl border border-white/10 bg-black/25 p-4">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-stone-400">
+                  Autonomous decision chain
+                </p>
+
+                <div className="mt-3 grid gap-2 text-xs text-stone-300">
+                  <div className="rounded-xl bg-black/25 p-3">
+                    <span className="font-semibold text-white">1. Market movement detected:</span>{" "}
+                    {formatOdds(selectedSignal.oddsBefore)} moved to {formatOdds(selectedSignal.oddsAfter)} for {getSignalTarget(selectedSignal)}.
+                  </div>
+
+                  <div className="rounded-xl bg-black/25 p-3">
+                    <span className="font-semibold text-white">2. Trap detector:</span>{" "}
+                    {(selectedSignal.trapStatus ?? "WATCHING").replaceAll("_", " ")}
+                    {typeof selectedSignal.trapScore === "number" ? ` · score ${selectedSignal.trapScore}` : ""}
+                  </div>
+
+                  <div className="rounded-xl bg-black/25 p-3">
+                    <span className="font-semibold text-white">3. Reversal radar:</span>{" "}
+                    {(selectedSignal.reversalRisk ?? "REVERSAL_SCAN").replaceAll("_", " ")}
+                  </div>
+
+                  <div className="rounded-xl bg-black/25 p-3">
+                    <span className="font-semibold text-white">4. Score reality:</span>{" "}
+                    {(selectedSignal.scoreRealityStatus ?? "WAITING_FOR_FINAL_SCORE").replaceAll("_", " ")}
+                    {selectedSignal.finalScore ? ` · ${selectedSignal.finalScore}` : ""}
+                  </div>
+
+                  <div className="rounded-xl bg-black/25 p-3">
+                    <span className="font-semibold text-white">5. Final verdict:</span>{" "}
+                    {selectedSignal.scoreRealityStatus === "REJECTED_BY_SCORE" &&
+                    selectedSignal.trapStatus === "CONFIRMED_TRAP"
+                      ? "False market move exposed"
+                      : selectedSignal.scoreRealityStatus === "CONFIRMED_BY_SCORE"
+                        ? "Market move validated"
+                        : "Market move under review"}
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="mb-4 rounded-2xl border border-sky-400/15 bg-sky-400/10 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -2085,6 +2750,72 @@ function App() {
               />
             </div>
 
+            {selectedSignal.trapStatus && (
+              <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-400/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-red-200/70">
+                      Smart Money Trap Assessment
+                    </p>
+                    <h3 className="mt-1 text-sm font-semibold text-white">
+                      {selectedSignal.trapStatus.replaceAll("_", " ")}
+                    </h3>
+                  </div>
+                  <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-red-100">
+                    Trap score {selectedSignal.trapScore ?? 0}
+                  </span>
+                </div>
+
+                <p className="mt-3 text-xs leading-5 text-stone-300">
+                  {selectedSignal.trapReason ??
+                    "GoalPulse reviewed this odds move against the final result to detect whether the market movement was confirmed or rejected."}
+                </p>
+              </div>
+            )}
+            {selectedSignal.reversalRisk && (
+              <div className="mt-4 rounded-2xl border border-purple-400/20 bg-purple-400/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-purple-200/70">
+                      Market Reversal Radar
+                    </p>
+                    <h3 className="mt-1 text-sm font-semibold text-white">
+                      {selectedSignal.reversalRisk.replaceAll("_", " ")}
+                    </h3>
+                  </div>
+                  <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-purple-100">
+                    Reversal scan
+                  </span>
+                </div>
+
+                <p className="mt-3 text-xs leading-5 text-stone-300">
+                  {selectedSignal.reversalReason ??
+                    "GoalPulse checks whether the odds move became overextended or failed final-result confirmation."}
+                </p>
+              </div>
+            )}
+            {selectedSignal.scoreRealityStatus && (
+              <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/70">
+                      Score Reality Check
+                    </p>
+                    <h3 className="mt-1 text-sm font-semibold text-white">
+                      {selectedSignal.scoreRealityStatus.replaceAll("_", " ")}
+                    </h3>
+                  </div>
+                  <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-amber-100">
+                    {selectedSignal.finalScore ?? "Final score pending"}
+                  </span>
+                </div>
+
+                <p className="mt-3 text-xs leading-5 text-stone-300">
+                  {selectedSignal.scoreRealityReason ??
+                    "GoalPulse compares the odds movement against the final score to check if the market move was confirmed by reality."}
+                </p>
+              </div>
+            )}
             <div className="mt-4 rounded-2xl bg-black/25 p-4">
               <p className="text-[11px] text-stone-500">Agent explanation</p>
               <p className="mt-2 text-sm leading-6 text-stone-200">
@@ -2179,64 +2910,4 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
