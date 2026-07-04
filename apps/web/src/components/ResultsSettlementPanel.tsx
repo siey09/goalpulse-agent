@@ -1,4 +1,4 @@
-﻿import { CheckCircle2, Clock, Flag, ShieldCheck, Trophy } from "lucide-react";
+﻿import { CheckCircle2, Clock, Database, Flag, ShieldCheck, Trophy } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 const API_BASE_URL =
@@ -13,7 +13,28 @@ type Match = {
   awayScore: number;
   minute: number;
   status: "scheduled" | "live" | "finished";
+  statusId?: number;
+  statusLabel?: string;
+  clockSeconds?: number;
+  clockLabel?: string;
   lastUpdated?: string;
+};
+
+type ScoresContext = {
+  fixtureId?: string;
+  endpointUsed?: string;
+  actionLabel?: string;
+  latestAction?: string;
+  statusId?: number;
+  statusName?: string;
+  minute?: number;
+  clockSeconds?: number;
+  homeScore?: number;
+  awayScore?: number;
+  scoreline?: string;
+  reliability?: "RELIABLE" | "UNRELIABLE" | "SUSPENDED" | "UNKNOWN";
+  reliabilityReason?: string;
+  proofLabel?: string;
 };
 
 type AgentSignal = {
@@ -32,6 +53,7 @@ type AgentSignal = {
     endpointUsed?: string;
     messageId?: string;
     bookmaker?: string;
+    scoresContext?: ScoresContext;
   };
 };
 
@@ -42,6 +64,24 @@ function getWinner(match: Match) {
   return "Draw";
 }
 
+function getFinalScore(match?: Match) {
+  if (!match) return "Pending";
+  if (match.status === "scheduled") return "—";
+  return `${match.homeScore}-${match.awayScore}`;
+}
+
+function getStatusLabel(match?: Match) {
+  if (!match) return "WAITING";
+  return match.statusLabel?.toUpperCase() ?? match.status.toUpperCase();
+}
+
+function getClockLabel(match?: Match) {
+  if (!match) return "—";
+  if (match.status === "scheduled") return "Pre-match";
+  if (match.status === "finished") return match.statusLabel ?? "Final";
+  return match.clockLabel ?? `${match.minute}'`;
+}
+
 function getSignalSettlement(signal: AgentSignal, match?: Match) {
   if (!match || match.status !== "finished") return "Awaiting final result";
 
@@ -50,6 +90,28 @@ function getSignalSettlement(signal: AgentSignal, match?: Match) {
 
   if (winner === "Draw") return target.toLowerCase().includes("draw") ? "Correct" : "Incorrect";
   return winner.toLowerCase() === target.toLowerCase() ? "Correct" : "Incorrect";
+}
+
+function getSettlementReason(signal: AgentSignal, match?: Match) {
+  if (!match || match.status !== "finished") {
+    return "The fixture has not reached a final TXODDS score state yet.";
+  }
+
+  const winner = getWinner(match);
+  const settlement = getSignalSettlement(signal, match);
+  const finalScore = getFinalScore(match);
+
+  if (settlement === "Correct") {
+    return `The signal target matched the final winner: ${winner}. Final score was ${finalScore}.`;
+  }
+
+  return `The signal target did not match the final winner. Winner: ${winner}. Final score was ${finalScore}.`;
+}
+
+function compact(value?: string, max = 58) {
+  if (!value) return "—";
+  if (value.length <= max) return value;
+  return `${value.slice(0, max)}...`;
 }
 
 export function ResultsSettlementPanel() {
@@ -129,7 +191,7 @@ export function ResultsSettlementPanel() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-xs text-stone-500">Final score feed</p>
-            <h2 className="text-base font-semibold text-white">Recent results</h2>
+            <h2 className="text-base font-semibold text-white">TXODDS recent results</h2>
           </div>
           <Trophy className="h-4 w-4 text-emerald-300" />
         </div>
@@ -138,11 +200,13 @@ export function ResultsSettlementPanel() {
           {finishedMatches.length > 0 ? (
             finishedMatches.map((match) => (
               <div key={match.id} className="rounded-2xl bg-black/25 p-3">
-                <div className="mb-2 flex items-center justify-between">
+                <div className="mb-2 flex items-center justify-between gap-3">
                   <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-200">
-                    FINISHED
+                    {getStatusLabel(match)}
                   </span>
-                  <span className="text-[10px] text-stone-500">90'</span>
+                  <span className="text-[10px] text-stone-500">
+                    {getClockLabel(match)}
+                  </span>
                 </div>
 
                 <div className="space-y-1">
@@ -156,9 +220,18 @@ export function ResultsSettlementPanel() {
                   </div>
                 </div>
 
-                <p className="mt-2 text-[11px] text-stone-500">
-                  Winner: <span className="text-stone-200">{getWinner(match)}</span>
-                </p>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="rounded-xl bg-black/25 p-2">
+                    <p className="text-stone-500">Winner</p>
+                    <p className="truncate font-semibold text-stone-100">{getWinner(match)}</p>
+                  </div>
+                  <div className="rounded-xl bg-black/25 p-2">
+                    <p className="text-stone-500">TXODDS status</p>
+                    <p className="truncate font-semibold text-stone-100">
+                      {match.statusId ? `#${match.statusId}` : "—"}
+                    </p>
+                  </div>
+                </div>
               </div>
             ))
           ) : (
@@ -180,54 +253,74 @@ export function ResultsSettlementPanel() {
 
         <div className="space-y-2">
           {settlementItems.length > 0 ? (
-            settlementItems.map(({ signal, match, settlement }) => (
-              <div key={signal.id} className="rounded-2xl bg-black/25 p-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-white">
-                      {signal.match} → {signal.target}
-                    </p>
-                    <p className="mt-1 text-xs text-stone-500">
-                      Odds {signal.oddsBefore} → {signal.oddsAfter} • {signal.oddsChangePct}% move
-                    </p>
+            settlementItems.map(({ signal, match, settlement }) => {
+              const scoresContext = signal.evidence?.scoresContext;
+
+              return (
+                <div key={signal.id} className="rounded-2xl bg-black/25 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">
+                        {signal.match} → {signal.target}
+                      </p>
+                      <p className="mt-1 text-xs text-stone-500">
+                        Odds {signal.oddsBefore} → {signal.oddsAfter} • {signal.oddsChangePct}% move
+                      </p>
+                    </div>
+
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                        settlement === "Correct"
+                          ? "bg-emerald-400/10 text-emerald-200"
+                          : "bg-rose-400/10 text-rose-200"
+                      }`}
+                    >
+                      {settlement}
+                    </span>
                   </div>
 
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                      settlement === "Correct"
-                        ? "bg-emerald-400/10 text-emerald-200"
-                        : "bg-rose-400/10 text-rose-200"
-                    }`}
-                  >
-                    {settlement}
-                  </span>
+                  <p className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] leading-5 text-stone-400">
+                    {getSettlementReason(signal, match)}
+                  </p>
+
+                  {match && (
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[11px] md:grid-cols-4">
+                      <div className="rounded-xl bg-black/25 p-2">
+                        <Flag className="mx-auto mb-1 h-3.5 w-3.5 text-stone-500" />
+                        <p className="text-stone-500">Final</p>
+                        <p className="font-semibold text-white">{getFinalScore(match)}</p>
+                      </div>
+                      <div className="rounded-xl bg-black/25 p-2">
+                        <CheckCircle2 className="mx-auto mb-1 h-3.5 w-3.5 text-stone-500" />
+                        <p className="text-stone-500">Winner</p>
+                        <p className="truncate font-semibold text-white">{getWinner(match)}</p>
+                      </div>
+                      <div className="rounded-xl bg-black/25 p-2">
+                        <Clock className="mx-auto mb-1 h-3.5 w-3.5 text-stone-500" />
+                        <p className="text-stone-500">Status</p>
+                        <p className="truncate font-semibold text-white">{getStatusLabel(match)}</p>
+                      </div>
+                      <div className="rounded-xl bg-black/25 p-2">
+                        <Database className="mx-auto mb-1 h-3.5 w-3.5 text-stone-500" />
+                        <p className="text-stone-500">Source</p>
+                        <p className="truncate font-semibold text-white">
+                          {signal.evidence?.source ?? "txline"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-3 grid gap-2 text-[11px] md:grid-cols-2">
+                    <AuditRow label="Odds endpoint" value={signal.evidence?.endpointUsed} />
+                    <AuditRow label="Scores endpoint" value={scoresContext?.endpointUsed} />
+                    <AuditRow label="Scores scoreline" value={scoresContext?.scoreline} />
+                    <AuditRow label="Scores reliability" value={scoresContext?.reliability} />
+                    <AuditRow label="Bookmaker" value={signal.evidence?.bookmaker} />
+                    <AuditRow label="Message ID" value={compact(signal.evidence?.messageId)} mono />
+                  </div>
                 </div>
-
-                {match && (
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px]">
-                    <div className="rounded-xl bg-black/25 p-2">
-                      <Flag className="mx-auto mb-1 h-3.5 w-3.5 text-stone-500" />
-                      <p className="text-stone-500">Final</p>
-                      <p className="font-semibold text-white">
-                        {match.homeScore}-{match.awayScore}
-                      </p>
-                    </div>
-                    <div className="rounded-xl bg-black/25 p-2">
-                      <CheckCircle2 className="mx-auto mb-1 h-3.5 w-3.5 text-stone-500" />
-                      <p className="text-stone-500">Winner</p>
-                      <p className="truncate font-semibold text-white">{getWinner(match)}</p>
-                    </div>
-                    <div className="rounded-xl bg-black/25 p-2">
-                      <Clock className="mx-auto mb-1 h-3.5 w-3.5 text-stone-500" />
-                      <p className="text-stone-500">Source</p>
-                      <p className="truncate font-semibold text-white">
-                        {signal.evidence?.source ?? "txline"}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="rounded-2xl bg-black/25 p-4 text-sm text-stone-500">
               Finished-match signal settlements will appear once a signal matches a completed fixture.
@@ -239,3 +332,21 @@ export function ResultsSettlementPanel() {
   );
 }
 
+function AuditRow({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value?: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="rounded-xl bg-black/20 p-2">
+      <p className="text-[10px] uppercase tracking-[0.16em] text-stone-500">{label}</p>
+      <p className={`mt-1 break-words text-stone-200 ${mono ? "font-mono text-[10px]" : "text-xs font-semibold"}`}>
+        {value || "—"}
+      </p>
+    </div>
+  );
+}
