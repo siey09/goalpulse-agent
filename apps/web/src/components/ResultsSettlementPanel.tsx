@@ -32,6 +32,15 @@ type ScoresContext = {
   homeScore?: number;
   awayScore?: number;
   scoreline?: string;
+  scoreBreakdown?: {
+    h1?: string;
+    h2?: string;
+    total?: string;
+    goals?: string;
+    corners?: string;
+    redCards?: string;
+    yellowCards?: string;
+  };
   reliability?: "RELIABLE" | "UNRELIABLE" | "SUSPENDED" | "UNKNOWN";
   reliabilityReason?: string;
   proofLabel?: string;
@@ -315,6 +324,12 @@ export function ResultsSettlementPanel() {
                     <AuditRow label="Scores endpoint" value={scoresContext?.endpointUsed} />
                     <AuditRow label="Scores scoreline" value={scoresContext?.scoreline} />
                     <AuditRow label="Scores reliability" value={scoresContext?.reliability} />
+                    <AuditRow label="H1 goals" value={scoresContext?.scoreBreakdown?.h1} />
+                    <AuditRow label="H2 goals" value={scoresContext?.scoreBreakdown?.h2} />
+                    <AuditRow label="Total goals" value={scoresContext?.scoreBreakdown?.total ?? scoresContext?.scoreBreakdown?.goals} />
+                    <AuditRow label="Corners" value={scoresContext?.scoreBreakdown?.corners} />
+                    <AuditRow label="Red cards" value={scoresContext?.scoreBreakdown?.redCards} />
+                    <AuditRow label="Yellow cards" value={scoresContext?.scoreBreakdown?.yellowCards} />
                     <AuditRow label="Bookmaker" value={signal.evidence?.bookmaker} />
                     <AuditRow label="Message ID" value={compact(signal.evidence?.messageId)} mono />
                   </div>
@@ -350,3 +365,4 @@ function AuditRow({
     </div>
   );
 }
+

@@ -303,6 +303,7 @@ function buildScoresContext(
     homeScore: scores.homeScore,
     awayScore: scores.awayScore,
     scoreline: `${match.homeTeam} ${scores.homeScore} - ${scores.awayScore} ${match.awayTeam}`,
+    scoreBreakdown: scoreEvent ? extractScoreBreakdown(scoreEvent) : undefined,
     possessionType,
     ...pressure,
     ...reliability,
@@ -501,6 +502,60 @@ function readNestedNumber(
   return toNumber(current);
 }
 
+function formatScorePair(home?: number, away?: number): string | undefined {
+  if (home === undefined && away === undefined) return undefined;
+  return `${home ?? 0}-${away ?? 0}`;
+}
+
+function readParticipantStat(
+  scoreValue: unknown,
+  participant: "Participant1" | "Participant2",
+  periods: string[],
+  stats: string[]
+): number | undefined {
+  for (const period of periods) {
+    for (const stat of stats) {
+      const value = readNestedNumber(scoreValue, [participant, period, stat]);
+      if (value !== undefined) return value;
+    }
+  }
+
+  for (const stat of stats) {
+    const value = readNestedNumber(scoreValue, [participant, stat]);
+    if (value !== undefined) return value;
+  }
+
+  return undefined;
+}
+
+function readScorePair(
+  scoreValue: unknown,
+  periods: string[],
+  stats: string[]
+): string | undefined {
+  const home = readParticipantStat(scoreValue, "Participant1", periods, stats);
+  const away = readParticipantStat(scoreValue, "Participant2", periods, stats);
+
+  return formatScorePair(home, away);
+}
+
+function extractScoreBreakdown(
+  score: TxLineScoreSnapshot
+): TxLineScoresContext["scoreBreakdown"] | undefined {
+  const scoreValue = score.Score ?? score.Scores;
+
+  const breakdown: TxLineScoresContext["scoreBreakdown"] = {
+    h1: readScorePair(scoreValue, ["H1", "HT", "FirstHalf", "1H"], ["Goals", "goals"]),
+    h2: readScorePair(scoreValue, ["H2", "SecondHalf", "2H"], ["Goals", "goals"]),
+    total: readScorePair(scoreValue, ["Total", "FT", "FullTime"], ["Goals", "goals"]),
+    goals: readScorePair(scoreValue, ["Total", "FT", "FullTime"], ["Goals", "goals"]),
+    corners: readScorePair(scoreValue, ["Total", "FT", "FullTime"], ["Corners", "corners", "Corner"]),
+    redCards: readScorePair(scoreValue, ["Total", "FT", "FullTime"], ["RedCards", "redCards", "RedCard"]),
+    yellowCards: readScorePair(scoreValue, ["Total", "FT", "FullTime"], ["YellowCards", "yellowCards", "YellowCard"]),
+  };
+
+  return Object.values(breakdown).some(Boolean) ? breakdown : undefined;
+}
 function latestScoreEvent(
   score: TxLineScoreSnapshot | TxLineScoreSnapshot[]
 ): TxLineScoreSnapshot | undefined {
@@ -1095,6 +1150,7 @@ export async function fetchRecentTxLineResults(): Promise<TxLineFeedResult> {
     snapshots: sortSnapshotsChronologically([...uniqueSnapshots.values()]),
   };
 }
+
 
 
 

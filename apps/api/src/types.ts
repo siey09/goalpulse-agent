@@ -17,6 +17,15 @@ export interface TxLineScoresContext {
   homeScore?: number;
   awayScore?: number;
   scoreline?: string;
+  scoreBreakdown?: {
+    h1?: string;
+    h2?: string;
+    total?: string;
+    goals?: string;
+    corners?: string;
+    redCards?: string;
+    yellowCards?: string;
+  };
   possessionType?: string;
   pressureLevel?: "NONE" | "SAFE" | "ATTACK" | "DANGER" | "HIGH_DANGER";
   fieldPressureScore?: number;
@@ -105,6 +114,7 @@ export interface AgentRun {
   status: "success" | "error";
   message: string;
 }
+
 
 
 
