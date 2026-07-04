@@ -25,3 +25,5 @@ pnpm-debug.log*
 apps/api/.secrets/
 apps/api/.env.local
 
+
+replay_dump.json
