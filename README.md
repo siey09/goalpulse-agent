@@ -17,6 +17,15 @@ GoalPulse is analytics-only. It does not place wagers, custody funds, execute tr
 
 Odds movement alone can be noisy. GoalPulse adds an autonomous intelligence layer that combines odds movement, live score-event context, field pressure, reliability checks, and final score audit evidence.
 
+## Verified Live Result
+
+Running live against real TxLINE Service Level 12 data (2026-07-04): 90+ unattended agent cycles, real odds updates across 9 World Cup fixtures, and confirmed real-outcome accuracy tracking on closed signals. Two concrete case studies from live production data:
+
+- **Colombia vs Ghana** (validated move): SHARP_MOVE and MOMENTUM_SHIFT signals on Colombia, both confirmed `correct` after the match ended 1-0.
+- **Canada vs Morocco** (confirmed trap): a 55.13% and a 52.7% odds compression on Canada were both rejected by the final result (Canada lost 0-3), and the Outcome Audit layer correctly classified both as `CONFIRMED_TRAP` with `EXTREME_REVERSAL` risk, backed by a real SHA-256 proof hash.
+
+See SUBMISSION_NOTES.md for the full write-up, including two real bugs found and fixed during live verification: an undocumented TxLINE `StatusId: 100` for finished matches, and a snapshot-ordering issue that could pair a current snapshot with a chronologically later "previous" snapshot during historical backfills.
+
 ## Key Features
 
 - Autonomous backend agent loop
@@ -32,6 +41,9 @@ Odds movement alone can be noisy. GoalPulse adds an autonomous intelligence laye
 - Score breakdown evidence for H1, H2, total goals, corners, red cards, and yellow cards
 - Replay mode for repeatable hackathon demos
 - Evidence chain with endpoints, fixture IDs, message IDs, bookmakers, and proof labels
+- Three-agent Council Vote and SHA-256 proof hash on every Outcome Audit run
+- Smart Money Trap detection with reversal-risk classification
+- Server-Sent Events live streaming for real-time dashboard updates
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer
@@ -106,6 +118,9 @@ npm.cmd --prefix apps\web run build
 - GET /api/agent-runs
 - GET /api/odds-history
 - GET /api/recent-results
+- GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
+- GET /api/live/odds-stream (Server-Sent Events)
+- GET /api/live/replay-stream (Server-Sent Events, demo replay)
 - POST /api/agent/run-once
 
 ## Demo Highlights

@@ -40,8 +40,7 @@ Important backend files:
 - apps/api/src/services/txlineClient.ts
 - apps/api/src/logic/signalEngine.ts
 - apps/api/src/agent.ts
-
-## Frontend
+- apps/api/src/store.ts (in-memory state; resets on process restart)
 
 The frontend is a React, TypeScript, Vite, Tailwind CSS dashboard.
 
@@ -149,6 +148,21 @@ Audit evidence includes:
 - bookmaker
 - message id
 
+## Outcome Audit Layer (Council Vote, Trap Detection, Proof Hash)
+
+`GET /api/replay/backtest` runs a second, independent audit over stored real TxLINE signals:
+
+- **Three-Agent Council Vote** — Movement Detector, Mean Reversion Guard, and Evidence Correlator each vote approve, watch, or reject on every signal. A signal needs at least 2 of 3 approvals to be marked "approved."
+- **Smart Money Trap Classification** — signals rejected by the final result are labeled `CONFIRMED_TRAP`, `POSSIBLE_TRAP`, or `LOW_TRAP_RISK` with a reversal-risk rating (`EXTREME_REVERSAL`, `MODERATE_REVERSAL`, `NORMAL_WATCH`, or `VALIDATED`). Verified live example: two Canada signals (55.13% and 52.7% odds compression) were both rejected when Canada lost 0-3 to Morocco, and correctly flagged `CONFIRMED_TRAP` with `trapScore: 100` and `EXTREME_REVERSAL`.
+- **Cryptographic Proof Hash** — the full dataset (snapshot ids, event ids, signal outcomes, council decisions) is hashed with SHA-256 (Node `crypto` module) and reported with a Solana devnet anchoring readiness flag (`anchoringStatus: "pending_wallet_configuration"` until a wallet/private key is configured).
+- **Live Streaming** — `GET /api/live/odds-stream` and `GET /api/live/replay-stream` push updates over Server-Sent Events so the dashboard does not need to poll.
+
+## Known Issues Fixed During Live Verification
+
+**Undocumented StatusId 100.** A `game_finalised` TxLINE Scores action was observed carrying `StatusId: 100`, a value not listed in the official TXODDS Scores Product API doc (v1.0, StatusId 1-18 only). The original `statusFromStatusId()` mapping in `txlineClient.ts` did not treat this as finished, so signals for completed matches stayed pending indefinitely. Fixed by adding `100` to the finished-status set.
+
+**Snapshot ordering during historical backfill.** `findPreviousSnapshot()` in `store.ts` returns the most recently stored snapshot for a match without checking that it is chronologically older than the new snapshot being processed. When a finished match was re-ingested through the recent-results backfill path, older historical snapshots could be compared against an already-stored, much later snapshot, producing nonsensical odds-compression signals (for example, comparing a pre-match snapshot to a full-time snapshot as if it were a single in-play move). Fixed in `agent.ts` by skipping signal generation whenever the candidate previous snapshot is not strictly older than the current snapshot.
+
 ## Signal Thresholds
 
 - LOW watch signal: odds compression >= 4%
@@ -183,6 +197,9 @@ Do not commit .env.local, .secrets, or API tokens.
 - GET /api/agent-runs
 - GET /api/odds-history
 - GET /api/recent-results
+- GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
+- GET /api/live/odds-stream (Server-Sent Events)
+- GET /api/live/replay-stream (Server-Sent Events, demo replay)
 - POST /api/agent/run-once
 
 ## Deployment
