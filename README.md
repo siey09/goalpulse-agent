@@ -1,107 +1,117 @@
 ﻿# GoalPulse Agent
 
-GoalPulse Agent is an autonomous World Cup odds movement and match momentum detector built for the TxLINE Trading Tools and Agents track.
+GoalPulse Agent is an autonomous TxLINE-powered sports market intelligence dashboard built for the TxLINE Trading Tools and Agents track.
 
-The system continuously ingests match and odds feed data, stores odds snapshots, detects sharp market movement, generates deterministic agent signals, explains every signal, and displays the results in a live dashboard.
+It monitors live football match markets, detects meaningful odds movement, enriches each signal with TXODDS Scores event context, and explains whether a market move is field-backed or market-only.
 
-## Core Idea
+GoalPulse is analytics-only. It does not place wagers, custody funds, execute trades, or facilitate betting.
 
-Live sports odds move quickly during matches. GoalPulse Agent acts as an automated monitoring layer that watches odds movement and match state, then flags meaningful changes without requiring manual human input.
-
-The project is designed as an analytics and market intelligence tool. It does not place wagers, custody funds, or execute betting transactions.
-
-## Features
-
-- Autonomous agent cycle running on a fixed interval
-- TxLINE-style live feed ingestion layer
-- Match score and minute tracking
-- Odds snapshot history
-- Sharp odds movement detection
-- Momentum score calculation
-- Signal generation with severity levels
-- Human-readable signal explanations
-- Live React dashboard
-- Backend API for matches, signals, stats, and odds history
-
-## Agent Logic
-
-The signal engine compares the current odds snapshot against the previous snapshot for each match.
-
-Signal rules:
-
-- HIGH sharp movement: odds compression greater than or equal to 15%
-- MEDIUM momentum shift: odds compression greater than or equal to 8%
-- LOW watch signal: odds compression greater than or equal to 4%
-- NO ACTION: movement below threshold
-
-Momentum score combines odds movement weight, match time pressure, and score change impact.
-
-## Tech Stack
-
-Frontend: React, TypeScript, Vite, Tailwind CSS, Recharts
-
-Backend: Node.js, Express, TypeScript, TSX
-
-## Project Structure
-
-goalpulse-agent/
-  apps/
-    web/   React dashboard
-    api/   Express API and autonomous agent
-  package.json
-  .gitignore
-  README.md
-
-## Local Development
-
-Run backend:
-
-cd apps/api
-npm.cmd install
-npm.cmd run dev
-
-Backend API: http://localhost:4000
-
-Run frontend:
-
-cd apps/web
-npm.cmd install
-npm.cmd run dev
-
-Frontend dashboard: http://localhost:5173
-
-## API Endpoints
-
-GET /health
-GET /api/matches
-GET /api/signals
-GET /api/stats
-GET /api/agent-runs
-GET /api/odds-history?matchId=wc-usa-bra
-POST /api/agent/run-once
-
-## Current Prototype Mode
-
-The current version uses a simulated TxLINE-style feed so the autonomous agent and dashboard can be demonstrated even when no live World Cup match is active during judging.
-
-The architecture separates feed ingestion from the signal engine, so the simulated adapter can be replaced with real TxLINE endpoints without changing the dashboard or decision logic.
-
-## Demo Focus
-
-1. Show the problem: live odds move faster than humans can monitor manually.
-2. Show the autonomous backend agent running on interval.
-3. Show live match and odds snapshots updating.
-4. Show agent-generated signals with explanations.
-5. Show the dashboard updating automatically.
-6. Explain how TxLINE powers the backend architecture.
-
-## Safety Note
-
-GoalPulse Agent is an analytics and monitoring tool. It does not execute wagers, facilitate illegal betting, custody funds, or perform financial transactions.
-
-## Live Deployment
+## Live Links
 
 - Frontend: https://goalpulse-agent.vercel.app
 - Backend API: https://goalpulse-agent-api.onrender.com
 - Health Check: https://goalpulse-agent-api.onrender.com/health
+- Repository: https://github.com/siey09/goalpulse-agent
 
+## Core Idea
+
+Odds movement alone can be noisy. GoalPulse adds an autonomous intelligence layer that combines odds movement, live score-event context, field pressure, reliability checks, and final score audit evidence.
+
+## Key Features
+
+- Autonomous backend agent loop
+- Real TxLINE feed adapter
+- Odds snapshot normalization
+- Sharp odds movement detection
+- TXODDS Scores event context
+- Field Pressure Index
+- Field-backed vs market-only signal labels
+- Reliability filter for suspended, unreliable, amended, or discarded data
+- Precise match status and clock labels
+- Final score settlement audit
+- Score breakdown evidence for H1, H2, total goals, corners, red cards, and yellow cards
+- Replay mode for repeatable hackathon demos
+- Evidence chain with endpoints, fixture IDs, message IDs, bookmakers, and proof labels
+- React dashboard for live monitoring and judge presentation
+
+## Scores Intelligence Layer
+
+GoalPulse uses TXODDS Scores context to explain why an odds move may have happened.
+
+Supported context includes goals, shots, corners, free kicks, penalties, VAR reviews, cards, safe possession, attack possession, danger possession, and high danger possession.
+
+A signal becomes stronger when odds movement occurs near high-pressure field events. If odds move without supporting match context, GoalPulse labels it as market-only movement.
+
+## Field Pressure Index
+
+The Field Pressure Index converts live match actions into an explainable pressure score.
+
+- High danger possession plus odds compression means stronger field-backed evidence.
+- Shot, penalty, VAR, red card, or goal near odds movement increases signal strength.
+- Odds movement without field context is treated as possible market-only movement.
+- Suspended or unreliable data reduces confidence.
+
+## Reliability Filter
+
+GoalPulse lowers or warns confidence when the feed includes suspend, unreliable_corners, unreliable_yellow_cards, action_amend, action_discarded, suspended coverage, or unreliable event flags.
+
+## Signal Thresholds
+
+- HIGH sharp move: odds compression >= 15%
+- MEDIUM momentum shift: odds compression >= 8%
+- LOW watch signal: odds compression >= 4%
+- NO ACTION: movement below threshold
+
+Momentum scoring combines odds compression, match time pressure, score movement, TXODDS field pressure context, and reliability penalties.
+
+## Tech Stack
+
+- Frontend: React, TypeScript, Vite, Tailwind CSS, Recharts, lucide-react
+- Backend: Node.js, Express, TypeScript, TSX
+- Deployment: Vercel frontend, Render backend, GitHub main branch
+
+## Project Structure
+
+- apps/api: Express API, TxLINE adapter, autonomous agent, signal engine
+- apps/web: React dashboard and judge-facing UI
+- DEMO_CHECKLIST.md: demo flow
+- SUBMISSION_NOTES.md: hackathon submission summary
+- TECHNICAL_DOCS.md: architecture notes
+
+## Local Development
+
+Backend:
+cd C:\Projects\goalpulse-agent\apps\api
+npm.cmd install
+npm.cmd run dev
+
+Frontend:
+cd C:\Projects\goalpulse-agent\apps\web
+npm.cmd install
+$env:VITE_API_BASE_URL="http://localhost:4000"
+npm.cmd run dev -- --host 127.0.0.1 --port 5175 --strictPort
+
+## Build Checks
+
+cd C:\Projects\goalpulse-agent
+npm.cmd --prefix apps\api run build
+npm.cmd --prefix apps\web run build
+
+## API Endpoints
+
+- GET /health
+- GET /api/matches
+- GET /api/signals
+- GET /api/stats
+- GET /api/agent-runs
+- GET /api/odds-history
+- GET /api/recent-results
+- POST /api/agent/run-once
+
+## Demo Highlights
+
+Judges should look for the live market board, TXODDS field context, Field Pressure Index, field-backed vs market-only labels, final score settlement audit, score breakdown rows, replay mode, and analytics-only compliance boundary.
+
+## Compliance Boundary
+
+GoalPulse explains sports market movement using odds snapshots, scores context, reliability checks, and audit evidence. It does not place bets, recommend wagers as financial advice, custody funds, execute trades, connect to betting accounts, or facilitate illegal betting.

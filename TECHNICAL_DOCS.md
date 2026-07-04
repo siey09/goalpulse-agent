@@ -2,124 +2,201 @@
 
 ## Overview
 
-GoalPulse Agent is an autonomous sports odds movement and match momentum detector for the TxLINE Trading Tools and Agents track.
+GoalPulse Agent is an autonomous TxLINE-powered sports market intelligence system.
 
-The system ingests live or simulated TxLINE-style match data, normalizes match and odds snapshots, runs deterministic signal logic, logs autonomous decisions, and evaluates signal outcomes after matches finish.
+It combines live odds movement, TXODDS Scores event context, field pressure scoring, reliability checks, and final score audit evidence to explain sports market movement.
 
-## Core Architecture
+The system is analytics-only. It does not place wagers, custody funds, execute trades, or facilitate betting.
 
-GoalPulse has three main layers:
+## Architecture
 
-1. Feed ingestion layer
-2. Autonomous agent and signal engine
-3. Live dashboard and API layer
+GoalPulse has four main layers:
 
-## Feed Ingestion
+1. TxLINE feed ingestion
+2. TXODDS Scores intelligence enrichment
+3. Autonomous signal engine
+4. React dashboard and audit interface
 
-The backend currently supports two feed modes:
+## Backend
 
-- Simulated TxLINE mode for demo reliability
-- Real TxLINE adapter mode for production integration
+The backend is a Node.js, Express, and TypeScript API.
 
-The feed mode is controlled with:
+Core responsibilities:
 
-USE_SIMULATED_FEED=true
+- Fetch TxLINE fixtures and odds snapshots
+- Fetch TXODDS Scores snapshots per fixture
+- Normalize match, odds, and score context
+- Run autonomous agent cycles
+- Detect odds compression signals
+- Attach field event context
+- Apply reliability penalties
+- Store evidence-rich signal history in memory for the demo
+- Serve dashboard API endpoints
 
-When set to false, the agent uses the TxLINE client adapter and reads API credentials from environment variables.
+Important backend files:
 
-## Environment Variables
+- apps/api/src/server.ts
+- apps/api/src/types.ts
+- apps/api/src/services/txlineClient.ts
+- apps/api/src/logic/signalEngine.ts
+- apps/api/src/logic/agent.ts
 
-PORT=4000
-AGENT_INTERVAL_MS=5000
-USE_SIMULATED_FEED=true
-TXLINE_API_BASE_URL=https://txline.txodds.com
-TXLINE_API_KEY=
+## Frontend
 
-## Agent Strategy
+The frontend is a React, TypeScript, Vite, Tailwind CSS dashboard.
 
-The agent compares the current odds snapshot against the previous odds snapshot for each match.
+Core dashboard areas:
 
-Signal thresholds:
+- Market Board
+- Odds movement chart
+- Signal Intelligence Panel
+- Results Settlement Panel
+- Replay audit demo
+- Judge Demo Guide
+- Agent timeline and stats
 
-- HIGH sharp movement: odds compression >= 15%
-- MEDIUM momentum shift: odds compression >= 8%
+Important frontend files:
+
+- apps/web/src/App.tsx
+- apps/web/src/components/SignalIntelligencePanel.tsx
+- apps/web/src/components/ResultsSettlementPanel.tsx
+
+## TxLINE and TXODDS Scores Usage
+
+The system uses TxLINE odds data for market movement and TXODDS Scores context for match-event explanation.
+
+Scores context can include:
+
+- latest action
+- action team
+- status id
+- status label
+- match clock
+- scoreline
+- possession type
+- pressure level
+- field pressure score
+- reliability status
+- score breakdown
+
+## Field Pressure Index
+
+GoalPulse maps field events into pressure levels:
+
+- NONE
+- SAFE
+- ATTACK
+- DANGER
+- HIGH_DANGER
+
+Examples:
+
+- safe_possession -> SAFE
+- attack_possession or corner -> ATTACK
+- shot or danger_possession -> DANGER
+- goal, penalty, VAR, red card, or high_danger_possession -> HIGH_DANGER
+
+The field pressure score is added to the signal confidence calculation, while unreliable or suspended feed states reduce confidence.
+
+## Reliability Filter
+
+The signal engine treats the following as warning conditions:
+
+- suspend
+- unreliable_corners
+- unreliable_yellow_cards
+- action_amend
+- action_discarded
+- suspended coverage status
+- unreliable flags from score event data
+
+GoalPulse does not blindly trust every update. It surfaces reliability status as part of the signal evidence.
+
+## Match Status and Clock
+
+The backend maps TXODDS status ids into clearer match labels such as:
+
+- Not Started
+- 1st Half
+- Half Time
+- 2nd Half
+- Finished
+- Extra Time
+- Penalty Shootout
+- Interrupted
+- Abandoned
+- Cancelled
+- Coverage Suspended
+
+The frontend displays these precise labels instead of only generic scheduled/live/finished states.
+
+## Final Score Audit
+
+Results Settlement checks whether a previously detected signal was confirmed or rejected after final score settlement.
+
+Audit evidence includes:
+
+- odds endpoint
+- scores endpoint
+- scoreline
+- reliability
+- H1 goals
+- H2 goals
+- total goals
+- corners
+- red cards
+- yellow cards
+- bookmaker
+- message id
+
+## Signal Thresholds
+
 - LOW watch signal: odds compression >= 4%
-- NO ACTION: movement below 4%
+- MEDIUM momentum shift: odds compression >= 8%
+- HIGH sharp move: odds compression >= 15%
 
 Momentum score combines:
 
-- odds movement
+- odds compression
 - match time pressure
 - score change impact
+- field pressure context
+- reliability penalty
 
-## Autonomous Operation
+## Environment Variables
 
-The backend automatically runs the agent cycle on a fixed interval. In demo mode, the interval is 5 seconds. In production mode, this can be set to 60 seconds or another appropriate interval.
+- PORT=4000
+- AGENT_INTERVAL_MS=5000
+- USE_SIMULATED_FEED=false
+- TXLINE_API_BASE_URL=https://txline.txodds.com
+- TXLINE_API_TOKEN or TXLINE_API_KEY
+- VITE_API_BASE_URL=https://goalpulse-agent-api.onrender.com
 
-Each agent cycle:
-
-1. Fetches feed data
-2. Updates match state
-3. Creates odds snapshots
-4. Compares current odds against previous odds
-5. Generates signals when thresholds are met
-6. Evaluates pending signals when matches finish
-7. Updates accuracy statistics
+Do not commit .env.local, .secrets, or API tokens.
 
 ## API Endpoints
 
-GET /health
-Returns API health, feed mode, and agent interval.
+- GET /health
+- GET /api/matches
+- GET /api/signals
+- GET /api/stats
+- GET /api/agent-runs
+- GET /api/odds-history
+- GET /api/recent-results
+- POST /api/agent/run-once
 
-GET /api/matches
-Returns normalized live match objects.
+## Deployment
 
-GET /api/signals
-Returns autonomous agent signals.
+- Frontend: Vercel
+- Backend: Render
+- Repository: GitHub main branch
 
-GET /api/stats
-Returns processed update count, generated signals, pending signals, correct signals, incorrect signals, closed signals, and strategy accuracy.
+Production URLs:
 
-GET /api/agent-runs
-Returns historical agent cycle logs.
+- https://goalpulse-agent.vercel.app
+- https://goalpulse-agent-api.onrender.com
+- https://goalpulse-agent-api.onrender.com/health
 
-GET /api/odds-history?matchId=wc-usa-bra
-Returns odds snapshots for a selected match.
+## Compliance Boundary
 
-POST /api/agent/run-once
-Manually triggers one agent cycle for testing.
-
-## TxLINE Integration Notes
-
-The current prototype uses a simulated TxLINE-style feed so judges can test and view the complete product flow even when no real match is live.
-
-The real TxLINE adapter is located at:
-
-apps/api/src/services/txlineClient.ts
-
-The adapter uses bearer token authentication via:
-
-Authorization: Bearer TXLINE_API_KEY
-
-After receiving the official TxLINE World Cup endpoint response, only the adapter mapper needs to be updated. The signal engine, API routes, and dashboard can remain unchanged because the internal Match and OddsSnapshot schema is already normalized.
-
-## Safety and Compliance
-
-GoalPulse Agent is an analytics and monitoring tool. It does not place wagers, custody funds, execute trades, or perform financial transactions.
-
-## Demo Script Summary
-
-1. Show the dashboard.
-2. Show that the API is healthy.
-3. Show the autonomous backend logs running every interval.
-4. Show live match updates and odds movement.
-5. Show agent-generated signals.
-6. Show finished matches triggering signal evaluation.
-7. Show accuracy stats on the dashboard.
-
-## Live Deployment Links
-
-- Frontend Dashboard: https://goalpulse-agent.vercel.app
-- Backend API: https://goalpulse-agent-api.onrender.com
-- API Health Check: https://goalpulse-agent-api.onrender.com/health
-
+GoalPulse is a decision-support and analytics dashboard. It explains market movement and match context, but it does not execute or facilitate betting.

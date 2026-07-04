@@ -1,97 +1,187 @@
 ﻿# GoalPulse Agent Demo Checklist
 
-Target demo length: under 5 minutes.
+Target demo length: 3 to 5 minutes.
 
 ## 1. Opening Problem
 
-Explain that live sports odds and match data move quickly, and manual monitoring can miss important shifts.
+Explain the problem:
+
+Live football odds move quickly, but odds movement alone does not explain why the market moved.
 
 Suggested line:
-GoalPulse Agent is an autonomous monitoring tool that watches TxLINE-style live match and odds data, detects meaningful odds movement, explains the signal, and tracks whether the signal was correct after the match ends.
 
-## 2. Show Backend Agent
+GoalPulse Agent is an autonomous TxLINE-powered market intelligence tool that detects meaningful odds movement, connects it with live TXODDS Scores context, and explains whether the move was field-backed or market-only.
 
-Open backend terminal:
-
-cd apps/api
-npm.cmd run dev
-
-Show logs like:
-
-Feed mode: simulated_txline
-Processed 3 matches, generated 1 signal(s), and evaluated 0 pending signal(s).
-
-Explain that the agent runs automatically every interval without manual input.
-
-## 3. Show API Health
+## 2. Open Production App
 
 Open:
-http://localhost:4000/health
 
-Show:
-- service status
+https://goalpulse-agent.vercel.app
+
+Hard refresh before demo:
+
+Ctrl + Shift + R
+
+Show that the app is live and connected to the deployed Render API.
+
+## 3. Show Backend Health
+
+Open:
+
+https://goalpulse-agent-api.onrender.com/health
+
+Point out:
+
+- service is running
 - agent interval
-- feed mode
+- useSimulatedFeed is false
+- TxLINE base URL
 
-## 4. Show Live Dashboard
+## 4. Market Board
 
-Open:
-http://localhost:5173
+Show the Market Board.
 
-Show:
-- TxLINE updates
-- signals generated
-- strategy accuracy
-- live matches
-- odds chart
-- autonomous signal feed
+Point out:
 
-## 5. Show Signals
+- normalized home, draw, and away odds
+- precise TXODDS match status
+- match clock labels
+- live/upcoming/finished filtering
 
-Open:
-http://localhost:4000/api/signals
+Suggested line:
+
+Instead of generic live or finished labels, GoalPulse maps TXODDS status ids into judge-readable match states like 1st Half, Half Time, Finished, or Coverage Suspended.
+
+## 5. Odds Movement Chart
+
+Show the odds chart.
+
+Point out:
+
+- odds movement over time
+- movement markers
+- sharp move thresholds
+
+Suggested line:
+
+The system compares current and previous odds snapshots and only surfaces signals when movement crosses transparent thresholds.
+
+## 6. Signal Intelligence Panel
+
+Show the Signal Intelligence Panel.
+
+Point out:
+
+- severity
+- momentum score
+- movement percentage
+- field-backed or market-only label
+- explanation
+- TXODDS field context
+
+Suggested line:
+
+GoalPulse does not just say odds moved. It explains what happened near the movement, such as goal, shot, VAR, penalty, card, danger possession, or high-danger possession.
+
+## 7. Field Pressure Index
+
+Show field context and pressure information.
+
+Point out:
+
+- NONE
+- SAFE
+- ATTACK
+- DANGER
+- HIGH_DANGER
+
+Suggested line:
+
+Odds movement near high-danger possession, VAR, penalty, red card, or goal receives stronger evidence than movement with no field context.
+
+## 8. Reliability Filter
+
+Show reliability status if available.
+
+Explain that GoalPulse reduces confidence when TXODDS data is marked unreliable, suspended, amended, or discarded.
+
+Suggested line:
+
+The agent does not blindly trust every update. It surfaces reliability warnings as part of the signal evidence.
+
+## 9. Results Settlement Audit
+
+Show the Results Settlement Panel.
+
+Point out:
+
+- confirmed or rejected signal
+- final score
+- winner
+- scores endpoint
+- scoreline
+- reliability
+- H1 goals
+- H2 goals
+- total goals
+- corners
+- red cards
+- yellow cards
+- bookmaker
+- message id
+
+Suggested line:
+
+After the match is finished, GoalPulse audits whether the signal was confirmed or rejected using final score and score breakdown evidence.
+
+## 10. Replay Mode
+
+Show replay/audit section if available.
 
 Explain:
-- signal type
-- severity
-- odds before and after
-- odds movement percentage
-- momentum score
-- explanation
-- result status
 
-## 6. Show Evaluation
+Replay mode makes the demo repeatable even when live match activity is quiet. It runs stored TxLINE snapshots through the same signal engine.
 
-Open:
-http://localhost:4000/api/stats
+## 11. Judge Demo Guide
 
-Show:
-- pending signals
-- correct signals
-- incorrect signals
-- closed signals
-- strategy accuracy
+Open or scroll to the Judge Demo Guide.
 
-Explain that the agent evaluates pending signals after matches finish.
+Point out:
 
-## 7. Explain TxLINE Integration
+- autonomous intelligence overview
+- scores intelligence signals
+- final score audit
+- field pressure context
+- evidence chain
+- compliance boundary
 
-Show file:
-apps/api/src/services/txlineClient.ts
+## 12. Compliance Boundary
 
-Explain that demo mode uses a simulated TxLINE-style feed for judge reliability, while the TxLINE adapter is ready for bearer-token authenticated API integration.
+End with safety/compliance:
 
-## 8. Close Strong
+GoalPulse is analytics-only. It does not place wagers, custody funds, execute trades, connect to betting accounts, or facilitate betting execution.
 
-Suggested closing line:
-GoalPulse turns granular live sports data into an autonomous, explainable monitoring agent for market intelligence teams, analysts, and sports data operators.
+## Final Demo Order
 
-## Must Show in Video
+1. Production app
+2. API health
+3. Market Board
+4. Odds chart
+5. Signal Intelligence Panel
+6. Field Pressure Index
+7. Results Settlement Audit
+8. Replay mode
+9. Judge Demo Guide
+10. Compliance statement
 
-- Running backend agent
-- Working dashboard
-- API endpoints
-- Signal generation
-- Signal evaluation
-- Technical architecture
-- Safety note: analytics only, no wagering or fund custody
+## Quick Verification Before Presenting
+
+Run locally or verify production:
+
+- Frontend loads
+- API health returns 200
+- Market Board displays matches
+- Signal panel displays field context
+- Results Settlement shows audit rows
+- Score breakdown rows are visible
+- No localhost URL is used in production frontend
