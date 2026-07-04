@@ -238,7 +238,12 @@ function statusLabel(status?: string) {
 }
 
 function preciseStatusLabel(match?: Match) {
-  if (match?.statusLabel) return match.statusLabel.toUpperCase();
+  const rawLabel = match?.statusLabel?.trim();
+  const normalizedLabel = rawLabel?.toLowerCase();
+
+  if (rawLabel && normalizedLabel !== "scheduled") {
+    return rawLabel.toUpperCase();
+  }
 
   if (match?.status === "scheduled") return "PRE-MATCH";
   if (match?.status === "live") return "LIVE";
