@@ -1,4 +1,4 @@
-﻿services:
+services:
   - type: web
     name: goalpulse-agent-api
     runtime: node
@@ -17,7 +17,7 @@
       - key: AGENT_INTERVAL_MS
         value: 5000
       - key: USE_SIMULATED_FEED
-        value: true
+        value: false
       - key: TXLINE_API_BASE_URL
         value: https://txline.txodds.com
       - key: TXLINE_API_KEY
