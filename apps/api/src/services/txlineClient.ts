@@ -704,7 +704,7 @@ function statusFromStatusId(
 
   if (statusId === 1) return "scheduled";
 
-  if ([5, 10, 13, 15, 16, 17].includes(statusId)) {
+  if ([5, 10, 13, 15, 16, 17, 100].includes(statusId)) {
     return "finished";
   }
 
