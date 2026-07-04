@@ -1854,7 +1854,7 @@ function App() {
               </div>
             </div>
           </section>
-          <section id="markets" className="scroll-mt-4 grid grid-cols-2 gap-3">
+          <section id="markets" className="scroll-mt-4 grid grid-cols-1 gap-3 2xl:grid-cols-2">
             <div
               className={`rounded-[24px] border p-4 transition-all duration-500 ${
                 activeSection === "markets"
@@ -1973,7 +1973,9 @@ function App() {
                 )}
               </div>
             </div>
-          <SignalIntelligencePanel />
+          <div className="2xl:col-span-2">
+            <SignalIntelligencePanel />
+          </div>
 
           <ResultsSettlementPanel />
 
@@ -2910,4 +2912,5 @@ function App() {
 }
 
 export default App;
+
 
