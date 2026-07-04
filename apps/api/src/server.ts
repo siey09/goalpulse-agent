@@ -751,24 +751,34 @@ app.post("/api/agent/run-once", async (_req, res) => {
   });
 });
 
+let isAgentCycleRunning = false;
+
+async function runGuardedAgentCycle(source: string) {
+  if (isAgentCycleRunning) {
+    console.warn(`Skipping ${source} agent cycle because the previous cycle is still running.`);
+    return;
+  }
+
+  isAgentCycleRunning = true;
+
+  try {
+    const run = await processAgentCycle();
+    console.log(run.message);
+  } catch (error) {
+    console.error("Agent cycle failed:", error);
+  } finally {
+    isAgentCycleRunning = false;
+  }
+}
 app.listen(config.port, async () => {
   console.log(`GoalPulse Agent API running on http://localhost:${config.port}`);
   console.log(`Autonomous agent interval: ${config.agentIntervalMs}ms`);
   console.log(
     `Feed mode: ${config.useSimulatedFeed ? "simulated_txline" : "txline"}`
   );
-
-  const firstRun = await processAgentCycle();
-  console.log(firstRun.message);
+  await runGuardedAgentCycle("startup");
 
   setInterval(() => {
-    processAgentCycle()
-      .then((run) => {
-        console.log(run.message);
-      })
-      .catch((error) => {
-        console.error("Agent cycle failed:", error);
-      });
+    void runGuardedAgentCycle("scheduled");
   }, config.agentIntervalMs);
 });
-

@@ -97,6 +97,7 @@ type OddsSnapshot = {
   id?: string;
   matchId?: string;
   timestamp?: string;
+  createdAt?: string;
   homeOdds?: number;
   drawOdds?: number;
   awayOdds?: number;
@@ -745,7 +746,7 @@ function App() {
         request<unknown>("/api/recent-results"),
         request<unknown>("/api/signals"),
         request<unknown>("/api/agent-runs"),
-        request<AgentStats>("/api/stats"),
+        request<AgentStats | { data?: AgentStats }>("/api/stats"),
       ]);
 
       const currentMatchList = asArray<Match>(matchesPayload, ["matches", "data"]);
@@ -764,13 +765,16 @@ function App() {
       const signalList = asArray<AgentSignal>(signalsPayload, ["signals", "data"]);
       const runList = asArray<AgentRun>(runsPayload, ["runs", "agentRuns", "data"]);
 
+      const statsData =
+        (statsPayload as { data?: AgentStats }).data ?? (statsPayload as AgentStats);
+
       const fallbackMatchId = matchList[0]?.id || "";
 
       setHealth(healthPayload);
       setMatches(matchList);
       setSignals(signalList);
       setRuns(runList);
-      setStats(statsPayload);
+      setStats(statsData);
       setSelectedMatchId((currentMatchId) => currentMatchId || fallbackMatchId);
 
       setLastRefresh(new Date().toLocaleTimeString());
@@ -829,7 +833,12 @@ function App() {
         };
 
         if (payload.history) {
-          setOddsHistory(payload.history);
+          setOddsHistory(
+        payload.history.map((snapshot) => ({
+          ...snapshot,
+          timestamp: snapshot.timestamp ?? snapshot.createdAt,
+        }))
+      );
         }
 
         if (payload.match) {
@@ -2953,11 +2962,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
-
-
-

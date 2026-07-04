@@ -332,6 +332,28 @@ const RECENT_RESULT_FIXTURES: TxLineFixture[] = [
   },
 ];
 
+
+const TXLINE_REQUEST_TIMEOUT_MS = 12000;
+
+async function fetchWithTimeout(input: string, init: RequestInit = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TXLINE_REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`TxLINE request timed out after ${TXLINE_REQUEST_TIMEOUT_MS}ms: ${input}`);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 async function getGuestJwt(): Promise<string> {
   const now = Date.now();
 
@@ -339,7 +361,7 @@ async function getGuestJwt(): Promise<string> {
     return cachedGuestJwt;
   }
 
-  const response = await fetch(`${config.txlineApiBaseUrl}/auth/guest/start`, {
+  const response = await fetchWithTimeout(`${config.txlineApiBaseUrl}/auth/guest/start`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -365,7 +387,7 @@ async function getGuestJwt(): Promise<string> {
 }
 
 async function txlineGet<T>(path: string, jwt: string): Promise<T> {
-  const response = await fetch(`${config.txlineApiBaseUrl}${path}`, {
+  const response = await fetchWithTimeout(`${config.txlineApiBaseUrl}${path}`, {
     headers: {
       Authorization: `Bearer ${jwt}`,
       "X-Api-Token": config.txlineApiKey,
@@ -448,11 +470,15 @@ function inferMinute(startTime?: number): number {
 }
 
 function normalizeFixture(fixture: TxLineFixture, nowIso: string): Match {
+  const isParticipant1Home = fixture.Participant1IsHome !== false;
+  const homeTeam = isParticipant1Home ? fixture.Participant1 : fixture.Participant2;
+  const awayTeam = isParticipant1Home ? fixture.Participant2 : fixture.Participant1;
+
   return {
     id: String(fixture.FixtureId),
     competition: fixture.Competition ?? "World Cup",
-    homeTeam: fixture.Participant1 ?? "Home",
-    awayTeam: fixture.Participant2 ?? "Away",
+    homeTeam: homeTeam ?? "Home",
+    awayTeam: awayTeam ?? "Away",
     homeScore: 0,
     awayScore: 0,
     minute: inferMinute(fixture.StartTime),
@@ -1150,12 +1176,3 @@ export async function fetchRecentTxLineResults(): Promise<TxLineFeedResult> {
     snapshots: sortSnapshotsChronologically([...uniqueSnapshots.values()]),
   };
 }
-
-
-
-
-
-
-
-
-

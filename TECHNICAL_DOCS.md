@@ -39,7 +39,7 @@ Important backend files:
 - apps/api/src/types.ts
 - apps/api/src/services/txlineClient.ts
 - apps/api/src/logic/signalEngine.ts
-- apps/api/src/logic/agent.ts
+- apps/api/src/agent.ts
 
 ## Frontend
 
