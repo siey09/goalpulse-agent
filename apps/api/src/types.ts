@@ -54,6 +54,10 @@ export interface Match {
   awayScore: number;
   minute: number;
   status: MatchStatus;
+  statusId?: number;
+  statusLabel?: string;
+  clockSeconds?: number;
+  clockLabel?: string;
   lastUpdated: string;
 }
 
@@ -101,5 +105,6 @@ export interface AgentRun {
   status: "success" | "error";
   message: string;
 }
+
 
 

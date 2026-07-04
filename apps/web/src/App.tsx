@@ -38,6 +38,10 @@ type Match = {
   awayScore?: number;
   minute?: number;
   status?: string;
+  statusId?: number;
+  statusLabel?: string;
+  clockSeconds?: number;
+  clockLabel?: string;
   market?: Odds;
   odds?: Odds;
 };
@@ -232,6 +236,55 @@ function statusLabel(status?: string) {
   return status.toUpperCase();
 }
 
+function preciseStatusLabel(match?: Match) {
+  if (match?.statusLabel) return match.statusLabel.toUpperCase();
+
+  if (match?.status === "scheduled") return "PRE-MATCH";
+  if (match?.status === "live") return "LIVE";
+  if (match?.status === "finished") return "FINISHED";
+
+  return statusLabel(match?.status);
+}
+
+function matchClockLabel(match?: Match) {
+  if (!match) return "—";
+
+  if (match.status === "scheduled") {
+    return match.statusLabel ?? "Pre-match";
+  }
+
+  if (match.status === "finished") {
+    return match.statusLabel ?? "Final";
+  }
+
+  return match.clockLabel ?? `${match.minute ?? 0}'`;
+}
+
+function matchStatusTone(match?: Match) {
+  const label = `${match?.statusLabel ?? ""}`.toLowerCase();
+
+  if (label.includes("suspended") || label.includes("interrupted")) {
+    return "bg-amber-400/15 text-amber-200";
+  }
+
+  if (label.includes("cancelled") || label.includes("abandoned")) {
+    return "bg-rose-400/15 text-rose-200";
+  }
+
+  if (match?.status === "live") {
+    return "bg-emerald-400/15 text-emerald-200";
+  }
+
+  if (match?.status === "scheduled") {
+    return "bg-sky-400/15 text-sky-200";
+  }
+
+  if (match?.status === "finished") {
+    return "bg-stone-400/15 text-stone-300";
+  }
+
+  return "bg-white/8 text-stone-300";
+}
 function signalTypeLabel(type?: string) {
   return (type ?? "WATCH").replaceAll("_", " ");
 }
@@ -1916,19 +1969,11 @@ function App() {
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
-                            match.status === "live"
-                              ? "bg-emerald-400/15 text-emerald-200"
-                              : match.status === "scheduled"
-                                ? "bg-sky-400/15 text-sky-200"
-                                : match.status === "finished"
-                                  ? "bg-stone-400/15 text-stone-300"
-                                  : "bg-white/8 text-stone-300"
-                          }`}>
-                            {match.status === "scheduled" ? "PRE-MATCH" : match.status === "live" ? "LIVE" : match.status === "finished" ? "FINISHED" : statusLabel(match.status)}
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${matchStatusTone(match)}`}>
+                            {preciseStatusLabel(match)}
                           </span>
                           <span className="text-xs text-stone-500">
-                            {match.status === "scheduled" ? "Pre-match" : match.status === "finished" ? "Final" : `${match.minute ?? 0}'`}
+                            {matchClockLabel(match)}
                           </span>
                         </div>
 
@@ -2158,19 +2203,15 @@ function App() {
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div className="rounded-xl bg-white/15 p-2.5">
                 <p className="text-xs text-white/70">
-                  {selectedMatch?.status === "live" ? "Minute" : "Timing"}
+                  {selectedMatch?.status === "live" ? "Clock" : "Timing"}
                 </p>
                 <p className="text-xl font-semibold">
-                  {selectedMatch?.status === "scheduled"
-                    ? "Pre-match"
-                    : selectedMatch?.status === "finished"
-                      ? "Final"
-                      : `${selectedMatch?.minute ?? 0}'`}
+                  {matchClockLabel(selectedMatch)}
                 </p>
               </div>
               <div className="rounded-xl bg-white/15 p-2.5">
                 <p className="text-xs text-white/70">Status</p>
-                <p className="text-sm font-semibold">{statusLabel(selectedMatch?.status)}</p>
+                <p className="text-sm font-semibold">{preciseStatusLabel(selectedMatch)}</p>
               </div>
             </div>
             <div className="mt-3 rounded-2xl bg-[#17100c]/75 p-3">
@@ -2912,5 +2953,9 @@ function App() {
 }
 
 export default App;
+
+
+
+
 
 

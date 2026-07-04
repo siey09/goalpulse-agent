@@ -641,6 +641,32 @@ function extractMinute(clock: unknown, fallbackMinute: number): number {
   return fallbackMinute;
 }
 
+function statusFromStatusId(
+  statusId: number | undefined,
+  fallbackStatus: Match["status"]
+): Match["status"] {
+  if (!statusId) return fallbackStatus;
+
+  if (statusId === 1) return "scheduled";
+
+  if ([5, 10, 13, 15, 16, 17].includes(statusId)) {
+    return "finished";
+  }
+
+  return "live";
+}
+
+function formatClockLabel(seconds: number | undefined, fallbackMinute: number) {
+  if (seconds === undefined) {
+    return fallbackMinute > 0 ? `${fallbackMinute}'` : undefined;
+  }
+
+  const safeSeconds = Math.max(0, seconds);
+  const minutes = Math.floor(safeSeconds / 60);
+  const remainder = safeSeconds % 60;
+
+  return `${minutes}:${String(remainder).padStart(2, "0")}`;
+}
 function statusFromScoreState(
   state: string | null | undefined,
   fallbackStatus: Match["status"]
@@ -682,16 +708,24 @@ function applyScoreSnapshot(
   if (!scoreEvent) return match;
 
   const scores = extractScores(scoreEvent);
+  const statusId = toNumber(scoreEvent.StatusId);
+  const clockSeconds = readObjectNumber(scoreEvent.Clock, ["Seconds", "seconds", "gameSeconds", "GameSeconds"]);
+  const minute = extractMinute(scoreEvent.Clock, match.minute);
+  const genericStatus = statusFromScoreState(
+    scoreEvent.GameState ?? scoreEvent.Status,
+    match.status
+  );
 
   return {
     ...match,
     homeScore: scores.homeScore,
     awayScore: scores.awayScore,
-    minute: extractMinute(scoreEvent.Clock, match.minute),
-    status: statusFromScoreState(
-      scoreEvent.GameState ?? scoreEvent.Status,
-      match.status
-    ),
+    minute,
+    status: statusFromStatusId(statusId, genericStatus),
+    statusId,
+    statusLabel: statusId ? STATUS_LABELS[statusId] : scoreEvent.Status ?? scoreEvent.GameState ?? undefined,
+    clockSeconds,
+    clockLabel: formatClockLabel(clockSeconds, minute),
     lastUpdated: nowIso,
   };
 }
@@ -1061,6 +1095,7 @@ export async function fetchRecentTxLineResults(): Promise<TxLineFeedResult> {
     snapshots: sortSnapshotsChronologically([...uniqueSnapshots.values()]),
   };
 }
+
 
 
 
