@@ -372,56 +372,56 @@ function App() {
 
   const judgeDemoSteps = [
     {
-      title: "1. Dashboard overview",
-      detail: "Start with the live autonomous odds intelligence dashboard, agent status, key metrics, and search.",
+      title: "1. Autonomous intelligence overview",
+      detail: "GoalPulse ingests TxLINE data, normalizes match markets, monitors odds movement, and explains signals without manual analyst work.",
     },
     {
-      title: "2. Odds movement chart",
-      detail: "This chart visualizes home and away odds movement with signal markers placed on meaningful shifts.",
+      title: "2. Odds movement timeline",
+      detail: "The chart shows how market prices move over time. Signal markers appear only when movement crosses deterministic compression thresholds.",
     },
     {
-      title: "3. Market board",
-      detail: "Market feed items are normalized here with home, draw, and away odds for quick scanning across live, upcoming, and finished matches.",
+      title: "3. TxLINE market board",
+      detail: "The market board shows normalized home, draw, and away prices plus precise TXODDS status and clock labels.",
     },
     {
-      title: "4. Latest signals",
-      detail: "The signal engine lists detected odds movements, severity, explanation, and detail entry points.",
+      title: "4. Scores intelligence signals",
+      detail: "Signals combine odds movement with TXODDS Scores context: goals, shots, VAR, penalties, cards, danger possession, and reliability warnings.",
     },
     {
-      title: "5. Outcome verification",
-      detail: "Signals are audited after detection so users can see before odds, after odds, move size, and proof preview.",
+      title: "5. Final score audit",
+      detail: "Signals are checked after final score settlement so judges can see whether each movement was confirmed or rejected.",
     },
     {
-      title: "6. Selected match pressure",
-      detail: "The selected match card summarizes the current match and converts signal momentum into market pressure.",
+      title: "6. Field pressure context",
+      detail: "GoalPulse separates field-backed moves from market-only moves using Field Pressure Index and TXODDS play-by-play events.",
     },
     {
-      title: "7. Agent timeline",
-      detail: "This shows the autonomous flow: feed ingestion, snapshot creation, signal execution, and outcome review.",
+      title: "7. Autonomous agent timeline",
+      detail: "The timeline explains the agent loop: ingest feed, capture snapshots, compare odds, attach scores context, score reliability, and store evidence.",
     },
     {
       title: "8. Real TxLINE replay",
-      detail: "Replay stored TxLINE odds snapshots through the same signal engine to audit whether market movements were later confirmed or rejected.",
+      detail: "Replay mode runs stored TxLINE snapshots through the same engine, making the demo repeatable even when live matches are quiet.",
     },
     {
       title: "9. Evidence chain",
-      detail: "The replay verifies TxLINE snapshot IDs, message IDs, source labels, and stored odds movement evidence.",
+      detail: "The evidence chain links odds endpoints, scores endpoints, message IDs, bookmakers, scoreline context, and proof labels for judge-verifiable review.",
     },
     {
       title: "10. Signal review council",
-      detail: "Multiple agent checks review movement strength, reversion risk, and evidence quality before approving a signal.",
+      detail: "Multiple agent checks review movement strength, field context, reliability, reversion risk, and evidence quality before surfacing a signal.",
     },
     {
       title: "11. Proof hash",
-      detail: "The replay generates a SHA-256 proof hash so the audit trail can be anchored later on Solana devnet.",
+      detail: "The replay generates a SHA-256 proof hash so the audit trail can become tamper-evident and independently reviewable.",
     },
     {
-      title: "12. Signal thresholds",
-      detail: "These rules explain the deterministic thresholds used by the signal engine.",
+      title: "12. Transparent thresholds",
+      detail: "The engine uses explainable thresholds: watch, momentum shift, and sharp move. No black-box betting recommendation is required.",
     },
     {
       title: "13. Compliance boundary",
-      detail: "GoalPulse is analytics-only: no wagers, no custody, no trading execution, and no illegal betting facilitation.",
+      detail: "GoalPulse is analytics-only: it explains sports market movement and evidence context. It does not place wagers, custody funds, or facilitate betting execution.",
     },
   ];
   const outcomeVerificationItems = useMemo(() => {
@@ -2953,6 +2953,8 @@ function App() {
 }
 
 export default App;
+
+
 
 
 
