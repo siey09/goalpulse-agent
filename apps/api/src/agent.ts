@@ -36,7 +36,12 @@ export async function processAgentCycle(): Promise<AgentRun> {
       }
 
       const previousSnapshot = findPreviousSnapshot(snapshot.matchId);
-      const signal = buildSignalFromSnapshots(snapshot, previousSnapshot);
+
+const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.createdAt).getTime() < new Date(snapshot.createdAt).getTime();
+
+      const signal = isChronologicallyValid
+        ? buildSignalFromSnapshots(snapshot, previousSnapshot)
+        : null;
 
       store.oddsSnapshots.unshift(snapshot);
       snapshotsCreated += 1;
