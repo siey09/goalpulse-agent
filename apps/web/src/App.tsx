@@ -3,6 +3,7 @@ import { SignalIntelligencePanel } from "./components/SignalIntelligencePanel";
 import { ResultsSettlementPanel } from "./components/ResultsSettlementPanel";
 import { WhatChangedPanel } from "./components/WhatChangedPanel";
 import {
+  Activity,
   BarChart3,
   Bot,
   ChevronDown,
@@ -11,8 +12,14 @@ import {
   Radio,
   RefreshCw,
   Search,
+  Server,
   ShieldCheck,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  Wifi,
   X,
+  Zap,
 } from "lucide-react";
 import {
   Area,
@@ -1587,40 +1594,52 @@ function App() {
             }`}
           >
             <div className="rounded-[26px] border border-white/10 bg-[#15100c] p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 animate-fade-in-up">
-                <div>
-                  <p className="text-[11px] text-stone-500">Autonomous odds intelligence</p>
-                  <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-white">
-                    GoalPulse Agent
-                  </h1>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 animate-fade-in-up">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 shadow-[0_0_24px_rgba(251,146,60,0.4)]">
+                    <Zap className="h-5 w-5 text-white" fill="white" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.15em] text-stone-500">Autonomous odds intelligence</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-white">
+                      GoalPulse Agent
+                    </h1>
+                  </div>
                 </div>
 
                 <div className="flex flex-1 flex-wrap items-stretch gap-2 sm:flex-none sm:justify-end">
                   <div
-                    className={`flex min-w-[168px] items-center gap-2.5 rounded-2xl border px-3.5 py-2.5 transition-shadow ${
+                    className={`flex min-w-[172px] items-center gap-2.5 rounded-2xl border px-3.5 py-2.5 transition-shadow ${
                       health?.useSimulatedFeed
-                        ? "border-amber-400/30 bg-amber-400/10 animate-glow-pulse-amber"
-                        : "border-emerald-400/30 bg-emerald-400/10 animate-glow-pulse"
+                        ? "border-amber-400/30 bg-gradient-to-br from-amber-400/15 to-amber-600/5 animate-glow-pulse-amber"
+                        : "border-emerald-400/30 bg-gradient-to-br from-emerald-400/15 to-emerald-600/5 animate-glow-pulse"
                     }`}
                   >
-                    <span className="relative flex h-2.5 w-2.5 shrink-0">
-                      <span
-                        className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${
-                          health?.useSimulatedFeed ? "bg-amber-400" : "bg-emerald-400"
-                        }`}
-                      />
-                      <span
-                        className={`relative inline-flex h-2.5 w-2.5 rounded-full ${
-                          health?.useSimulatedFeed ? "bg-amber-400" : "bg-emerald-400"
-                        }`}
-                      />
-                    </span>
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                        health?.useSimulatedFeed ? "bg-amber-400/20" : "bg-emerald-400/20"
+                      }`}
+                    >
+                      <Wifi className={`h-4 w-4 ${health?.useSimulatedFeed ? "text-amber-300" : "text-emerald-300"}`} />
+                    </div>
                     <div>
                       <p
-                        className={`text-xs font-bold uppercase leading-tight tracking-[0.1em] ${
+                        className={`flex items-center gap-1.5 text-xs font-bold uppercase leading-tight tracking-[0.1em] ${
                           health?.useSimulatedFeed ? "text-amber-200" : "text-emerald-200"
                         }`}
                       >
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span
+                            className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${
+                              health?.useSimulatedFeed ? "bg-amber-400" : "bg-emerald-400"
+                            }`}
+                          />
+                          <span
+                            className={`relative inline-flex h-1.5 w-1.5 rounded-full ${
+                              health?.useSimulatedFeed ? "bg-amber-400" : "bg-emerald-400"
+                            }`}
+                          />
+                        </span>
                         {health?.useSimulatedFeed ? "Lab mode" : "Live feed"}
                       </p>
                       <p className="text-[10px] leading-tight text-stone-400">
@@ -1630,51 +1649,99 @@ function App() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 sm:flex sm:items-stretch">
-                    <div className="min-w-[84px] rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 transition-colors hover:bg-white/[0.07]">
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">Updates</p>
-                      <p className="mt-0.5 text-lg font-semibold tabular-nums text-white">
-                        {formatNumber(stats?.txlineUpdates)}
-                      </p>
+                    <div className="flex min-w-[104px] items-center gap-2.5 rounded-2xl border border-sky-400/20 bg-gradient-to-br from-sky-400/10 to-transparent px-3.5 py-2.5 transition-all hover:scale-[1.03] hover:border-sky-400/40">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-400/15">
+                        <Activity className="h-4 w-4 text-sky-300" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Updates</p>
+                        <p className="text-xl font-bold tabular-nums text-white">
+                          {formatNumber(stats?.txlineUpdates)}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="min-w-[84px] rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 transition-colors hover:bg-white/[0.07]">
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">Signals</p>
-                      <p className="mt-0.5 text-lg font-semibold tabular-nums text-white">
-                        {formatNumber(stats?.signalsGenerated)}
-                      </p>
+                    <div className="flex min-w-[104px] items-center gap-2.5 rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-400/10 to-transparent px-3.5 py-2.5 transition-all hover:scale-[1.03] hover:border-violet-400/40">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet-400/15">
+                        <Zap className="h-4 w-4 text-violet-300" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Signals</p>
+                        <p className="text-xl font-bold tabular-nums text-white">
+                          {formatNumber(stats?.signalsGenerated)}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="min-w-[84px] rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 transition-colors hover:bg-white/[0.07]">
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">Accuracy</p>
-                      {(stats?.closedSignals ?? 0) > 0 ? (
-                        <p
-                          className={`mt-0.5 text-lg font-semibold tabular-nums ${
-                            (stats?.strategyAccuracy ?? 0) >= 60
-                              ? "text-emerald-300"
+                    <div
+                      className={`flex min-w-[104px] items-center gap-2.5 rounded-2xl border px-3.5 py-2.5 transition-all hover:scale-[1.03] ${
+                        (stats?.closedSignals ?? 0) === 0
+                          ? "border-stone-500/20 bg-gradient-to-br from-stone-500/10 to-transparent hover:border-stone-400/40"
+                          : (stats?.strategyAccuracy ?? 0) >= 60
+                            ? "border-emerald-400/20 bg-gradient-to-br from-emerald-400/10 to-transparent hover:border-emerald-400/40"
+                            : (stats?.strategyAccuracy ?? 0) >= 40
+                              ? "border-amber-400/20 bg-gradient-to-br from-amber-400/10 to-transparent hover:border-amber-400/40"
+                              : "border-red-400/20 bg-gradient-to-br from-red-400/10 to-transparent hover:border-red-400/40"
+                      }`}
+                    >
+                      <div
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                          (stats?.closedSignals ?? 0) === 0
+                            ? "bg-stone-500/15"
+                            : (stats?.strategyAccuracy ?? 0) >= 60
+                              ? "bg-emerald-400/15"
                               : (stats?.strategyAccuracy ?? 0) >= 40
-                                ? "text-amber-300"
-                                : "text-red-300"
-                          }`}
-                        >
-                          {formatPercent(stats?.strategyAccuracy)}
-                        </p>
-                      ) : (
-                        <p className="mt-0.5 text-sm font-medium text-stone-500">
-                          Building…
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="min-w-[84px] rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 transition-colors hover:bg-white/[0.07]">
-                      <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">Backend</p>
-                      <p className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold text-emerald-200">
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            health?.ok ? "bg-emerald-400" : "bg-stone-500"
+                                ? "bg-amber-400/15"
+                                : "bg-red-400/15"
+                        }`}
+                      >
+                        <Target
+                          className={`h-4 w-4 ${
+                            (stats?.closedSignals ?? 0) === 0
+                              ? "text-stone-400"
+                              : (stats?.strategyAccuracy ?? 0) >= 60
+                                ? "text-emerald-300"
+                                : (stats?.strategyAccuracy ?? 0) >= 40
+                                  ? "text-amber-300"
+                                  : "text-red-300"
                           }`}
                         />
-                        {health?.ok ? "Online" : "Checking"}
-                      </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Accuracy</p>
+                        {(stats?.closedSignals ?? 0) > 0 ? (
+                          <p
+                            className={`text-xl font-bold tabular-nums ${
+                              (stats?.strategyAccuracy ?? 0) >= 60
+                                ? "text-emerald-300"
+                                : (stats?.strategyAccuracy ?? 0) >= 40
+                                  ? "text-amber-300"
+                                  : "text-red-300"
+                            }`}
+                          >
+                            {formatPercent(stats?.strategyAccuracy)}
+                          </p>
+                        ) : (
+                          <p className="text-sm font-semibold text-stone-400">Building…</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex min-w-[104px] items-center gap-2.5 rounded-2xl border border-teal-400/20 bg-gradient-to-br from-teal-400/10 to-transparent px-3.5 py-2.5 transition-all hover:scale-[1.03] hover:border-teal-400/40">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-teal-400/15">
+                        <Server className="h-4 w-4 text-teal-300" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Backend</p>
+                        <p className="flex items-center gap-1.5 text-sm font-bold text-teal-200">
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              health?.ok ? "bg-teal-400" : "bg-stone-500"
+                            }`}
+                          />
+                          {health?.ok ? "Online" : "Checking"}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1773,24 +1840,30 @@ function App() {
                 </div>
 
                 <div className="mb-3 space-y-2 animate-fade-in-up">
-                  <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3 transition-all duration-500 ${chartReadout.severity.cardClass}`}>
+                  <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3.5 transition-all duration-500 ${chartReadout.severity.cardClass}`}>
                     <div className="flex items-center gap-3">
-                      <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/20">
                         {(chartReadout.severity.tier === "Sharp move" || chartReadout.severity.tier === "Momentum") && (
-                          <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${chartReadout.severity.dotClass}`} />
+                          <span className={`absolute inline-flex h-full w-full animate-ping rounded-xl opacity-20 ${chartReadout.severity.dotClass}`} />
                         )}
-                        <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${chartReadout.severity.dotClass}`} />
-                      </span>
+                        {chartReadout.severity.tier === "Sharp move" || chartReadout.severity.tier === "Momentum" ? (
+                          <TrendingDown className={`relative h-5 w-5 ${chartReadout.severity.textClass}`} />
+                        ) : chartReadout.severity.tier === "Building" ? (
+                          <TrendingUp className={`relative h-5 w-5 ${chartReadout.severity.textClass}`} />
+                        ) : (
+                          <Activity className={`relative h-5 w-5 ${chartReadout.severity.textClass}`} />
+                        )}
+                      </div>
                       <div>
                         <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400">
                           Market verdict
                         </p>
-                        <h3 className="mt-0.5 text-base font-semibold text-white">
+                        <h3 className="mt-0.5 text-lg font-bold leading-tight text-white">
                           {chartReadout.verdict}
                         </h3>
                       </div>
                     </div>
-                    <span className={`shrink-0 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${chartReadout.severity.badgeClass}`}>
+                    <span className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] ${chartReadout.severity.badgeClass}`}>
                       {chartReadout.severity.tier}
                     </span>
                   </div>
@@ -1800,20 +1873,21 @@ function App() {
                   </p>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+                    <div className="rounded-2xl border border-orange-400/15 bg-gradient-to-br from-orange-400/10 to-black/30 p-3">
                       <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
                         {selectedMatch?.homeTeam ?? "Home"} odds now
                       </p>
-                      <p className="mt-2 text-xl font-semibold text-orange-200">
+                      <p className="mt-2 text-2xl font-bold text-orange-200">
                         {chartReadout.homeCurrent}
+
                       </p>
                     </div>
 
-                    <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+                    <div className="rounded-2xl border border-emerald-400/15 bg-gradient-to-br from-emerald-400/10 to-black/30 p-3">
                       <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
                         {selectedMatch?.awayTeam ?? "Away"} odds now
                       </p>
-                      <p className="mt-2 text-xl font-semibold text-emerald-200">
+                      <p className="mt-2 text-2xl font-bold text-emerald-200">
                         {chartReadout.awayCurrent}
                       </p>
                     </div>
