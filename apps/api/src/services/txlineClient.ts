@@ -354,7 +354,7 @@ async function fetchWithTimeout(input: string, init: RequestInit = {}) {
     clearTimeout(timeout);
   }
 }
-async function getGuestJwt(): Promise<string> {
+export async function getGuestJwt(): Promise<string> {
   const now = Date.now();
 
   if (cachedGuestJwt && now - cachedGuestJwtCreatedAt < 10 * 60 * 1000) {
@@ -406,6 +406,67 @@ async function txlineGet<T>(path: string, jwt: string): Promise<T> {
   }
 
   return (await response.json()) as T;
+}
+
+/**
+ * Raw entry shape as documented by TxLINE's /api/scores/historical/{fixtureId}
+ * example (lowercase: seq, ts, gameState). The live snapshot/update endpoints
+ * return PascalCase (Seq, Ts, GameState) per the TXODDS Scores Product API doc.
+ * This normalizer accepts either casing defensively so a future response-shape
+ * change on either endpoint does not silently produce blank field context.
+ */
+function normalizeHistoricalScoreEntry(raw: Record<string, unknown>): TxLineScoreSnapshot {
+  const pick = (pascalKey: string, camelKey: string) =>
+    raw[pascalKey] ?? raw[camelKey];
+
+  return {
+    FixtureId: pick("FixtureId", "fixtureId") as number | undefined,
+    Ts: pick("Ts", "ts") as number | undefined,
+    GameState: pick("GameState", "gameState") as string | null | undefined,
+    Status: pick("Status", "status") as string | null | undefined,
+    StatusId: pick("StatusId", "statusId") as number | undefined,
+    Action: pick("Action", "action") as string | undefined,
+    Confirmed: pick("Confirmed", "confirmed") as boolean | undefined,
+    Clock: pick("Clock", "clock"),
+    Score: pick("Score", "score"),
+    HomeScore: pick("HomeScore", "homeScore") as number | undefined,
+    AwayScore: pick("AwayScore", "awayScore") as number | undefined,
+    Participant1Score: pick("Participant1Score", "participant1Score") as number | undefined,
+    Participant2Score: pick("Participant2Score", "participant2Score") as number | undefined,
+    Scores: pick("Scores", "scores"),
+    Participant: pick("Participant", "participant") as number | null | undefined,
+    Possession: pick("Possession", "possession") as number | null | undefined,
+    PossessionType: pick("PossessionType", "possessionType") as string | null | undefined,
+    PossibleEvent: pick("PossibleEvent", "possibleEvent"),
+    Data: pick("Data", "data") as Record<string, unknown> | null | undefined,
+    Seq: pick("Seq", "seq") as number | undefined,
+    Id: pick("Id", "id") as number | undefined,
+  };
+}
+
+/**
+ * Fetches the complete sequence of score updates for a finished/recent fixture
+ * using TxLINE's dedicated historical endpoint (only available for fixtures
+ * that started between two weeks and six hours ago). This replaces relying on
+ * a single /api/scores/snapshot current-state call for the recent-results
+ * backfill path, giving the Scores Intelligence Layer the full play-by-play
+ * history to pick the strongest field-context match from, instead of just
+ * whatever the last snapshot happened to be.
+ */
+async function fetchHistoricalScores(
+  fixtureId: number,
+  jwt: string
+): Promise<TxLineScoreSnapshot[]> {
+  const raw = await txlineGet<Array<Record<string, unknown>>>(
+    `/api/scores/historical/${fixtureId}`,
+    jwt
+  );
+
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw.map(normalizeHistoricalScoreEntry);
 }
 
 async function getOddsUpdates(
@@ -1089,10 +1150,29 @@ export async function fetchRecentTxLineResults(): Promise<TxLineFeedResult> {
     try {
       let match = normalizeFixture(fixture, nowIso);
 
-      const scoreSnapshot = await txlineGet<TxLineScoreSnapshot | TxLineScoreSnapshot[]>(
-        `/api/scores/snapshot/${fixture.FixtureId}`,
-        jwt
-      );
+      let scoreSnapshot: TxLineScoreSnapshot | TxLineScoreSnapshot[];
+      let scoresEndpointUsed = `/api/scores/historical/${fixture.FixtureId}`;
+
+      try {
+        const historicalScores = await fetchHistoricalScores(fixture.FixtureId, jwt);
+
+        if (historicalScores.length === 0) {
+          throw new Error("Historical endpoint returned no score updates.");
+        }
+
+        scoreSnapshot = historicalScores;
+      } catch (error) {
+        console.warn(
+          `TxLINE historical scores unavailable for fixture ${fixture.FixtureId}, falling back to current snapshot:`,
+          error instanceof Error ? error.message : error
+        );
+
+        scoresEndpointUsed = `/api/scores/snapshot/${fixture.FixtureId}`;
+        scoreSnapshot = await txlineGet<TxLineScoreSnapshot | TxLineScoreSnapshot[]>(
+          scoresEndpointUsed,
+          jwt
+        );
+      }
 
       match = applyScoreSnapshot(match, scoreSnapshot, nowIso);
 
@@ -1104,7 +1184,7 @@ export async function fetchRecentTxLineResults(): Promise<TxLineFeedResult> {
         scoreSnapshot,
         fixture,
         match,
-        `/api/scores/snapshot/${fixture.FixtureId}`
+        scoresEndpointUsed
       );
 
       matches.push(match);

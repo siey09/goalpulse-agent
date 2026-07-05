@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import { processAgentCycle } from "./agent";
 import { fetchRecentTxLineResults } from "./services/txlineClient";
+import { getLiveStreamState, startLiveStreamMonitor } from "./services/txlineStream";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { config } from "./config";
 import { getStats, store , upsertRecentFinishedMatches } from "./store";
@@ -21,6 +22,7 @@ app.get("/health", (_req, res) => {
     agentIntervalMs: config.agentIntervalMs,
     useSimulatedFeed: config.useSimulatedFeed,
     txlineBaseUrl: config.txlineApiBaseUrl,
+    liveStream: getLiveStreamState(),
     timestamp: new Date().toISOString(),
   });
 });
@@ -777,6 +779,8 @@ app.listen(config.port, async () => {
     `Feed mode: ${config.useSimulatedFeed ? "simulated_txline" : "txline"}`
   );
   await runGuardedAgentCycle("startup");
+
+  startLiveStreamMonitor();
 
   setInterval(() => {
     void runGuardedAgentCycle("scheduled");

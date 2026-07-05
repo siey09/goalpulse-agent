@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 
-dotenv.config();
-dotenv.config({ path: ".env.local", override: true });
+dotenv.config({ quiet: true });
+dotenv.config({ path: ".env.local", override: true, quiet: true });
 
 export const config = {
   port: Number(process.env.PORT ?? 4000),
