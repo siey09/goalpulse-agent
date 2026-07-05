@@ -1032,6 +1032,41 @@ function sortSnapshotsChronologically(
   );
 }
 
+/**
+ * A single fixtures/snapshot response can contain far more entries than we
+ * process per cycle (bounded to 14 below for TxLINE rate/latency reasons).
+ * Without sorting, a currently in-play match could be pushed past that limit
+ * by unrelated future-scheduled fixtures, silently dropping live coverage.
+ * This prioritizes fixtures whose kickoff has already passed and are still
+ * within a plausible in-play window (kickoff to kickoff + 3 hours, covering
+ * full time plus stoppage/extra time/penalties) ahead of everything else,
+ * then falls back to soonest-kickoff-first for the remaining slots.
+ */
+function prioritizeLikelyLiveFixtures(fixtures: TxLineFixture[]): TxLineFixture[] {
+  const nowMs = Date.now();
+  const maxLikelyMatchDurationMs = 3 * 60 * 60 * 1000;
+
+  const isLikelyInPlay = (fixture: TxLineFixture) => {
+    if (!fixture.StartTime) {
+      return false;
+    }
+
+    const elapsed = nowMs - fixture.StartTime;
+    return elapsed >= 0 && elapsed <= maxLikelyMatchDurationMs;
+  };
+
+  return [...fixtures].sort((a, b) => {
+    const aLive = isLikelyInPlay(a);
+    const bLive = isLikelyInPlay(b);
+
+    if (aLive !== bLive) {
+      return aLive ? -1 : 1;
+    }
+
+    return (a.StartTime ?? 0) - (b.StartTime ?? 0);
+  });
+}
+
 export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
   if (!config.txlineApiKey) {
     throw new Error(
@@ -1041,12 +1076,13 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
 
   const jwt = await getGuestJwt();
   const fixtures = await txlineGet<TxLineFixture[]>("/api/fixtures/snapshot", jwt);
+  const prioritizedFixtures = prioritizeLikelyLiveFixtures(fixtures);
 
   const nowIso = new Date().toISOString();
   const matches: Match[] = [];
   const snapshots: OddsSnapshot[] = [];
 
-  for (const fixture of fixtures.slice(0, 14)) {
+  for (const fixture of prioritizedFixtures.slice(0, 14)) {
     let match = normalizeFixture(fixture, nowIso);
     let scoreSnapshot: TxLineScoreSnapshot | TxLineScoreSnapshot[] | undefined;
 
