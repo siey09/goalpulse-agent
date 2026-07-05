@@ -2,6 +2,7 @@
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { fetchSimulatedTxLineFeed } from "./services/mockTxLine";
 import { fetchTxLineFeed } from "./services/txlineClient";
+import { sendHighSeverityAlert } from "./services/alerts";
 import {
   evaluatePendingSignalsForFinishedMatches,
   findPreviousSnapshot,
@@ -49,6 +50,10 @@ const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.cr
       if (signal && !signalAlreadyExists(signal)) {
         store.signals.unshift(signal);
         signalsCreated += 1;
+
+        if (signal.severity === "HIGH") {
+          void sendHighSeverityAlert(signal);
+        }
       }
     }
 
