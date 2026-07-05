@@ -377,6 +377,17 @@ function App() {
   const [signals, setSignals] = useState<AgentSignal[]>([]);
   const [runs, setRuns] = useState<AgentRun[]>([]);
   const [stats, setStats] = useState<AgentStats | null>(null);
+  const [pnl, setPnl] = useState<{
+    unitStake: number;
+    settledBets: number;
+    totalStaked: number;
+    netUnits: number;
+    roiPercent: number;
+    openPositions: number;
+    openExposure: number;
+    bySeverity: Array<{ severity: string; bets: number; netUnits: number; roiPercent: number }>;
+    note: string;
+  } | null>(null);
   const [oddsHistory, setOddsHistory] = useState<OddsSnapshot[]>([]);
   const [isOddsStreamLive, setIsOddsStreamLive] = useState(false);
   const [oddsStreamLastUpdate, setOddsStreamLastUpdate] = useState("");
@@ -820,6 +831,7 @@ function App() {
         signalsPayload,
         runsPayload,
         statsPayload,
+        pnlPayload,
       ] = await Promise.all([
         request<Health>("/health"),
         request<unknown>("/api/matches"),
@@ -827,6 +839,7 @@ function App() {
         request<unknown>("/api/signals"),
         request<unknown>("/api/agent-runs"),
         request<AgentStats | { data?: AgentStats }>("/api/stats"),
+        request<{ data?: typeof pnl }>("/api/pnl").catch(() => null),
       ]);
 
       const currentMatchList = asArray<Match>(matchesPayload, ["matches", "data"]);
@@ -855,6 +868,9 @@ function App() {
       setSignals(signalList);
       setRuns(runList);
       setStats(statsData);
+      if (pnlPayload?.data) {
+        setPnl(pnlPayload.data);
+      }
       setSelectedMatchId((currentMatchId) => currentMatchId || fallbackMatchId);
 
       setLastRefresh(new Date().toLocaleTimeString());
@@ -2555,6 +2571,44 @@ function App() {
                 {isReplayRunning ? "Running..." : "Run audit"}
               </button>
             </div>
+
+            {pnl && (
+              <div className="mb-3 rounded-2xl border border-white/10 bg-black/25 p-3.5">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
+                    Simulated P&amp;L — flat 1 unit per signal
+                  </p>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${
+                      pnl.netUnits > 0
+                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                        : pnl.netUnits < 0
+                          ? "border-red-400/30 bg-red-400/10 text-red-200"
+                          : "border-white/10 bg-white/5 text-stone-300"
+                    }`}
+                  >
+                    {pnl.netUnits > 0 ? "+" : ""}
+                    {pnl.netUnits.toFixed(2)}u · {pnl.roiPercent > 0 ? "+" : ""}
+                    {pnl.roiPercent}% ROI
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-lg font-bold tabular-nums text-white">{pnl.settledBets}</p>
+                    <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Settled bets</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold tabular-nums text-white">{pnl.totalStaked}u</p>
+                    <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Total staked</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold tabular-nums text-amber-200">{pnl.openPositions}</p>
+                    <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Open positions</p>
+                  </div>
+                </div>
+                <p className="mt-2 text-[9px] leading-4 text-stone-500">{pnl.note}</p>
+              </div>
+            )}
 
             {replayBacktest ? (
               <div className="space-y-3">

@@ -116,3 +116,62 @@ export function getStats() {
   };
 }
 
+/**
+ * Simulates a flat 1-unit stake placed on every signal at the decimal odds
+ * available at the moment the signal fired (`oddsAfter`), settled against
+ * the real, already-verified match outcome. This turns "accuracy %" into an
+ * actual trading performance metric: a strategy can be more than 50%
+ * accurate and still lose money if winners pay short odds and losers cost
+ * a full unit, or the reverse. Pending (unsettled) signals are reported
+ * separately as open exposure, not counted in realized P&L.
+ */
+export function getPnlSummary() {
+  const closedSignals = store.signals.filter(
+    (s) => s.resultStatus === "correct" || s.resultStatus === "incorrect"
+  );
+  const pendingSignals = store.signals.filter((s) => s.resultStatus === "pending");
+
+  const unitStake = 1;
+
+  const settle = (signal: (typeof store.signals)[number]) => {
+    if (signal.resultStatus === "correct") {
+      const price = signal.oddsAfter && signal.oddsAfter > 1 ? signal.oddsAfter : 1;
+      return unitStake * (price - 1);
+    }
+
+    return -unitStake;
+  };
+
+  const netUnits = closedSignals.reduce((sum, signal) => sum + settle(signal), 0);
+  const totalStaked = closedSignals.length * unitStake;
+  const roiPercent =
+    totalStaked === 0 ? 0 : Number(((netUnits / totalStaked) * 100).toFixed(1));
+
+  const bySeverity = (["HIGH", "MEDIUM", "LOW"] as const).map((severity) => {
+    const tierSignals = closedSignals.filter((s) => s.severity === severity);
+    const tierNet = tierSignals.reduce((sum, signal) => sum + settle(signal), 0);
+    const tierStaked = tierSignals.length * unitStake;
+
+    return {
+      severity,
+      bets: tierSignals.length,
+      netUnits: Number(tierNet.toFixed(2)),
+      roiPercent:
+        tierStaked === 0 ? 0 : Number(((tierNet / tierStaked) * 100).toFixed(1)),
+    };
+  });
+
+  return {
+    unitStake,
+    settledBets: closedSignals.length,
+    totalStaked: Number(totalStaked.toFixed(2)),
+    netUnits: Number(netUnits.toFixed(2)),
+    roiPercent,
+    openPositions: pendingSignals.length,
+    openExposure: Number((pendingSignals.length * unitStake).toFixed(2)),
+    bySeverity,
+    note: "Simulated flat 1-unit stakes at the odds available when each signal fired, settled against real match outcomes. Analytics only, not a trading recommendation.",
+  };
+}
+
+

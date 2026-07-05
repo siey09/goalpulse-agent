@@ -7,7 +7,7 @@ import { getLiveStreamState, startLiveStreamMonitor } from "./services/txlineStr
 import { validateStatOnChain } from "./services/onchainValidation";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { config } from "./config";
-import { getStats, store , upsertRecentFinishedMatches } from "./store";
+import { getPnlSummary, getStats, store , upsertRecentFinishedMatches } from "./store";
 import type { OddsSnapshot } from "./types";
 
 const app = express();
@@ -269,6 +269,12 @@ app.get("/api/agent-runs", (_req, res) => {
 app.get("/api/stats", (_req, res) => {
   res.json({
     data: getStats(),
+  });
+});
+
+app.get("/api/pnl", (_req, res) => {
+  res.json({
+    data: getPnlSummary(),
   });
 });
 
