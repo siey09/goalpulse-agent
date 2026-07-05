@@ -42,6 +42,7 @@ type Match = {
   statusLabel?: string;
   clockSeconds?: number;
   clockLabel?: string;
+  lastUpdated?: string;
   market?: Odds;
   odds?: Odds;
 };
@@ -160,6 +161,13 @@ type Health = {
   ok?: boolean;
   agentIntervalMs?: number;
   useSimulatedFeed?: boolean;
+  liveStream?: {
+    connected?: boolean;
+    lastEventAt?: string | null;
+    totalEventsReceived?: number;
+    totalReconnects?: number;
+    lastError?: string | null;
+  };
 };
 
 const API_BASE_URL =
@@ -264,6 +272,26 @@ function matchClockLabel(match?: Match) {
   }
 
   return match.clockLabel ?? `${match.minute ?? 0}'`;
+}
+
+function dataFreshnessLabel(lastUpdated?: string) {
+  if (!lastUpdated) return null;
+
+  const updatedMs = new Date(lastUpdated).getTime();
+
+  if (Number.isNaN(updatedMs)) return null;
+
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - updatedMs) / 1000));
+
+  if (elapsedSeconds < 60) {
+    return `updated ${elapsedSeconds}s ago`;
+  }
+
+  if (elapsedSeconds < 3600) {
+    return `updated ${Math.floor(elapsedSeconds / 60)}m ago`;
+  }
+
+  return `updated ${Math.floor(elapsedSeconds / 3600)}h ago`;
 }
 
 function matchStatusTone(match?: Match) {
@@ -1677,6 +1705,18 @@ function App() {
                         Last tick: {oddsStreamLastUpdate}
                       </p>
                     )}
+                    {health?.liveStream && (
+                      <p
+                        className={`mt-2 text-[10px] font-semibold ${
+                          health.liveStream.connected ? "text-emerald-200" : "text-stone-500"
+                        }`}
+                        title={health.liveStream.lastError ?? undefined}
+                      >
+                        {health.liveStream.connected
+                          ? `⛓ TxLINE push feed connected (${health.liveStream.totalEventsReceived ?? 0} events)`
+                          : "⛓ TxLINE push feed reconnecting…"}
+                      </p>
+                    )}
                     <button
                       type="button"
                       onClick={() => setIsReplayStreamMode((current) => !current)}
@@ -2026,8 +2066,13 @@ function App() {
                           <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${matchStatusTone(match)}`}>
                             {preciseStatusLabel(match)}
                           </span>
-                          <span className="text-xs text-stone-500">
-                            {matchClockLabel(match)}
+                          <span className="text-right text-xs text-stone-500">
+                            <span className="block">{matchClockLabel(match)}</span>
+                            {dataFreshnessLabel(match.lastUpdated) && (
+                              <span className="block text-[9px] text-stone-600">
+                                {dataFreshnessLabel(match.lastUpdated)}
+                              </span>
+                            )}
                           </span>
                         </div>
 
