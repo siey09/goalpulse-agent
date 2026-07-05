@@ -374,6 +374,16 @@ function App() {
   const [error, setError] = useState("");
   const [replayBacktest, setReplayBacktest] = useState<ReplayBacktest | null>(null);
   const [isReplayRunning, setIsReplayRunning] = useState(false);
+  const [onchainVerify, setOnchainVerify] = useState<{
+    loading: boolean;
+    data: {
+      available: boolean;
+      reason?: string;
+      isValid?: boolean;
+      provenStat?: { key: number; value: number; period: number };
+      dailyScoresPda?: string;
+    } | null;
+  }>({ loading: false, data: null });
   const hasLoadedOnceRef = useRef(false);
 
   const judgeDemoSteps = [
@@ -540,6 +550,36 @@ function App() {
       );
     } finally {
       setIsReplayRunning(false);
+    }
+  }
+  async function runOnchainVerify() {
+    try {
+      setOnchainVerify({ loading: true, data: null });
+
+      const payload = await request<{
+        data: {
+          available: boolean;
+          reason?: string;
+          isValid?: boolean;
+          provenStat?: { key: number; value: number; period: number };
+          dailyScoresPda?: string;
+        };
+      }>(
+        "/api/onchain/validate-stat?fixtureId=18179549&seq=1029&statKey=1002&threshold=0&comparison=equalTo"
+      );
+
+      setOnchainVerify({ loading: false, data: payload.data });
+    } catch (currentError) {
+      setOnchainVerify({
+        loading: false,
+        data: {
+          available: false,
+          reason:
+            currentError instanceof Error
+              ? currentError.message
+              : "Unable to reach the on-chain validation endpoint.",
+        },
+      });
     }
   }
   const guideTargets = [
@@ -2465,6 +2505,59 @@ function App() {
                     <p className="mt-2 truncate text-[10px] text-stone-500">
                       Hash: {replayBacktest.proof?.hash ?? "pending"}
                     </p>
+
+                    <button
+                      type="button"
+                      onClick={runOnchainVerify}
+                      disabled={onchainVerify.loading}
+                      className="mt-2 w-full rounded-lg bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-sky-200 transition hover:bg-sky-400/20 disabled:opacity-50"
+                    >
+                      {onchainVerify.loading
+                        ? "Verifying on Solana…"
+                        : "Verify Colombia vs Ghana on Solana ⛓"}
+                    </button>
+
+                    {onchainVerify.data && (
+                      <div className="mt-2 rounded-lg bg-black/30 p-2 text-[10px]">
+                        {onchainVerify.data.available ? (
+                          <>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-stone-500">On-chain result</span>
+                              <span
+                                className={`font-semibold ${
+                                  onchainVerify.data.isValid
+                                    ? "text-emerald-300"
+                                    : "text-red-300"
+                                }`}
+                              >
+                                {onchainVerify.data.isValid ? "PROOF VALID" : "PROOF FAILED"}
+                              </span>
+                            </div>
+                            {onchainVerify.data.provenStat && (
+                              <p className="mt-1 text-stone-500">
+                                Proven stat: key {onchainVerify.data.provenStat.key}, value{" "}
+                                {onchainVerify.data.provenStat.value}, period{" "}
+                                {onchainVerify.data.provenStat.period}
+                              </p>
+                            )}
+                            {onchainVerify.data.dailyScoresPda && (
+                              <a
+                                href={`https://explorer.solana.com/address/${onchainVerify.data.dailyScoresPda}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-1 block truncate text-sky-300 underline"
+                              >
+                                View PDA on Solana Explorer ↗
+                              </a>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-stone-500">
+                            {onchainVerify.data.reason ?? "On-chain validation unavailable."}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 {(replayBacktest.events ?? []).length > 0 && (
