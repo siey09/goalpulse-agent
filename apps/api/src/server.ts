@@ -4,6 +4,7 @@ import express from "express";
 import { processAgentCycle } from "./agent";
 import { fetchRecentTxLineResults } from "./services/txlineClient";
 import { getLiveStreamState, startLiveStreamMonitor } from "./services/txlineStream";
+import { validateStatOnChain } from "./services/onchainValidation";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { config } from "./config";
 import { getStats, store , upsertRecentFinishedMatches } from "./store";
@@ -31,6 +32,47 @@ app.get("/api/matches", (_req, res) => {
   res.json({
     data: store.matches,
   });
+});
+
+/**
+ * Diagnostic endpoint for manually experimenting with real on-chain Merkle
+ * proof validation against TxLINE's Solana program. Since the numeric
+ * meaning of a given statKey is not publicly documented, this endpoint
+ * surfaces the exact key/value TxLINE proves (`provenStat`) so the caller
+ * can confirm what a statKey represents before relying on it elsewhere.
+ *
+ * Example: /api/onchain/validate-stat?fixtureId=18179549&seq=1029&statKey=1002&threshold=0&comparison=greaterThan
+ */
+app.get("/api/onchain/validate-stat", async (req, res) => {
+  const fixtureId = Number(req.query.fixtureId);
+  const seq = Number(req.query.seq);
+  const statKey = Number(req.query.statKey);
+  const threshold = Number(req.query.threshold ?? 0);
+  const comparison = (req.query.comparison as string) ?? "greaterThan";
+
+  if (!fixtureId || !seq || !statKey) {
+    res.status(400).json({
+      error: "fixtureId, seq, and statKey query parameters are required.",
+    });
+    return;
+  }
+
+  if (!["greaterThan", "lessThan", "equalTo"].includes(comparison)) {
+    res.status(400).json({
+      error: "comparison must be one of: greaterThan, lessThan, equalTo",
+    });
+    return;
+  }
+
+  const result = await validateStatOnChain(
+    fixtureId,
+    seq,
+    statKey,
+    threshold,
+    comparison as "greaterThan" | "lessThan" | "equalTo"
+  );
+
+  res.json({ data: result });
 });
 
 app.get("/api/recent-results", async (_req, res) => {
