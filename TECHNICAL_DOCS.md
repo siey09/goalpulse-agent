@@ -38,6 +38,9 @@ Important backend files:
 - apps/api/src/server.ts
 - apps/api/src/types.ts
 - apps/api/src/services/txlineClient.ts
+- apps/api/src/services/txlineStream.ts (live push-stream connectivity monitor)
+- apps/api/src/services/onchainValidation.ts (real on-chain Solana Merkle proof validation)
+- apps/api/src/services/alerts.ts (autonomous Discord webhook alerts)
 - apps/api/src/logic/signalEngine.ts
 - apps/api/src/agent.ts
 - apps/api/src/store.ts (in-memory state; resets on process restart)
@@ -163,6 +166,36 @@ Audit evidence includes:
 
 **Snapshot ordering during historical backfill.** `findPreviousSnapshot()` in `store.ts` returns the most recently stored snapshot for a match without checking that it is chronologically older than the new snapshot being processed. When a finished match was re-ingested through the recent-results backfill path, older historical snapshots could be compared against an already-stored, much later snapshot, producing nonsensical odds-compression signals (for example, comparing a pre-match snapshot to a full-time snapshot as if it were a single in-play move). Fixed in `agent.ts` by skipping signal generation whenever the candidate previous snapshot is not strictly older than the current snapshot.
 
+**Live fixture coverage could be silently dropped.** The live poll loop in `fetchTxLineFeed` processes a capped batch of fixtures per cycle (14) from `/api/fixtures/snapshot` without sorting the response first. With multiple concurrent World Cup matches, a currently in-play fixture could be pushed past the cap by unrelated future-scheduled fixtures. Fixed with `prioritizeLikelyLiveFixtures()`, which sorts fixtures whose kickoff has already passed and are within a plausible in-play window (kickoff to kickoff + 3 hours) ahead of everything else before slicing.
+
+## Live TxLINE Push Stream Monitor
+
+`apps/api/src/services/txlineStream.ts` maintains a persistent Server-Sent Events connection directly to TxLINE's own `/api/scores/stream` endpoint, with automatic reconnection and capped exponential backoff. This is additive to, and independent from, the 5-second polling loop that remains the source of truth for signal generation. Connectivity state (`connected`, `lastEventAt`, `totalEventsReceived`, `totalReconnects`, `lastError`) is exposed via `/health` and surfaced on the dashboard as a "TxLINE push feed connected (N events)" badge. Started at server boot only when `USE_SIMULATED_FEED=false` and a `TXLINE_API_KEY` is configured; never crashes the process on a connectivity failure.
+
+## Official Historical Scores Endpoint
+
+The recent-results backfill path (`fetchRecentTxLineResults`) uses TxLINE's dedicated `GET /api/scores/historical/{fixtureId}` endpoint (available for fixtures started between two weeks and six hours ago) instead of a single current-state snapshot call. This gives the Scores Intelligence Layer the full play-by-play history to pick the strongest field-context match from. The endpoint's response uses camelCase field names, which differ from the PascalCase used by the live snapshot/update endpoints per the TXODDS Scores Product API doc; `normalizeHistoricalScoreEntry()` defensively accepts either casing so a response-shape change on either endpoint does not silently produce blank field context, with automatic fallback to the current-snapshot endpoint if the historical call fails or the fixture falls outside the two-week window.
+
+## Multi-Market Signal Detection
+
+Alongside the 1X2 match-winner market, GoalPulse independently tracks the full-match Over/Under Total Goals market (`SuperOddsType: "OVERUNDER_PARTICIPANT_GOALS"` with an empty `MarketPeriod`, confirmed live against real TxLINE data; `MarketPeriod: "half=1"`/`"half=2"` variants are per-half lines and are intentionally excluded). Totals snapshots use a distinct `matchId` (`<fixtureId>-totals-<line>`) so their price history is fully isolated from the 1X2 market in the store — mixing the two under one id would let the signal engine compare a 1X2 price against a totals price as if they were the same market. A `matchLabel` field carries the real fixture context (e.g. "Portugal vs Spain") so the signal's `match` display string stays meaningful even though `homeTeam`/`awayTeam` are repurposed as "Over 3.5" / "Under 3.5". Settlement (`evaluatePendingSignalsForFinishedMatches` in `store.ts`) resolves Over/Under signals by comparing the real combined goal count against the line, falling back to the base fixture id (stripping the `-totals-<line>` suffix) to find the final score.
+
+## Real On-Chain Merkle Proof Validation (Solana Mainnet)
+
+`apps/api/src/services/onchainValidation.ts` calls TxLINE's actual `Txoracle` Anchor program deployed on Solana mainnet (program id `9ExbZjAapQww1vfcisDmrngPinHTEfpjYRWMunJgcKaA`) via `GET /api/onchain/validate-stat`. The flow: fetch Merkle proof data from TxLINE's own `/api/scores/stat-validation` endpoint for a given fixtureId/seq/statKey, derive the daily Merkle root PDA, and call `program.methods.validateStat(...).view()` — a read-only transaction simulation, so no SOL is spent on network fees. The exact numeric meaning of a given `statKey` is not publicly documented by TxLINE, so this module does not hardcode assumptions about what a key represents; the response surfaces the actual `provenStat` (key/value/period) TxLINE returns so the caller can confirm what was proven. Gracefully reports `available: false` if `SOLANA_WALLET_SECRET_KEY` is not configured, so a missing wallet never breaks the endpoint or the rest of the Outcome Audit. Verified live: a stat from the Colombia vs Ghana fixture (`key: 1002, value: 0, period: 4`) returned `isValid: false` against an incorrect threshold and `isValid: true` against the correct one, confirming the full chain (wallet, RPC, PDA derivation, Merkle proof verification) works end to end on mainnet. Displayed on the dashboard with a direct Solana Explorer link to the daily root PDA.
+
+## Simulated P&L (Trading Performance Tracking)
+
+`getPnlSummary()` in `store.ts` (exposed via `GET /api/pnl`) simulates a flat 1-unit stake on every settled signal at the decimal odds available when the signal fired (`oddsAfter`), settled against the real, already-verified match outcome: `profit = stake * (oddsAfter - 1)` if correct, `-stake` if incorrect. Reports net units, ROI%, and a breakdown by severity tier (HIGH/MEDIUM/LOW), plus open exposure for pending signals. This is a genuine trading-performance metric, not just an accuracy percentage: a strategy can be more than 50% accurate and still lose money if winners pay short odds and losers cost a full unit.
+
+## Autonomous Discord Alerts
+
+`apps/api/src/services/alerts.ts` sends a Discord webhook alert the instant `agent.ts` detects a HIGH severity signal, with no human triggering it. Configured via `DISCORD_WEBHOOK_URL`; silently no-ops if unset, and every delivery attempt is wrapped in try/catch with console logging so a webhook failure can never break the agent cycle. Verified live with a real "SHARP MOVE — Belgium" alert delivered the moment USA vs Belgium odds compressed 19.64%.
+
+## Automated Test Coverage
+
+`apps/api/src/logic/signalEngine.test.ts` and `apps/api/src/store.test.ts` (Vitest, `npm run test`, 17 tests total) cover the deterministic core: severity classification at the exact 4%/8%/15% thresholds, correct side selection between home/away, multi-market `matchLabel` handling, momentum score clamping to 0-100, and signal settlement for both the 1X2 market (home/away/draw) and the Over/Under totals market (including matchId-suffix resolution back to the base fixture). `tsconfig.json` excludes `src/**/*.test.ts` so test files never ship in the production build output.
+
 ## Signal Thresholds
 
 - LOW watch signal: odds compression >= 4%
@@ -184,20 +217,25 @@ Momentum score combines:
 - USE_SIMULATED_FEED=false
 - TXLINE_API_BASE_URL=https://txline.txodds.com
 - TXLINE_API_TOKEN or TXLINE_API_KEY
+- SOLANA_WALLET_SECRET_KEY (JSON array of secret key bytes; enables real on-chain validation)
+- SOLANA_RPC_URL (optional; defaults to the public Solana mainnet-beta RPC)
+- DISCORD_WEBHOOK_URL (optional; enables autonomous HIGH severity alerts)
 - VITE_API_BASE_URL=https://goalpulse-agent-api.onrender.com
 
-Do not commit .env.local, .secrets, or API tokens.
+Do not commit .env.local, .secrets, or API tokens. A full git-history audit confirmed none have ever been committed; only .env.example (a template with no real values) is tracked.
 
 ## API Endpoints
 
-- GET /health
+- GET /health (includes liveStream connectivity status)
 - GET /api/matches
 - GET /api/signals
 - GET /api/stats
+- GET /api/pnl (simulated trading P&L)
 - GET /api/agent-runs
 - GET /api/odds-history
 - GET /api/recent-results
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
+- GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)
 - GET /api/live/replay-stream (Server-Sent Events, demo replay)
 - POST /api/agent/run-once

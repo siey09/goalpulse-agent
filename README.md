@@ -24,26 +24,46 @@ Running live against real TxLINE Service Level 12 data (2026-07-04): 90+ unatten
 - **Colombia vs Ghana** (validated move): SHARP_MOVE and MOMENTUM_SHIFT signals on Colombia, both confirmed `correct` after the match ended 1-0.
 - **Canada vs Morocco** (confirmed trap): a 55.13% and a 52.7% odds compression on Canada were both rejected by the final result (Canada lost 0-3), and the Outcome Audit layer correctly classified both as `CONFIRMED_TRAP` with `EXTREME_REVERSAL` risk, backed by a real SHA-256 proof hash.
 
-See SUBMISSION_NOTES.md for the full write-up, including two real bugs found and fixed during live verification: an undocumented TxLINE `StatusId: 100` for finished matches, and a snapshot-ordering issue that could pair a current snapshot with a chronologically later "previous" snapshot during historical backfills.
+See SUBMISSION_NOTES.md for the full write-up, including three real bugs found and fixed during live verification: an undocumented TxLINE `StatusId: 100` for finished matches, a snapshot-ordering issue during historical backfill, and a fixture-coverage gap that could silently drop live matches.
+
+## Beyond the Core Loop
+
+Five substantial features were added and verified live in production after the initial write-up:
+
+1. **Real on-chain Merkle proof validation on Solana mainnet** — calls TxLINE's actual `Txoracle` program (not a self-generated hash) via a genuine `.view()` simulation call, verified live with a real stat from Colombia vs Ghana. See the "Verify on Solana" button on the dashboard.
+2. **Simulated P&L tracking** — turns "accuracy %" into a real trading performance metric (net units, ROI%, per-severity breakdown) using a flat 1-unit stake simulation against real settled outcomes.
+3. **Autonomous Discord alerts** — the agent sends a real webhook alert the instant it detects a HIGH severity signal, with no human trigger, verified live.
+4. **Multi-market signal detection** — independently tracks the Over/Under Total Goals market alongside 1X2, with isolated price history so the two markets never cross-contaminate each other's signals.
+5. **Live TxLINE push stream** — a persistent Server-Sent Events connection directly to TxLINE's own streaming endpoint, additive to the tested polling loop, exposed via `/health`.
+
+Also added: 17 automated unit tests covering the deterministic signal and settlement logic, and a full git-history security audit confirming no secrets were ever committed.
 
 ## Key Features
 
 - Autonomous backend agent loop
 - Real TxLINE feed adapter
+- Live TxLINE push stream monitor (beyond polling)
+- Official historical scores endpoint for backfill
+- Fixture prioritization to avoid missing in-play matches
 - Odds snapshot normalization
 - Sharp odds movement detection
+- Multi-market signal detection (1X2 and Over/Under Total Goals)
 - TXODDS Scores event context
 - Field Pressure Index
 - Field-backed vs market-only signal labels
 - Reliability filter for suspended, unreliable, amended, or discarded data
-- Precise match status and clock labels
+- Precise match status and clock labels with live "updated Xs ago" freshness indicator
 - Final score settlement audit
 - Score breakdown evidence for H1, H2, total goals, corners, red cards, and yellow cards
+- Real on-chain Merkle proof validation (Solana mainnet)
+- Simulated P&L / trading performance tracking
+- Autonomous Discord alerts on HIGH severity signals
 - Replay mode for repeatable hackathon demos
 - Evidence chain with endpoints, fixture IDs, message IDs, bookmakers, and proof labels
 - Three-agent Council Vote and SHA-256 proof hash on every Outcome Audit run
 - Smart Money Trap detection with reversal-risk classification
 - Server-Sent Events live streaming for real-time dashboard updates
+- 17 automated unit tests
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer
@@ -109,16 +129,23 @@ cd C:\Projects\goalpulse-agent
 npm.cmd --prefix apps\api run build
 npm.cmd --prefix apps\web run build
 
+## Tests
+
+cd C:\Projects\goalpulse-agent\apps\api
+npm.cmd run test
+
 ## API Endpoints
 
-- GET /health
+- GET /health (includes liveStream connectivity status)
 - GET /api/matches
 - GET /api/signals
 - GET /api/stats
+- GET /api/pnl (simulated trading P&L)
 - GET /api/agent-runs
 - GET /api/odds-history
 - GET /api/recent-results
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
+- GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)
 - GET /api/live/replay-stream (Server-Sent Events, demo replay)
 - POST /api/agent/run-once
