@@ -82,6 +82,9 @@ type AgentSignal = {
   finalScore?: string;
   scoreRealityStatus?: string;
   scoreRealityReason?: string;
+  evidence?: {
+    marketType?: string;
+  };
 };
 
 type AgentRun = {
@@ -329,6 +332,12 @@ function matchStatusTone(match?: Match) {
 }
 function signalTypeLabel(type?: string) {
   return (type ?? "WATCH").replaceAll("_", " ");
+}
+
+function marketTypeLabel(marketType?: string) {
+  if (marketType === "OVERUNDER_PARTICIPANT_GOALS") return "Over/Under";
+  if (marketType === "1X2_PARTICIPANT_RESULT") return "1X2";
+  return undefined;
 }
 
 function getSignalType(signal?: AgentSignal | null) {
@@ -2300,13 +2309,20 @@ function App() {
                       className="w-full rounded-xl border border-white/8 bg-black/20 p-2.5 text-left transition hover:border-orange-400/40 hover:bg-orange-400/10"
                     >
                       <div className="mb-2 flex items-center justify-between">
-                        <span
-                          className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${severityStyle(
-                            signal.severity
-                          )}`}
-                        >
-                          {(signal.severity ?? "LOW").toUpperCase()}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${severityStyle(
+                              signal.severity
+                            )}`}
+                          >
+                            {(signal.severity ?? "LOW").toUpperCase()}
+                          </span>
+                          {marketTypeLabel(signal.evidence?.marketType) && (
+                            <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-2 py-1 text-[10px] font-semibold text-sky-200">
+                              {marketTypeLabel(signal.evidence?.marketType)}
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[11px] text-stone-500">
                           {formatTime(signal.createdAt)}
                         </span>
@@ -2369,6 +2385,9 @@ function App() {
                             </p>
                             <p className="mt-0.5 text-[11px] text-stone-500">
                               {item.source} • {getSignalTarget(item.signal)}
+                              {marketTypeLabel(item.signal.evidence?.marketType)
+                                ? ` • ${marketTypeLabel(item.signal.evidence?.marketType)}`
+                                : ""}
                             </p>
                           </div>
 
