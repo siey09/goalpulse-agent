@@ -1,0 +1,738 @@
+openapi: 3.0.3
+info:
+  title: GoalPulse Agent API
+  description: >
+    Autonomous TxLINE-powered sports market intelligence API. Detects odds
+    movement, enriches signals with TXODDS Scores context, and audits
+    settlement outcomes against real match results.
+
+
+    All endpoints are rate-limited to 1200 requests/minute per IP. Exceeding
+    this limit returns `429` with `{ "error": "Too many requests. Please
+    slow down and try again shortly." }`. `POST /api/agent/run-once` has an
+    additional, stricter 10 requests/minute limit and requires the
+    `X-API-Key` header.
+  version: 1.0.0
+servers:
+  - url: https://goalpulse-agent-api.onrender.com
+    description: Production (Render)
+  - url: http://localhost:4000
+    description: Local development
+
+security: []
+
+components:
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: >
+        Required only for POST /api/agent/run-once. Configured via the
+        API_ACCESS_KEY environment variable on the server. If the server has
+        no key configured, this endpoint always rejects (fail-closed).
+
+  schemas:
+    Match:
+      type: object
+      properties:
+        id: { type: string }
+        competition: { type: string }
+        homeTeam: { type: string }
+        awayTeam: { type: string }
+        homeScore: { type: number }
+        awayScore: { type: number }
+        minute: { type: number }
+        status: { type: string, enum: [scheduled, live, finished] }
+        statusId: { type: number }
+        statusLabel: { type: string }
+        clockSeconds: { type: number }
+        clockLabel: { type: string }
+        lastUpdated: { type: string, format: date-time }
+      required: [id, competition, homeTeam, awayTeam, homeScore, awayScore, minute, status, lastUpdated]
+
+    TxLineScoreBreakdown:
+      type: object
+      properties:
+        h1: { type: string }
+        h2: { type: string }
+        total: { type: string }
+        goals: { type: string }
+        corners: { type: string }
+        redCards: { type: string }
+        yellowCards: { type: string }
+
+    TxLineScoresContext:
+      type: object
+      properties:
+        fixtureId: { type: string }
+        endpointUsed: { type: string }
+        latestAction: { type: string }
+        actionLabel: { type: string }
+        actionTeam: { type: string, enum: [home, away, neutral, unknown] }
+        statusId: { type: number }
+        statusName: { type: string }
+        clockSeconds: { type: number }
+        minute: { type: number }
+        homeScore: { type: number }
+        awayScore: { type: number }
+        scoreline: { type: string }
+        scoreBreakdown:
+          $ref: '#/components/schemas/TxLineScoreBreakdown'
+        possessionType: { type: string }
+        pressureLevel: { type: string, enum: [NONE, SAFE, ATTACK, DANGER, HIGH_DANGER] }
+        fieldPressureScore: { type: number }
+        reliability: { type: string, enum: [RELIABLE, UNRELIABLE, SUSPENDED, UNKNOWN] }
+        reliabilityReason: { type: string }
+        confirmed: { type: boolean }
+        sequence: { type: number }
+        timestamp: { type: string, format: date-time }
+        proofLabel: { type: string }
+
+    TxLineEvidence:
+      type: object
+      properties:
+        source: { type: string, enum: [txline, simulated_txline] }
+        fixtureId: { type: string }
+        endpointUsed: { type: string }
+        bookmaker: { type: string }
+        messageId: { type: string }
+        marketType: { type: string }
+        marketPeriod: { type: string, nullable: true }
+        marketParameters: { type: string, nullable: true }
+        previousSnapshotId: { type: string }
+        currentSnapshotId: { type: string }
+        previousTimestamp: { type: string, format: date-time }
+        currentTimestamp: { type: string, format: date-time }
+        scoresContext:
+          $ref: '#/components/schemas/TxLineScoresContext'
+        proofLabel: { type: string }
+      required: [source]
+
+    OddsSnapshot:
+      type: object
+      properties:
+        id: { type: string }
+        matchId: { type: string }
+        homeTeam: { type: string }
+        awayTeam: { type: string }
+        homeOdds: { type: number }
+        awayOdds: { type: number }
+        drawOdds: { type: number }
+        homeScore: { type: number }
+        awayScore: { type: number }
+        minute: { type: number }
+        source: { type: string, enum: [simulated_txline, txline] }
+        createdAt: { type: string, format: date-time }
+        matchLabel: { type: string }
+        evidence:
+          $ref: '#/components/schemas/TxLineEvidence'
+      required: [id, matchId, homeTeam, awayTeam, homeOdds, awayOdds, drawOdds, homeScore, awayScore, minute, source, createdAt]
+
+    AgentSignal:
+      type: object
+      properties:
+        id: { type: string }
+        matchId: { type: string }
+        match: { type: string }
+        target: { type: string }
+        side: { type: string, enum: [home, away] }
+        signalType: { type: string, enum: [SHARP_MOVE, WATCH, MOMENTUM_SHIFT, NO_ACTION] }
+        severity: { type: string, enum: [HIGH, MEDIUM, LOW, NONE] }
+        oddsBefore: { type: number }
+        oddsAfter: { type: number }
+        oddsChangePct: { type: number }
+        momentumScore: { type: number }
+        explanation: { type: string }
+        createdAt: { type: string, format: date-time }
+        resultStatus: { type: string, enum: [pending, correct, incorrect] }
+        evidence:
+          $ref: '#/components/schemas/TxLineEvidence'
+        discordAlertStatus: { type: string, enum: [sent, failed, not_configured] }
+      required: [id, matchId, match, target, side, signalType, severity, oddsBefore, oddsAfter, oddsChangePct, momentumScore, explanation, createdAt, resultStatus]
+
+    AgentRun:
+      type: object
+      properties:
+        id: { type: string }
+        startedAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time }
+        matchesProcessed: { type: number }
+        snapshotsCreated: { type: number }
+        signalsCreated: { type: number }
+        status: { type: string, enum: [success, error] }
+        message: { type: string }
+      required: [id, startedAt, finishedAt, matchesProcessed, snapshotsCreated, signalsCreated, status, message]
+
+    LiveStreamState:
+      type: object
+      properties:
+        connected: { type: boolean }
+        lastEventAt: { type: string, format: date-time, nullable: true }
+        totalEventsReceived: { type: number }
+        totalReconnects: { type: number }
+        lastError: { type: string, nullable: true }
+      required: [connected, lastEventAt, totalEventsReceived, totalReconnects, lastError]
+
+    Stats:
+      type: object
+      properties:
+        txlineUpdates: { type: number }
+        signalsGenerated: { type: number }
+        highSeverity: { type: number }
+        pendingSignals: { type: number }
+        correctSignals: { type: number }
+        incorrectSignals: { type: number }
+        closedSignals: { type: number }
+        strategyAccuracy: { type: number }
+        lastAgentRun:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/AgentRun'
+      required: [txlineUpdates, signalsGenerated, highSeverity, pendingSignals, correctSignals, incorrectSignals, closedSignals, strategyAccuracy, lastAgentRun]
+
+    PnlSeverityBreakdown:
+      type: object
+      properties:
+        severity: { type: string }
+        bets: { type: number }
+        netUnits: { type: number }
+        roiPercent: { type: number }
+      required: [severity, bets, netUnits, roiPercent]
+
+    PnlSummary:
+      type: object
+      properties:
+        unitStake: { type: number }
+        settledBets: { type: number }
+        totalStaked: { type: number }
+        netUnits: { type: number }
+        roiPercent: { type: number }
+        openPositions: { type: number }
+        openExposure: { type: number }
+        bySeverity:
+          type: array
+          items:
+            $ref: '#/components/schemas/PnlSeverityBreakdown'
+        note: { type: string }
+      required: [unitStake, settledBets, totalStaked, netUnits, roiPercent, openPositions, openExposure, bySeverity, note]
+
+    ProvenStat:
+      type: object
+      properties:
+        key: { type: number }
+        value: { type: number }
+        period: { type: number }
+      required: [key, value, period]
+
+    OnChainValidationResult:
+      type: object
+      properties:
+        available: { type: boolean }
+        reason: { type: string }
+        isValid: { type: boolean }
+        provenStat:
+          $ref: '#/components/schemas/ProvenStat'
+        dailyScoresPda: { type: string }
+      required: [available]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+
+    ReplayTimelineStep:
+      type: object
+      properties:
+        step: { type: string }
+        detail: { type: string }
+      required: [step, detail]
+
+    ReplayEvent:
+      type: object
+      properties:
+        id: { type: string }
+        matchId: { type: string }
+        minute: { type: number }
+        team: { type: string }
+        type: { type: string }
+        description: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, matchId, minute, team, type, description, createdAt]
+
+    ReplaySignal:
+      allOf:
+        - $ref: '#/components/schemas/AgentSignal'
+        - type: object
+          properties:
+            trapStatus: { type: string, enum: [WATCHING, VALIDATED_MOVE, CONFIRMED_TRAP, POSSIBLE_TRAP, LOW_TRAP_RISK] }
+            trapScore: { type: number }
+            trapReason: { type: string }
+            reversalRisk: { type: string, enum: [OVEREXTENDED_WATCH, NORMAL_WATCH, VALIDATED, EXTREME_REVERSAL, HIGH_REVERSAL, MODERATE_REVERSAL, LOW_REVERSAL] }
+            reversalReason: { type: string }
+            finalScore: { type: string }
+            scoreRealityStatus: { type: string, enum: [WAITING_FOR_FINAL_SCORE, CONFIRMED_BY_SCORE, REJECTED_BY_SCORE] }
+            scoreRealityReason: { type: string }
+          required: [trapStatus, trapScore, trapReason, reversalRisk, reversalReason, finalScore, scoreRealityStatus, scoreRealityReason]
+
+    CouncilVote:
+      type: object
+      properties:
+        agent: { type: string }
+        vote: { type: string, enum: [approve, reject, watch] }
+        reason: { type: string }
+      required: [agent, vote, reason]
+
+    CouncilDecision:
+      type: object
+      properties:
+        signalId: { type: string }
+        matchId: { type: string }
+        target: { type: string }
+        decision: { type: string, enum: [approved, watch, rejected] }
+        approvals: { type: number }
+        totalAgents: { type: number }
+        votes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CouncilVote'
+      required: [signalId, matchId, target, decision, approvals, totalAgents, votes]
+
+    ReplayProof:
+      type: object
+      properties:
+        type: { type: string, enum: [sha256] }
+        hash: { type: string }
+        network: { type: string, enum: [solana-devnet] }
+        anchoringStatus: { type: string, enum: [ready_to_anchor, pending_wallet_configuration] }
+        walletConfigured: { type: boolean }
+        transactionSignature: { type: string, nullable: true }
+        explorerUrl: { type: string, nullable: true }
+        note: { type: string }
+      required: [type, hash, network, anchoringStatus, walletConfigured, transactionSignature, explorerUrl, note]
+
+    ReplaySummary:
+      type: object
+      properties:
+        snapshotsProcessed: { type: number }
+        signalsDetected: { type: number }
+        correctSignals: { type: number }
+        incorrectSignals: { type: number }
+        accuracyPct: { type: number }
+        smartMoneyTraps: { type: number }
+        confirmedTraps: { type: number }
+        possibleTraps: { type: number }
+      required: [snapshotsProcessed, signalsDetected, correctSignals, incorrectSignals, accuracyPct, smartMoneyTraps, confirmedTraps, possibleTraps]
+
+    ReplayBacktest:
+      type: object
+      properties:
+        datasetId: { type: string }
+        mode: { type: string, enum: [real_txline_replay, historical_replay] }
+        status: { type: string, enum: [completed] }
+        summary:
+          $ref: '#/components/schemas/ReplaySummary'
+        timeline:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReplayTimelineStep'
+        snapshots:
+          type: array
+          items:
+            $ref: '#/components/schemas/OddsSnapshot'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReplayEvent'
+        signals:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReplaySignal'
+        councilVotes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CouncilDecision'
+        proof:
+          $ref: '#/components/schemas/ReplayProof'
+      required: [datasetId, mode, status, summary, timeline, snapshots, events, signals, councilVotes, proof]
+
+    OddsStreamEvent:
+      type: object
+      properties:
+        matchId: { type: string }
+        timestamp: { type: string, format: date-time }
+        match:
+          $ref: '#/components/schemas/Match'
+        latestSnapshot:
+          $ref: '#/components/schemas/OddsSnapshot'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/OddsSnapshot'
+        signals:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentSignal'
+        stats:
+          $ref: '#/components/schemas/Stats'
+        streamMode: { type: string, enum: [replay_test] }
+        replayCursor: { type: number }
+        replayTotal: { type: number }
+        replayComplete: { type: boolean }
+      required: [matchId, timestamp, history, signals, stats]
+
+  responses:
+    RateLimited:
+      description: Too many requests — general 1200/min per-IP limit exceeded.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Too many requests. Please slow down and try again shortly."
+
+paths:
+  /health:
+    get:
+      summary: Health check and live-stream connectivity status
+      description: >
+        Returns service status, agent configuration, and TxLINE push-stream
+        connectivity state. Used by UptimeRobot for external monitoring
+        (every 5 minutes) and by Render's own health check.
+      responses:
+        '200':
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, enum: [true] }
+                  service: { type: string, enum: ["GoalPulse Agent API"] }
+                  status: { type: string, enum: [running] }
+                  agentIntervalMs: { type: number }
+                  useSimulatedFeed: { type: boolean }
+                  txlineBaseUrl: { type: string }
+                  liveStream:
+                    $ref: '#/components/schemas/LiveStreamState'
+                  timestamp: { type: string, format: date-time }
+                required: [ok, service, status, agentIntervalMs, useSimulatedFeed, txlineBaseUrl, liveStream, timestamp]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/matches:
+    get:
+      summary: Current live/scheduled matches
+      description: All matches currently tracked by the agent (scheduled, live, or recently finished in the current polling cycle).
+      responses:
+        '200':
+          description: List of matches.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Match'
+                required: [data]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/recent-results:
+    get:
+      summary: Recently finished matches
+      description: >
+        Finished matches, backfilled via TxLINE's historical scores endpoint
+        if not already present in the live store.
+      responses:
+        '200':
+          description: List of finished matches.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Match'
+                required: [data]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/signals:
+    get:
+      summary: Live-detected agent signals
+      description: All signals generated by the autonomous agent loop from real (or simulated) TxLINE odds movement, most recent first.
+      responses:
+        '200':
+          description: List of signals.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AgentSignal'
+                required: [data]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/stats:
+    get:
+      summary: Aggregate agent statistics
+      description: Signal counts, accuracy, and the most recent agent run.
+      responses:
+        '200':
+          description: Aggregate stats.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Stats'
+                required: [data]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/pnl:
+    get:
+      summary: Simulated trading P&L
+      description: >
+        Simulates a flat 1-unit stake on every settled signal at the odds
+        available when it fired, settled against the real match outcome.
+        Analytics only, not a trading recommendation.
+      responses:
+        '200':
+          description: P&L summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PnlSummary'
+                required: [data]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/agent-runs:
+    get:
+      summary: Autonomous agent run history
+      description: History of autonomous agent cycles (most recent first).
+      responses:
+        '200':
+          description: List of agent runs.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AgentRun'
+                required: [data]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/odds-history:
+    get:
+      summary: Odds snapshot history
+      description: Up to the 100 most recent odds snapshots, newest first, optionally filtered to a single match.
+      parameters:
+        - name: matchId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter to a single match/market id. Omit for all matches combined.
+      responses:
+        '200':
+          description: List of odds snapshots.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OddsSnapshot'
+                required: [data]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/onchain/validate-stat:
+    get:
+      summary: Real on-chain Merkle proof validation (Solana mainnet)
+      description: >
+        Calls TxLINE's actual Txoracle Anchor program on Solana mainnet to
+        cryptographically verify a specific match statistic is provably
+        anchored on-chain. The predicate proven is always "the exact value
+        TxLINE reports for this stat is what's anchored on-chain" — an
+        arbitrary caller-supplied threshold is deliberately not used (see
+        docs/superpowers/specs/2026-07-07-rate-limiting-design.md and the
+        onchainValidation.ts source for why). Returns `available: false`
+        with a `reason` if the server has no Solana wallet configured, or if
+        TxLINE has no provable stat for the given fixtureId/seq/statKey
+        combination — this is expected, safe behavior, not an error.
+      parameters:
+        - name: fixtureId
+          in: query
+          required: true
+          schema:
+            type: number
+          description: TxLINE fixture id (also usable as a Match/OddsSnapshot id).
+        - name: seq
+          in: query
+          required: true
+          schema:
+            type: number
+          description: TXODDS Scores update sequence number (see AgentSignal.evidence.scoresContext.sequence).
+        - name: statKey
+          in: query
+          required: true
+          schema:
+            type: number
+          description: >
+            TxLINE-defined numeric stat key. Not publicly documented by
+            TxLINE; 1002 is confirmed to generalize across fixtures during
+            manual verification.
+      responses:
+        '200':
+          description: Validation attempted (may still report available:false — see description).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OnChainValidationResult'
+                required: [data]
+        '400':
+          description: One or more of fixtureId/seq/statKey was missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/replay/backtest:
+    get:
+      summary: Outcome Audit — council vote, trap classification, proof hash
+      description: >
+        Replays stored real TxLINE odds snapshots (or, if too few are
+        available, a fixed historical demo dataset) through the same signal
+        engine, then runs a three-agent council vote, Smart Money Trap
+        classification, and a SHA-256 proof hash over the full result set.
+      responses:
+        '200':
+          description: Replay/backtest result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ReplayBacktest'
+                required: [data]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/live/odds-stream:
+    get:
+      summary: Live odds Server-Sent Events stream
+      description: >
+        Persistent Server-Sent Events connection. Pushes an `odds-update`
+        event (JSON payload) whenever the selected match's odds/signals/stats
+        signature actually changes — not on a fixed interval. Optionally
+        filtered to a single match via `matchId`.
+      parameters:
+        - name: matchId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter to a single match. Omit for the most recent match overall.
+      responses:
+        '200':
+          description: text/event-stream connection. Each event is named `odds-update` with a JSON data payload.
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/OddsStreamEvent'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/live/replay-stream:
+    get:
+      summary: Demo replay Server-Sent Events stream
+      description: >
+        Same event shape as /api/live/odds-stream, but replays stored
+        snapshots for the given match one tick per second in a repeating
+        loop, for judge demos when no live match is active. Adds
+        `streamMode: "replay_test"`, `replayCursor`, `replayTotal`, and
+        `replayComplete` fields to each event.
+      parameters:
+        - name: matchId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Match/market id to replay. Omit for all stored snapshots combined.
+      responses:
+        '200':
+          description: text/event-stream connection. Each event is named `odds-update` with a JSON data payload.
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/OddsStreamEvent'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/agent/run-once:
+    post:
+      summary: Manually trigger one agent cycle
+      description: >
+        Forces a single out-of-cycle autonomous agent run (fetches TxLINE
+        data, generates signals, sends Discord alerts for HIGH severity
+        signals). Manual/debug trigger only — never called by the live
+        dashboard. Requires the X-API-Key header. Rate-limited to 10
+        requests/minute per IP (stricter than the general 1200/min limit),
+        as defense-in-depth alongside the API key.
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Agent cycle completed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AgentRun'
+                required: [data]
+        '401':
+          description: Missing/incorrect X-API-Key header, or the server has no API_ACCESS_KEY configured (fail-closed).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests — strict 10/min limit for this endpoint specifically exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Too many requests to this endpoint. Please wait before trying again."
