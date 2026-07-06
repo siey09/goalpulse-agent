@@ -7,6 +7,7 @@ import { getLiveStreamState, startLiveStreamMonitor } from "./services/txlineStr
 import { validateStatOnChain } from "./services/onchainValidation";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { config } from "./config";
+import { requireApiKey } from "./middleware/apiKeyAuth";
 import { getPnlSummary, getStats, store , upsertRecentFinishedMatches } from "./store";
 import type { OddsSnapshot } from "./types";
 
@@ -783,7 +784,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
   });
 });
 
-app.post("/api/agent/run-once", async (_req, res) => {
+app.post("/api/agent/run-once", requireApiKey, async (_req, res) => {
   const run = await processAgentCycle();
 
   res.json({
