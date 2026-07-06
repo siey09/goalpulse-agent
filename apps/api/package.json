@@ -16,6 +16,7 @@
     "@coral-xyz/anchor": "^0.32.1",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
+    "@supabase/supabase-js": "latest",
     "axios": "^1.18.1",
     "bs58": "^6.0.0",
     "cors": "latest",

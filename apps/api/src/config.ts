@@ -16,4 +16,6 @@ export const config = {
     process.env.TXLINE_API_KEY ??
     "",
   apiAccessKey: process.env.API_ACCESS_KEY ?? "",
+  supabaseUrl: process.env.SUPABASE_URL ?? "",
+  supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY ?? "",
 };
