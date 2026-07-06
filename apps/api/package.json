@@ -21,6 +21,7 @@
     "cors": "latest",
     "dotenv": "latest",
     "express": "latest",
+    "express-rate-limit": "latest",
     "tweetnacl": "^1.0.3",
     "zod": "latest"
   },
