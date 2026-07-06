@@ -85,6 +85,7 @@ type AgentSignal = {
   evidence?: {
     marketType?: string;
   };
+  discordAlertStatus?: "sent" | "failed" | "not_configured";
 };
 
 type AgentRun = {
@@ -337,6 +338,19 @@ function signalTypeLabel(type?: string) {
 function marketTypeLabel(marketType?: string) {
   if (marketType === "OVERUNDER_PARTICIPANT_GOALS") return "Over/Under";
   if (marketType === "1X2_PARTICIPANT_RESULT") return "1X2";
+  return undefined;
+}
+
+function discordAlertBadge(status?: "sent" | "failed" | "not_configured") {
+  if (status === "sent") {
+    return { label: "🔔 Alert sent", className: "border-emerald-400/20 bg-emerald-400/10 text-emerald-200" };
+  }
+  if (status === "failed") {
+    return { label: "⚠ Alert failed", className: "border-amber-400/20 bg-amber-400/10 text-amber-200" };
+  }
+  if (status === "not_configured") {
+    return { label: "Alerts off", className: "border-white/10 bg-white/5 text-stone-400" };
+  }
   return undefined;
 }
 
@@ -2322,6 +2336,16 @@ function App() {
                               {marketTypeLabel(signal.evidence?.marketType)}
                             </span>
                           )}
+                          {signal.severity === "HIGH" &&
+                            discordAlertBadge(signal.discordAlertStatus) && (
+                              <span
+                                className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${
+                                  discordAlertBadge(signal.discordAlertStatus)!.className
+                                }`}
+                              >
+                                {discordAlertBadge(signal.discordAlertStatus)!.label}
+                              </span>
+                            )}
                         </div>
                         <span className="text-[11px] text-stone-500">
                           {formatTime(signal.createdAt)}
@@ -2387,6 +2411,10 @@ function App() {
                               {item.source} • {getSignalTarget(item.signal)}
                               {marketTypeLabel(item.signal.evidence?.marketType)
                                 ? ` • ${marketTypeLabel(item.signal.evidence?.marketType)}`
+                                : ""}
+                              {item.signal.severity === "HIGH" &&
+                              discordAlertBadge(item.signal.discordAlertStatus)
+                                ? ` • ${discordAlertBadge(item.signal.discordAlertStatus)!.label}`
                                 : ""}
                             </p>
                           </div>

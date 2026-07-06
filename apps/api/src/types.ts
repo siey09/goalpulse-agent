@@ -109,6 +109,7 @@ export interface AgentSignal {
   createdAt: string;
   resultStatus: "pending" | "correct" | "incorrect";
   evidence?: TxLineEvidence;
+  discordAlertStatus?: "sent" | "failed" | "not_configured";
 }
 
 export interface AgentRun {

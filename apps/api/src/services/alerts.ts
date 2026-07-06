@@ -12,11 +12,15 @@ import { AgentSignal } from "../types";
  * If it is not configured, this silently no-ops so the agent cycle never
  * fails or slows down because of a missing/invalid webhook.
  */
-export async function sendHighSeverityAlert(signal: AgentSignal): Promise<void> {
+export type DiscordAlertStatus = "sent" | "failed" | "not_configured";
+
+export async function sendHighSeverityAlert(
+  signal: AgentSignal
+): Promise<DiscordAlertStatus> {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
   if (!webhookUrl) {
-    return;
+    return "not_configured";
   }
 
   const direction = signal.oddsAfter < signal.oddsBefore ? "compressed" : "drifted";
@@ -45,13 +49,16 @@ export async function sendHighSeverityAlert(signal: AgentSignal): Promise<void> 
   };
 
   try {
-    await fetch(webhookUrl, {
+    const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+
+    return response.ok ? "sent" : "failed";
   } catch {
     // Alerts are best-effort. A delivery failure must never break the
     // agent cycle or signal generation.
+    return "failed";
   }
 }

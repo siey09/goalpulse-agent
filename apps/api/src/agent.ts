@@ -52,7 +52,9 @@ const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.cr
         signalsCreated += 1;
 
         if (signal.severity === "HIGH") {
-          void sendHighSeverityAlert(signal);
+          void sendHighSeverityAlert(signal).then((status) => {
+            signal.discordAlertStatus = status;
+          });
         }
       }
     }
