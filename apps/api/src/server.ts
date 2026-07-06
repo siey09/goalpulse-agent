@@ -14,21 +14,12 @@ import type { OddsSnapshot } from "./types";
 
 const app = express();
 
-// Interim value — Render's exact reverse-proxy hop count could not be
-// verified from official documentation (see docs/superpowers/specs/
-// 2026-07-07-rate-limiting-design.md, "Prerequisite fix"). Confirm the real
-// value from the diagnostic logging below before treating this as final.
-app.set("trust proxy", 1);
-
-// TEMPORARY: remove once the real Render hop count is confirmed via these
-// logs (see the spec's Phase 2 follow-up). Logs the raw incoming header so
-// the actual number of proxy hops can be counted from Render's own logs.
-app.use((req, res, next) => {
-  console.log(
-    `[trust-proxy-diagnostic] x-forwarded-for="${req.headers["x-forwarded-for"] ?? ""}" socket-remote-address="${req.socket.remoteAddress}"`
-  );
-  next();
-});
+// Confirmed via production Render logs (2026-07-07): external requests
+// consistently show exactly 2 proxy hops in X-Forwarded-For — a Cloudflare
+// edge IP followed by Render's internal load balancer IP — before the real
+// client IP. See docs/superpowers/specs/2026-07-07-rate-limiting-design.md,
+// "Prerequisite fix", for the Phase 1/Phase 2 history of this value.
+app.set("trust proxy", 2);
 
 app.use(cors());
 app.use(express.json());
