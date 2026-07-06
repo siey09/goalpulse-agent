@@ -8,7 +8,9 @@
     "dev": "tsx watch src/server.ts",
     "dev:once": "tsx src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
@@ -27,6 +29,7 @@
     "@types/express": "latest",
     "@types/node": "latest",
     "tsx": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitest": "^4.1.10"
   }
 }
