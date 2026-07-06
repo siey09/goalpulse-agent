@@ -55,10 +55,23 @@ export async function sendHighSeverityAlert(
       body: JSON.stringify(payload),
     });
 
+    if (!response.ok) {
+      const retryAfter = response.headers.get("Retry-After");
+      console.error(
+        `[alerts] Discord webhook delivery failed for "${signal.target}" (${signal.match}): HTTP ${response.status}${
+          retryAfter ? `, Retry-After: ${retryAfter}s` : ""
+        }`
+      );
+    }
+
     return response.ok ? "sent" : "failed";
-  } catch {
+  } catch (error) {
     // Alerts are best-effort. A delivery failure must never break the
     // agent cycle or signal generation.
+    console.error(
+      `[alerts] Discord webhook delivery threw for "${signal.target}" (${signal.match}):`,
+      error
+    );
     return "failed";
   }
 }

@@ -26,6 +26,8 @@ export async function processAgentCycle(): Promise<AgentRun> {
 
     let signalsCreated = 0;
     let snapshotsCreated = 0;
+    let highSeverityAlertCount = 0;
+    const alertStaggerMs = 750;
 
     const orderedSnapshots = [...feed.snapshots].sort(
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -52,9 +54,14 @@ const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.cr
         signalsCreated += 1;
 
         if (signal.severity === "HIGH") {
-          void sendHighSeverityAlert(signal).then((status) => {
-            signal.discordAlertStatus = status;
-          });
+          const delayMs = highSeverityAlertCount * alertStaggerMs;
+          highSeverityAlertCount += 1;
+
+          void new Promise<void>((resolve) => setTimeout(resolve, delayMs))
+            .then(() => sendHighSeverityAlert(signal))
+            .then((status) => {
+              signal.discordAlertStatus = status;
+            });
         }
       }
     }
