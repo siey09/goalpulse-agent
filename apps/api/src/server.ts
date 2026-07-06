@@ -1,6 +1,9 @@
 ﻿import { createHash } from "crypto";
+import path from "path";
 import cors from "cors";
 import express from "express";
+import swaggerUi from "swagger-ui-express";
+import YAML from "yamljs";
 import { processAgentCycle } from "./agent";
 import { fetchRecentTxLineResults } from "./services/txlineClient";
 import { getLiveStreamState, startLiveStreamMonitor } from "./services/txlineStream";
@@ -37,6 +40,11 @@ app.get("/health", (_req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+const openApiDocument = YAML.load(
+  path.join(__dirname, "..", "..", "..", "openapi.yaml")
+);
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
 app.get("/api/matches", (_req, res) => {
   res.json({

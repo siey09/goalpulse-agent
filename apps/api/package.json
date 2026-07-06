@@ -22,13 +22,17 @@
     "dotenv": "latest",
     "express": "latest",
     "express-rate-limit": "latest",
+    "swagger-ui-express": "latest",
     "tweetnacl": "^1.0.3",
+    "yamljs": "latest",
     "zod": "latest"
   },
   "devDependencies": {
     "@types/cors": "latest",
     "@types/express": "latest",
     "@types/node": "latest",
+    "@types/swagger-ui-express": "latest",
+    "@types/yamljs": "latest",
     "tsx": "latest",
     "typescript": "latest",
     "vitest": "^4.1.10"
