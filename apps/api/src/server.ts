@@ -8,13 +8,31 @@ import { validateStatOnChain } from "./services/onchainValidation";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { config } from "./config";
 import { requireApiKey } from "./middleware/apiKeyAuth";
+import { generalApiLimiter, runOnceLimiter } from "./middleware/rateLimiters";
 import { getPnlSummary, getStats, store , upsertRecentFinishedMatches } from "./store";
 import type { OddsSnapshot } from "./types";
 
 const app = express();
 
+// Interim value — Render's exact reverse-proxy hop count could not be
+// verified from official documentation (see docs/superpowers/specs/
+// 2026-07-07-rate-limiting-design.md, "Prerequisite fix"). Confirm the real
+// value from the diagnostic logging below before treating this as final.
+app.set("trust proxy", 1);
+
+// TEMPORARY: remove once the real Render hop count is confirmed via these
+// logs (see the spec's Phase 2 follow-up). Logs the raw incoming header so
+// the actual number of proxy hops can be counted from Render's own logs.
+app.use((req, res, next) => {
+  console.log(
+    `[trust-proxy-diagnostic] x-forwarded-for="${req.headers["x-forwarded-for"] ?? ""}" socket-remote-address="${req.socket.remoteAddress}"`
+  );
+  next();
+});
+
 app.use(cors());
 app.use(express.json());
+app.use(generalApiLimiter);
 
 app.get("/health", (_req, res) => {
   res.json({
@@ -784,7 +802,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
   });
 });
 
-app.post("/api/agent/run-once", requireApiKey, async (_req, res) => {
+app.post("/api/agent/run-once", runOnceLimiter, requireApiKey, async (_req, res) => {
   const run = await processAgentCycle();
 
   res.json({
