@@ -85,18 +85,26 @@ function getProgram(): anchor.Program | null {
  * Validates a single stat for a fixture/seq against the on-chain Merkle root,
  * using TxLINE's own /api/scores/stat-validation endpoint for the proof data.
  *
- * `statKey` and `threshold`/`comparison` are caller-supplied: this module
- * does not assume or hardcode what a given numeric statKey semantically
- * means (e.g. "home goals"), since that mapping is not publicly documented
- * by TxLINE. The `provenStat` field in the result surfaces the actual
- * key/value TxLINE returns, so the caller can confirm what was proven.
+ * `statKey` is caller-supplied: this module does not assume or hardcode what
+ * a given numeric statKey semantically means (e.g. "home goals"), since that
+ * mapping is not publicly documented by TxLINE. The `provenStat` field in the
+ * result surfaces the actual key/value TxLINE returns, so the caller can
+ * confirm what was proven.
+ *
+ * The on-chain predicate itself is always "the exact value TxLINE reports
+ * for this stat (`validation.statToProve.value`) is what's anchored
+ * on-chain" (comparison: equalTo, threshold: that same real value) rather
+ * than an arbitrary caller-supplied threshold. An arbitrary fixed predicate
+ * (e.g. always "greaterThan 0") can produce a mechanically-correct but
+ * misleading `isValid: false` for a perfectly valid, untampered proof, just
+ * because of what the real underlying value happens to be. Proving equality
+ * against the real value is always a meaningful, genuine on-chain check
+ * ("this recorded value is really what's anchored"), for any fixture/seq.
  */
 export async function validateStatOnChain(
   fixtureId: number,
   seq: number,
-  statKey: number,
-  threshold: number,
-  comparison: "greaterThan" | "lessThan" | "equalTo"
+  statKey: number
 ): Promise<OnChainValidationResult> {
   const program = getProgram();
 
@@ -133,6 +141,14 @@ export async function validateStatOnChain(
 
     const validation = await response.json();
 
+    if (!validation.statToProve) {
+      return {
+        available: false,
+        reason:
+          "TxLINE did not return a provable stat for this fixtureId/seq/statKey combination.",
+      };
+    }
+
     const fixtureSummary = {
       fixtureId: new BN(validation.summary.fixtureId),
       updateStats: {
@@ -153,8 +169,8 @@ export async function validateStatOnChain(
     };
 
     const predicate = {
-      threshold,
-      comparison: { [comparison]: {} },
+      threshold: validation.statToProve.value,
+      comparison: { equalTo: {} },
     };
 
     const targetTs = validation.summary.updateStats.minTimestamp;

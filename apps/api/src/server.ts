@@ -35,20 +35,23 @@ app.get("/api/matches", (_req, res) => {
 });
 
 /**
- * Diagnostic endpoint for manually experimenting with real on-chain Merkle
- * proof validation against TxLINE's Solana program. Since the numeric
- * meaning of a given statKey is not publicly documented, this endpoint
- * surfaces the exact key/value TxLINE proves (`provenStat`) so the caller
- * can confirm what a statKey represents before relying on it elsewhere.
+ * Real on-chain Merkle proof validation against TxLINE's Solana program, for
+ * whichever fixtureId/seq/statKey the caller (the dashboard's "Verify on
+ * Solana" button, tied to the currently selected signal) provides. The
+ * predicate proven on-chain is always "the exact value TxLINE reports for
+ * this stat is what's anchored on-chain" (comparison: equalTo, threshold:
+ * the real proven value) rather than an arbitrary caller-supplied threshold —
+ * see validateStatOnChain for why. Since the numeric meaning of a given
+ * statKey is not publicly documented, this endpoint surfaces the exact
+ * key/value TxLINE proves (`provenStat`) so the caller can confirm what a
+ * statKey represents before relying on it elsewhere.
  *
- * Example: /api/onchain/validate-stat?fixtureId=18179549&seq=1029&statKey=1002&threshold=0&comparison=greaterThan
+ * Example: /api/onchain/validate-stat?fixtureId=18179549&seq=1029&statKey=1002
  */
 app.get("/api/onchain/validate-stat", async (req, res) => {
   const fixtureId = Number(req.query.fixtureId);
   const seq = Number(req.query.seq);
   const statKey = Number(req.query.statKey);
-  const threshold = Number(req.query.threshold ?? 0);
-  const comparison = (req.query.comparison as string) ?? "greaterThan";
 
   if (!fixtureId || !seq || !statKey) {
     res.status(400).json({
@@ -57,20 +60,7 @@ app.get("/api/onchain/validate-stat", async (req, res) => {
     return;
   }
 
-  if (!["greaterThan", "lessThan", "equalTo"].includes(comparison)) {
-    res.status(400).json({
-      error: "comparison must be one of: greaterThan, lessThan, equalTo",
-    });
-    return;
-  }
-
-  const result = await validateStatOnChain(
-    fixtureId,
-    seq,
-    statKey,
-    threshold,
-    comparison as "greaterThan" | "lessThan" | "equalTo"
-  );
+  const result = await validateStatOnChain(fixtureId, seq, statKey);
 
   res.json({ data: result });
 });

@@ -84,6 +84,10 @@ type AgentSignal = {
   scoreRealityReason?: string;
   evidence?: {
     marketType?: string;
+    fixtureId?: string;
+    scoresContext?: {
+      sequence?: number;
+    };
   };
   discordAlertStatus?: "sent" | "failed" | "not_configured";
 };
@@ -622,7 +626,20 @@ function App() {
       setIsReplayRunning(false);
     }
   }
-  async function runOnchainVerify() {
+  function getOnchainVerifyTarget(signal: AgentSignal | null) {
+    const fixtureId = signal?.evidence?.fixtureId;
+    const sequence = signal?.evidence?.scoresContext?.sequence;
+
+    if (!fixtureId || !sequence) return null;
+
+    return { fixtureId, sequence };
+  }
+
+  async function runOnchainVerify(signal: AgentSignal | null) {
+    const target = getOnchainVerifyTarget(signal);
+
+    if (!target) return;
+
     try {
       setOnchainVerify({ loading: true, data: null });
 
@@ -635,7 +652,9 @@ function App() {
           dailyScoresPda?: string;
         };
       }>(
-        "/api/onchain/validate-stat?fixtureId=18179549&seq=1029&statKey=1002&threshold=0&comparison=equalTo"
+        `/api/onchain/validate-stat?fixtureId=${encodeURIComponent(
+          target.fixtureId
+        )}&seq=${target.sequence}&statKey=1002`
       );
 
       setOnchainVerify({ loading: false, data: payload.data });
@@ -2795,14 +2814,23 @@ function App() {
 
                     <button
                       type="button"
-                      onClick={runOnchainVerify}
-                      disabled={onchainVerify.loading}
+                      onClick={() => runOnchainVerify(selectedSignal)}
+                      disabled={onchainVerify.loading || !getOnchainVerifyTarget(selectedSignal)}
                       className="mt-2 w-full rounded-lg bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-sky-200 transition hover:bg-sky-400/20 disabled:opacity-50"
                     >
                       {onchainVerify.loading
                         ? "Verifying on Solana…"
-                        : "Verify Colombia vs Ghana on Solana ⛓"}
+                        : getOnchainVerifyTarget(selectedSignal)
+                          ? `Verify ${selectedSignal?.match ?? "this signal"} on Solana ⛓`
+                          : "Verify on Solana ⛓"}
                     </button>
+                    {!getOnchainVerifyTarget(selectedSignal) && (
+                      <p className="mt-1.5 text-[10px] leading-4 text-stone-500">
+                        {selectedSignal
+                          ? "This signal has no TXODDS sequence data to verify."
+                          : "Select a signal above to verify it on Solana."}
+                      </p>
+                    )}
 
                     {onchainVerify.data && (
                       <div className="mt-2 rounded-lg bg-black/30 p-2 text-[10px]">
