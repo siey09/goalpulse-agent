@@ -177,7 +177,7 @@ export function buildSignalFromSnapshots(
   return {
     id: `signal-${current.matchId}-${current.id}-${side}`,
     matchId: current.matchId,
-    match: `${current.homeTeam} vs ${current.awayTeam}`,
+    match: current.matchLabel ?? `${current.homeTeam} vs ${current.awayTeam}`,
     target,
     side,
     signalType,

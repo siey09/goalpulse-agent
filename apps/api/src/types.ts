@@ -83,6 +83,13 @@ export interface OddsSnapshot {
   minute: number;
   source: "simulated_txline" | "txline";
   createdAt: string;
+  /**
+   * Optional real-match display label (e.g. "Portugal vs Spain"), used when
+   * homeTeam/awayTeam have been repurposed to describe a non-1X2 market
+   * outcome (e.g. "Over 3.5" / "Under 3.5" for a total goals market) so the
+   * signal's `match` field can still show the actual fixture context.
+   */
+  matchLabel?: string;
   evidence?: TxLineEvidence;
 }
 

@@ -884,6 +884,73 @@ function is1x2Odds(item: TxLineOddsSnapshot): boolean {
   );
 }
 
+/**
+ * Full-match (not per-half) Over/Under Total Goals market. Confirmed live
+ * against real TxLINE data: SuperOddsType "OVERUNDER_PARTICIPANT_GOALS" with
+ * an empty MarketPeriod is the full-match version (MarketPeriod "half=1"/
+ * "half=2" are first/second-half-only lines, intentionally excluded here).
+ */
+function isTotalsOdds(item: TxLineOddsSnapshot): boolean {
+  return (
+    item.SuperOddsType === "OVERUNDER_PARTICIPANT_GOALS" &&
+    (item.MarketPeriod === null || item.MarketPeriod === undefined) &&
+    Array.isArray(item.PriceNames) &&
+    Array.isArray(item.Prices) &&
+    item.PriceNames.includes("over") &&
+    item.PriceNames.includes("under")
+  );
+}
+
+function getTotalsPrice(item: TxLineOddsSnapshot, name: "over" | "under") {
+  const index = item.PriceNames?.indexOf(name) ?? -1;
+
+  return index >= 0 ? priceToDecimal(item.Prices?.[index]) : 1.01;
+}
+
+function getTotalsLine(item: TxLineOddsSnapshot): string {
+  const match = item.MarketParameters?.match(/line=([\d.]+)/);
+  return match ? match[1] : "?";
+}
+
+function findLatestTotalsOdds(
+  odds: TxLineOddsSnapshot[]
+): TxLineOddsSnapshot | undefined {
+  return odds
+    .filter(isTotalsOdds)
+    .sort((a, b) => (b.Ts ?? 0) - (a.Ts ?? 0))[0];
+}
+
+/**
+ * A fixture can offer more than one total-goals line at once (e.g. 2.5 and
+ * 3.5 simultaneously). Movement history is only meaningful when compared
+ * against the same line, so this locks onto whichever line the latest
+ * update used and only returns history for that exact line.
+ */
+function selectTotalsMovementOdds(
+  odds: TxLineOddsSnapshot[],
+  limit = 8
+): TxLineOddsSnapshot[] {
+  const latest = findLatestTotalsOdds(odds);
+
+  if (!latest) return [];
+
+  const line = getTotalsLine(latest);
+
+  const candidates = odds
+    .filter(isTotalsOdds)
+    .filter((item) => getTotalsLine(item) === line)
+    .sort((a, b) => (a.Ts ?? 0) - (b.Ts ?? 0));
+
+  const uniqueByMessage = new Map<string, TxLineOddsSnapshot>();
+
+  for (const item of candidates) {
+    const key = item.MessageId ?? `${item.FixtureId}-${item.Ts}-${item.Prices?.join("-")}`;
+    uniqueByMessage.set(key, item);
+  }
+
+  return [...uniqueByMessage.values()].slice(-limit);
+}
+
 function preferMainMarket(item: TxLineOddsSnapshot): boolean {
   return item.MarketPeriod === null || item.MarketPeriod === undefined;
 }
@@ -1024,6 +1091,61 @@ function normalizeOddsSnapshot(
   };
 }
 
+/**
+ * Builds an OddsSnapshot for the full-match Over/Under Total Goals market.
+ * Uses a distinct matchId ("<fixtureId>-totals-<line>") so this market's
+ * snapshot history is tracked completely separately from the 1X2 market in
+ * the store. Mixing the two under one matchId would let the signal engine
+ * compare a 1X2 price against a totals price as if they were the same
+ * market, producing meaningless "movement" — the same class of bug fixed
+ * earlier for chronological snapshot ordering.
+ */
+function normalizeTotalsSnapshot(
+  match: Match,
+  odds: TxLineOddsSnapshot,
+  endpointUsed: string,
+  scoresContext?: TxLineScoresContext
+): OddsSnapshot {
+  const createdAt = odds.Ts
+    ? new Date(odds.Ts).toISOString()
+    : new Date().toISOString();
+
+  const line = getTotalsLine(odds);
+
+  return {
+    id: `txline-totals-${match.id}-${line}-${odds.Ts ?? Date.now()}-${
+      odds.MessageId ?? "snapshot"
+    }`,
+    matchId: `${match.id}-totals-${line}`,
+    matchLabel: `${match.homeTeam} vs ${match.awayTeam}`,
+    homeTeam: `Over ${line}`,
+    awayTeam: `Under ${line}`,
+    homeOdds: getTotalsPrice(odds, "over"),
+    awayOdds: getTotalsPrice(odds, "under"),
+    drawOdds: 1,
+    homeScore: match.homeScore,
+    awayScore: match.awayScore,
+    minute: match.minute,
+    source: "txline",
+    createdAt,
+    evidence: {
+      source: "txline",
+      fixtureId: match.id,
+      endpointUsed,
+      bookmaker: odds.Bookmaker,
+      messageId: odds.MessageId,
+      marketType: odds.SuperOddsType,
+      marketPeriod: odds.MarketPeriod,
+      marketParameters: odds.MarketParameters,
+      currentTimestamp: createdAt,
+      scoresContext,
+      proofLabel: scoresContext
+        ? "Generated from real TxLINE odds movement data and TXODDS Scores event context"
+        : "Generated from real TxLINE odds movement data",
+    },
+  };
+}
+
 function sortSnapshotsChronologically(
   snapshots: OddsSnapshot[]
 ): OddsSnapshot[] {
@@ -1102,6 +1224,8 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
 
     let latestOdds: TxLineOddsSnapshot | undefined;
     let movementOdds: TxLineOddsSnapshot[] = [];
+    let latestTotalsOdds: TxLineOddsSnapshot | undefined;
+    let totalsMovementOdds: TxLineOddsSnapshot[] = [];
 
     try {
       const currentOdds = await txlineGet<TxLineOddsSnapshot[]>(
@@ -1110,9 +1234,11 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
       );
 
       latestOdds = findLatest1x2Odds(currentOdds);
+      latestTotalsOdds = findLatestTotalsOdds(currentOdds);
 
       const historicalOdds = await getOddsUpdates(fixture.FixtureId, jwt);
       movementOdds = selectMovementOdds(historicalOdds, 8);
+      totalsMovementOdds = selectTotalsMovementOdds(historicalOdds, 8);
     } catch (error) {
       console.warn(
         `TxLINE odds enrichment skipped for fixture ${fixture.FixtureId}:`,
@@ -1121,8 +1247,11 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
     }
 
     const selectedOdds = latestOdds ? [...movementOdds, latestOdds] : movementOdds;
+    const selectedTotalsOdds = latestTotalsOdds
+      ? [...totalsMovementOdds, latestTotalsOdds]
+      : totalsMovementOdds;
 
-    if (selectedOdds.length === 0) {
+    if (selectedOdds.length === 0 && selectedTotalsOdds.length === 0) {
       continue;
     }
 
@@ -1142,6 +1271,15 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
           : `/api/odds/updates/${fixture.FixtureId}`;
 
       snapshots.push(normalizeOddsSnapshot(match, item, endpointUsed, scoresContext));
+    }
+
+    for (const item of selectedTotalsOdds) {
+      const endpointUsed =
+        item.MessageId === latestTotalsOdds?.MessageId
+          ? `/api/odds/snapshot/${fixture.FixtureId}`
+          : `/api/odds/updates/${fixture.FixtureId}`;
+
+      snapshots.push(normalizeTotalsSnapshot(match, item, endpointUsed, scoresContext));
     }
   }
 

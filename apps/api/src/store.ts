@@ -77,15 +77,34 @@ export function evaluatePendingSignalsForFinishedMatches() {
 
     const match =
       store.matches.find((item) => item.id === signal.matchId) ??
-      store.recentFinishedMatches.find((item) => item.id === signal.matchId);
+      store.recentFinishedMatches.find((item) => item.id === signal.matchId) ??
+      // Totals signals use a distinct matchId ("<fixtureId>-totals-<line>") to
+      // keep their odds history isolated from the 1X2 market (see
+      // normalizeTotalsSnapshot). Settlement still needs the real match's
+      // final score, so fall back to the base fixture id before the suffix.
+      store.matches.find((item) => signal.matchId.startsWith(`${item.id}-totals-`)) ??
+      store.recentFinishedMatches.find((item) =>
+        signal.matchId.startsWith(`${item.id}-totals-`)
+      );
 
     if (!match || match.status !== "finished") continue;
 
-    const homeWon = match.homeScore > match.awayScore;
-    const awayWon = match.awayScore > match.homeScore;
+    const totalsMatch = signal.target.match(/^(Over|Under) ([\d.]+)$/);
 
-    const signalWon =
-      (signal.side === "home" && homeWon) || (signal.side === "away" && awayWon);
+    let signalWon: boolean;
+
+    if (totalsMatch) {
+      const [, direction, lineStr] = totalsMatch;
+      const line = Number(lineStr);
+      const totalGoals = match.homeScore + match.awayScore;
+      signalWon =
+        direction === "Over" ? totalGoals > line : totalGoals < line;
+    } else {
+      const homeWon = match.homeScore > match.awayScore;
+      const awayWon = match.awayScore > match.homeScore;
+      signalWon =
+        (signal.side === "home" && homeWon) || (signal.side === "away" && awayWon);
+    }
 
     signal.resultStatus = signalWon ? "correct" : "incorrect";
     evaluatedCount += 1;
