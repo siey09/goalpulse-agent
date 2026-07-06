@@ -8,6 +8,7 @@ import { processAgentCycle } from "./agent";
 import { fetchRecentTxLineResults } from "./services/txlineClient";
 import { getLiveStreamState, startLiveStreamMonitor } from "./services/txlineStream";
 import { validateStatOnChain } from "./services/onchainValidation";
+import { loadSnapshot, saveSnapshot } from "./services/persistence";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { config } from "./config";
 import { requireApiKey } from "./middleware/apiKeyAuth";
@@ -810,6 +811,8 @@ app.post("/api/agent/run-once", runOnceLimiter, requireApiKey, async (_req, res)
 });
 
 let isAgentCycleRunning = false;
+let lastSnapshotAt = 0;
+const snapshotIntervalMs = 30000;
 
 async function runGuardedAgentCycle(source: string) {
   if (isAgentCycleRunning) {
@@ -822,6 +825,11 @@ async function runGuardedAgentCycle(source: string) {
   try {
     const run = await processAgentCycle();
     console.log(run.message);
+
+    if (Date.now() - lastSnapshotAt >= snapshotIntervalMs) {
+      lastSnapshotAt = Date.now();
+      void saveSnapshot();
+    }
   } catch (error) {
     console.error("Agent cycle failed:", error);
   } finally {
@@ -834,6 +842,9 @@ app.listen(config.port, async () => {
   console.log(
     `Feed mode: ${config.useSimulatedFeed ? "simulated_txline" : "txline"}`
   );
+
+  await loadSnapshot();
+
   await runGuardedAgentCycle("startup");
 
   startLiveStreamMonitor();
