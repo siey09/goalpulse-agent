@@ -15,4 +15,5 @@ export const config = {
     process.env.TXLINE_API_TOKEN ??
     process.env.TXLINE_API_KEY ??
     "",
+  apiAccessKey: process.env.API_ACCESS_KEY ?? "",
 };
