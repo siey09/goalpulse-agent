@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { SignalIntelligencePanel } from "./components/SignalIntelligencePanel";
 import { ResultsSettlementPanel } from "./components/ResultsSettlementPanel";
+import { VerifiedCaseStudiesPanel } from "./components/VerifiedCaseStudiesPanel";
 import { WhatChangedPanel } from "./components/WhatChangedPanel";
 import {
   Activity,
@@ -2255,6 +2256,8 @@ function App() {
           </div>
 
           <ResultsSettlementPanel />
+
+          <VerifiedCaseStudiesPanel />
 
           <WhatChangedPanel />
 
