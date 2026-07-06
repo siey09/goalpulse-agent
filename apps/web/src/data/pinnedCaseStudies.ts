@@ -1,0 +1,246 @@
+export type PinnedCaseStudySide = "home" | "away";
+
+export type PinnedCaseStudyScoreBreakdown = {
+  h1?: string;
+  h2?: string;
+  total?: string;
+  goals?: string;
+  corners?: string;
+  redCards?: string;
+  yellowCards?: string;
+};
+
+export type PinnedCaseStudyScoresContext = {
+  fixtureId: string;
+  latestAction: string;
+  actionLabel: string;
+  actionTeam: "home" | "away" | "neutral" | "unknown";
+  statusId: number;
+  statusName: string;
+  clockSeconds: number;
+  minute: number;
+  homeScore: number;
+  awayScore: number;
+  scoreline: string;
+  scoreBreakdown: PinnedCaseStudyScoreBreakdown;
+  possessionType?: string;
+  pressureLevel: "NONE" | "SAFE" | "ATTACK" | "DANGER" | "HIGH_DANGER";
+  fieldPressureScore: number;
+  reliability: "RELIABLE" | "UNRELIABLE" | "SUSPENDED" | "UNKNOWN";
+  confirmed?: boolean;
+  sequence: number;
+};
+
+export type PinnedCaseStudyEvidence = {
+  source: "txline";
+  fixtureId: string;
+  endpointUsed: string;
+  bookmaker: string;
+  messageId: string;
+  marketType: string;
+  scoresContext: PinnedCaseStudyScoresContext;
+};
+
+export type PinnedCaseStudy = {
+  id: string;
+  matchId: string;
+  match: string;
+  target: string;
+  side: PinnedCaseStudySide;
+  signalType: "SHARP_MOVE" | "MOMENTUM_SHIFT";
+  severity: "HIGH" | "MEDIUM";
+  oddsBefore: number;
+  oddsAfter: number;
+  oddsChangePct: number;
+  momentumScore: number;
+  explanation: string;
+  resultStatus: "correct" | "incorrect";
+  trapStatus?: "CONFIRMED_TRAP";
+  trapScore?: number;
+  reversalRisk?: "EXTREME_REVERSAL";
+  evidence: PinnedCaseStudyEvidence;
+};
+
+export const PINNED_CASE_STUDIES_PROVENANCE =
+  "Captured verbatim from live production /api/signals responses on 2026-07-04/2026-07-05 during manual verification, before the in-memory store reset on a later Render restart. This is a faithful copy of real API output, not a reconstruction from memory.";
+
+export const PINNED_CASE_STUDIES: PinnedCaseStudy[] = [
+  {
+    id: "signal-18179549-txline-18179549-1783129507735-1836215980:00003:000163-10021-stab-home",
+    matchId: "18179549",
+    match: "Colombia vs Ghana",
+    target: "Colombia",
+    side: "home",
+    signalType: "SHARP_MOVE",
+    severity: "HIGH",
+    oddsBefore: 1.59,
+    oddsAfter: 1.19,
+    oddsChangePct: 25.16,
+    momentumScore: 25.54,
+    explanation:
+      "Colombia odds compressed by 25.16% from 1.59 to 1.19. The agent flags this as a high-severity sharp movement. The move has moderate field context from a Attack Possession event. The event context aligns with Colombia or has no clear side conflict. Match phase: 2nd Half. Scoreline: Colombia 1 - 0 Ghana. Reliability check: No TXODDS reliability warning was found.",
+    resultStatus: "correct",
+    evidence: {
+      source: "txline",
+      fixtureId: "18179549",
+      endpointUsed: "/api/odds/updates/18179549",
+      bookmaker: "TXLineStablePriceDemargined",
+      messageId: "1836215980:00003:000163-10021-stab",
+      marketType: "1X2_PARTICIPANT_RESULT",
+      scoresContext: {
+        fixtureId: "18179549",
+        latestAction: "attack_possession",
+        actionLabel: "Attack Possession",
+        actionTeam: "home",
+        statusId: 4,
+        statusName: "2nd Half",
+        clockSeconds: 5834,
+        minute: 97,
+        homeScore: 1,
+        awayScore: 0,
+        scoreline: "Colombia 1 - 0 Ghana",
+        scoreBreakdown: { h1: "1-0", total: "1-0", goals: "1-0", corners: "3-2", yellowCards: "2-3" },
+        possessionType: "AttackPossession",
+        pressureLevel: "ATTACK",
+        fieldPressureScore: 22,
+        reliability: "RELIABLE",
+        sequence: 1029,
+      },
+    },
+  },
+  {
+    id: "signal-18179549-txline-18179549-1783135662836-1836226794:00003:000001-10021-stab-home",
+    matchId: "18179549",
+    match: "Colombia vs Ghana",
+    target: "Colombia",
+    side: "home",
+    signalType: "MOMENTUM_SHIFT",
+    severity: "MEDIUM",
+    oddsBefore: 1.19,
+    oddsAfter: 1.04,
+    oddsChangePct: 12.61,
+    momentumScore: 18.63,
+    explanation:
+      "Colombia odds moved by 12.61% with sustained market direction. The agent flags this as a momentum shift. The move has moderate field context from a Attack Possession event. The event context aligns with Colombia or has no clear side conflict. Match phase: 2nd Half. Scoreline: Colombia 1 - 0 Ghana. Reliability check: No TXODDS reliability warning was found.",
+    resultStatus: "correct",
+    evidence: {
+      source: "txline",
+      fixtureId: "18179549",
+      endpointUsed: "/api/odds/updates/18179549",
+      bookmaker: "TXLineStablePriceDemargined",
+      messageId: "1836226794:00003:000001-10021-stab",
+      marketType: "1X2_PARTICIPANT_RESULT",
+      scoresContext: {
+        fixtureId: "18179549",
+        latestAction: "attack_possession",
+        actionLabel: "Attack Possession",
+        actionTeam: "home",
+        statusId: 4,
+        statusName: "2nd Half",
+        clockSeconds: 5834,
+        minute: 97,
+        homeScore: 1,
+        awayScore: 0,
+        scoreline: "Colombia 1 - 0 Ghana",
+        scoreBreakdown: { h1: "1-0", total: "1-0", goals: "1-0", corners: "3-2", yellowCards: "2-3" },
+        possessionType: "AttackPossession",
+        pressureLevel: "ATTACK",
+        fieldPressureScore: 22,
+        reliability: "RELIABLE",
+        sequence: 1029,
+      },
+    },
+  },
+  {
+    id: "signal-18185036-txline-18185036-1783191053690-1836327775:00003:000526-1-10021-stab-home",
+    matchId: "18185036",
+    match: "Canada vs Morocco",
+    target: "Canada",
+    side: "home",
+    signalType: "SHARP_MOVE",
+    severity: "HIGH",
+    oddsBefore: 780,
+    oddsAfter: 350,
+    oddsChangePct: 55.13,
+    momentumScore: 50.07,
+    explanation:
+      "Canada odds compressed by 55.13% from 780 to 350. The agent flags this as a high-severity sharp movement. The move is field-backed by a Goal event with high_danger pressure. Caution: the latest field event came from the away side, not the signal side. Match phase: 2nd Half. Scoreline: Canada 0 - 3 Morocco. Reliability check: No TXODDS reliability warning was found.",
+    resultStatus: "incorrect",
+    trapStatus: "CONFIRMED_TRAP",
+    trapScore: 100,
+    reversalRisk: "EXTREME_REVERSAL",
+    evidence: {
+      source: "txline",
+      fixtureId: "18185036",
+      endpointUsed: "/api/odds/updates/18185036",
+      bookmaker: "TXLineStablePriceDemargined",
+      messageId: "1836327775:00003:000526-1-10021-stab",
+      marketType: "1X2_PARTICIPANT_RESULT",
+      scoresContext: {
+        fixtureId: "18185036",
+        latestAction: "goal",
+        actionLabel: "Goal",
+        actionTeam: "away",
+        statusId: 4,
+        statusName: "2nd Half",
+        clockSeconds: 5857,
+        minute: 97,
+        homeScore: 0,
+        awayScore: 3,
+        scoreline: "Canada 0 - 3 Morocco",
+        scoreBreakdown: { h2: "0-3", total: "0-3", goals: "0-3", corners: "11-1", yellowCards: "4-4" },
+        pressureLevel: "HIGH_DANGER",
+        fieldPressureScore: 45,
+        reliability: "RELIABLE",
+        confirmed: true,
+        sequence: 1117,
+      },
+    },
+  },
+  {
+    id: "signal-18185036-txline-18185036-1783191107700-1836327810:00003:000067-1-10021-stab-home",
+    matchId: "18185036",
+    match: "Canada vs Morocco",
+    target: "Canada",
+    side: "home",
+    signalType: "SHARP_MOVE",
+    severity: "HIGH",
+    oddsBefore: 740,
+    oddsAfter: 350,
+    oddsChangePct: 52.7,
+    momentumScore: 48.74,
+    explanation:
+      "Canada odds compressed by 52.7% from 740 to 350. The agent flags this as a high-severity sharp movement. The move is field-backed by a Goal event with high_danger pressure. Caution: the latest field event came from the away side, not the signal side. Match phase: 2nd Half. Scoreline: Canada 0 - 3 Morocco. Reliability check: No TXODDS reliability warning was found.",
+    resultStatus: "incorrect",
+    trapStatus: "CONFIRMED_TRAP",
+    trapScore: 100,
+    reversalRisk: "EXTREME_REVERSAL",
+    evidence: {
+      source: "txline",
+      fixtureId: "18185036",
+      endpointUsed: "/api/odds/updates/18185036",
+      bookmaker: "TXLineStablePriceDemargined",
+      messageId: "1836327810:00003:000067-1-10021-stab",
+      marketType: "1X2_PARTICIPANT_RESULT",
+      scoresContext: {
+        fixtureId: "18185036",
+        latestAction: "goal",
+        actionTeam: "away",
+        actionLabel: "Goal",
+        statusId: 4,
+        statusName: "2nd Half",
+        clockSeconds: 5857,
+        minute: 97,
+        homeScore: 0,
+        awayScore: 3,
+        scoreline: "Canada 0 - 3 Morocco",
+        scoreBreakdown: { h2: "0-3", total: "0-3", goals: "0-3", corners: "11-1", yellowCards: "4-4" },
+        pressureLevel: "HIGH_DANGER",
+        fieldPressureScore: 45,
+        reliability: "RELIABLE",
+        confirmed: true,
+        sequence: 1117,
+      },
+    },
+  },
+];
