@@ -1005,6 +1005,13 @@ function App() {
     });
   }
 
+  function scrollToCaseStudies() {
+    document.getElementById("verified-case-studies")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
   const selectedMatch = useMemo(
     () => matches.find((match) => match.id === selectedMatchId) ?? matches[0],
     [matches, selectedMatchId]
@@ -1741,6 +1748,13 @@ function App() {
                         ) : (
                           <p className="text-sm font-semibold text-stone-400">Building…</p>
                         )}
+                        <button
+                          type="button"
+                          onClick={scrollToCaseStudies}
+                          className="mt-1 block text-left text-[8px] leading-tight text-stone-500 underline decoration-dotted hover:text-stone-300"
+                        >
+                          n={stats?.closedSignals ?? 0} closed — too small to be meaningful · See verified case studies
+                        </button>
                       </div>
                     </div>
 
@@ -2610,6 +2624,13 @@ function App() {
                   </div>
                 </div>
                 <p className="mt-2 text-[9px] leading-4 text-stone-500">{pnl.note}</p>
+                <button
+                  type="button"
+                  onClick={scrollToCaseStudies}
+                  className="mt-1 block text-left text-[9px] leading-4 text-stone-500 underline decoration-dotted hover:text-stone-300"
+                >
+                  Based on {pnl.settledBets} settled bet(s) — see verified case studies for permanently confirmed historical examples
+                </button>
               </div>
             )}
 
