@@ -6,3 +6,21 @@ create table if not exists store_snapshots (
   data jsonb not null,
   updated_at timestamptz not null default now()
 );
+
+-- Insert-only permanent archive: one row per signal per lifecycle event
+-- (created, settled). Never upserted, updated, or deleted - grows for the
+-- rest of the tournament, independent of any in-memory cap.
+create table if not exists signal_archive (
+  id bigserial primary key,
+  signal_id text not null,
+  event text not null check (event in ('created', 'settled')),
+  match_id text not null,
+  side text not null,
+  signal_type text not null,
+  severity text not null,
+  result_status text not null,
+  momentum_score numeric not null,
+  odds_change_pct numeric not null,
+  signal_data jsonb not null,
+  archived_at timestamptz not null default now()
+);
