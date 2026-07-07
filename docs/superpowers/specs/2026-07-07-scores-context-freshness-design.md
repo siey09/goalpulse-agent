@@ -2,6 +2,9 @@
 
 Date: 2026-07-07
 Status: Approved, ready for implementation planning
+Amended: 2026-07-07 — added Decision #4 and Task 2 (signalEngine.ts fallback,
+shared module extraction) after the final whole-branch review of Task 1
+surfaced a residual pathway. See Decision #4 below.
 
 ## Problem
 
@@ -67,6 +70,49 @@ vice versa — a real accuracy problem for one of the feature's core claims.
    `fetchRecentTxLineResults`'s loop all share the identical "one
    `scoresContext`, many ticks" structure. Fixing only the live 1X2 path would
    leave the same latent mislabeling in the other two.
+4. **Extend the same check into `signalEngine.ts`'s fallback (added after
+   Task 1's final review).** `buildSignalFromSnapshots` computes a signal's
+   own `scoresContext` as `current.evidence?.scoresContext ??
+   previous.evidence?.scoresContext` (`signalEngine.ts:136-137`). Before Task
+   1, `current.evidence.scoresContext` was only ever `undefined` when a whole
+   poll had no score data at all, so this fallback was effectively unreachable
+   for the "reach-back stale tick" scenario. Task 1's own fix is the first
+   thing that can make `current`'s context become `undefined` for exactly
+   that reason — which means the fallback can now substitute `previous`'s
+   context without ever checking whether *that* context is fresh relative to
+   **current's own timestamp** (only relative to `previous`'s own timestamp,
+   which is all Task 1 checks when `previous`'s snapshot was originally
+   built). Verified against the real USA vs Belgium data: this newly-possible
+   fallback triggers for exactly 2 of 18 signals (~11%) — the same two flagged
+   as stale in Decision #2 — and in both real cases the paired `previous`
+   tick sits only ~13-16 seconds before `current` (ordinary poll cadence, not
+   another reach-back tick), so the fallback's substitution converts a
+   ~2-5 *minute* mismatch into a ~15-*second* one rather than fully
+   eliminating it. That residual is real but bounded by the actual
+   previous-current gap (already kept sane by the existing chronological-order
+   check in `agent.ts`), not by the poll-to-poll gap that caused the original
+   bug — small enough that reopening a full design cycle isn't warranted, but
+   real enough that the fallback should get the same `isScoresContextFresh`
+   check, checked against `current`'s timestamp, before trusting `previous`'s
+   context. If that check also fails, fall back to `undefined` (fail-safe,
+   same principle as Decision #1) rather than silently substituting a value
+   that might still be stale relative to the signal it's attached to.
+5. **Extract `isScoresContextFresh`/`SCORES_CONTEXT_TOLERANCE_MS` into their
+   own shared module (added after Task 1's final review).** Decision #4 means
+   both `services/txlineClient.ts` and `logic/signalEngine.ts` need the same
+   function. Importing it from `txlineClient.ts` into `signalEngine.ts` would
+   introduce a new "logic depends on services" import direction that didn't
+   exist before. The function's own signature has no TxLINE-specific types
+   (`number | undefined, string | undefined, number`), so it isn't actually
+   coupled to `txlineClient.ts` — it only ever lived there because it was
+   Task 1's only consumer. Moving it to
+   `apps/api/src/logic/scoresContextFreshness.ts` matches this codebase's
+   existing convention of small, independent pure-function modules in
+   `logic/` (`arena.ts`,
+   `marketMaker.ts`, `signalEngine.ts`) and lets both consumers import from a
+   neutral location instead of one importing from the other. The move is a
+   verbatim relocation of already-written, already-tested code — no logic
+   changes — so it does not reopen the design or add meaningful risk.
 
 ## Confirmed facts (verified against real code and real production data)
 
@@ -89,16 +135,15 @@ vice versa — a real accuracy problem for one of the feature's core claims.
 
 ## Design
 
-### New pure function: `isScoresContextFresh`
+### Shared module: `apps/api/src/logic/scoresContextFreshness.ts`
 
-Colocated in `apps/api/src/services/txlineClient.ts`, next to
-`buildScoresContext` (tightly coupled to `TxLineScoresContext`, not worth a
-separate module):
+(Originally specified as colocated in `txlineClient.ts`; relocated per
+Decision #5 once `signalEngine.ts` became a second consumer.)
 
 ```ts
-const SCORES_CONTEXT_TOLERANCE_MS = 60_000;
+export const SCORES_CONTEXT_TOLERANCE_MS = 60_000;
 
-function isScoresContextFresh(
+export function isScoresContextFresh(
   tickTs: number | undefined,
   contextTimestamp: string | undefined,
   toleranceMs: number
@@ -114,6 +159,10 @@ Missing `tickTs` or missing `contextTimestamp` both count as "not fresh"
 (omit), never as "assume fresh." The gap is compared as an absolute value —
 two real signals showed a small *negative* gap (context timestamp slightly
 after the tick, -4.7s and -5.9s), which is normal jitter, not staleness.
+
+Both `SCORES_CONTEXT_TOLERANCE_MS` and `isScoresContextFresh` are exported so
+`txlineClient.ts` and `signalEngine.ts` share the identical threshold value —
+no second hardcoded `60_000` that could drift out of sync.
 
 ### Call-site change (same one-line pattern, three places)
 
@@ -139,13 +188,45 @@ snapshots.push(normalizeOddsSnapshot(match, item, endpointUsed, contextForItem))
 
 (And the equivalent for the one `normalizeTotalsSnapshot` call site.)
 
-No changes to `types.ts`, `arena.ts`, `store.ts`, `agent.ts`, or any
-consumer — every downstream reader of `evidence.scoresContext` already
-handles it being `undefined`.
+No changes to `types.ts`, `arena.ts`, `store.ts`, or `agent.ts` — every
+downstream reader of `evidence.scoresContext` already handles it being
+`undefined`. (`signalEngine.ts` is now in scope — see below — but only for
+the one fallback line Decision #4 identified, not a broader change.)
+
+### `signalEngine.ts`'s fallback (Decision #4)
+
+`buildSignalFromSnapshots` currently does:
+
+```ts
+const scoresContext =
+  current.evidence?.scoresContext ?? previous.evidence?.scoresContext;
+```
+
+Becomes:
+
+```ts
+const scoresContext =
+  current.evidence?.scoresContext ??
+  (isScoresContextFresh(
+    new Date(current.createdAt).getTime(),
+    previous.evidence?.scoresContext?.timestamp,
+    SCORES_CONTEXT_TOLERANCE_MS
+  )
+    ? previous.evidence?.scoresContext
+    : undefined);
+```
+
+The check compares `previous`'s context timestamp against **`current`'s**
+own timestamp — the moment the signal is actually about — not `previous`'s
+own timestamp (which is all that was already checked when `previous`'s
+snapshot was originally built in `txlineClient.ts`). If `previous`'s context
+is fresh for itself but still too far from `current`, it's dropped to
+`undefined` instead of substituted, same fail-safe principle as Decision #1.
 
 ### Testing
 
-`apps/api/src/services/txlineClient.test.ts` (new file), covering
+`apps/api/src/logic/scoresContextFreshness.test.ts` (relocated from the
+originally-specified `apps/api/src/services/txlineClient.test.ts`), covering
 `isScoresContextFresh` directly with plain numbers/strings — no network
 mocking needed:
 
@@ -156,6 +237,16 @@ mocking needed:
 - Missing context timestamp → not fresh.
 - Negative gap under the threshold → fresh (context slightly ahead of tick).
 - Negative gap over the threshold → not fresh.
+
+`apps/api/src/logic/signalEngine.test.ts` (existing file, new cases added):
+
+- `current` has a fresh context → used as-is, `previous` never consulted
+  (unchanged existing behavior).
+- `current` has no context, `previous`'s context is fresh relative to
+  `current`'s own timestamp → `previous`'s context is used.
+- `current` has no context, `previous`'s context is stale relative to
+  `current`'s own timestamp (even though it may have been fresh for
+  `previous` itself) → `undefined`, not silently substituted.
 
 ## Alternatives considered (rejected)
 
@@ -178,13 +269,22 @@ tick with a too-new context, not selecting the tick in the first place.
 ## Non-goals
 
 - Does not attempt to recover the correct field-context for a stale tick —
-  only prevents mislabeling one.
+  only prevents mislabeling one, at both the snapshot layer (Task 1) and the
+  signal layer (Task 2, Decision #4).
 - Does not change settlement, win/loss determination, or anything in
   `arena.ts`, `store.ts`, or `agent.ts`.
 - Does not change `selectMovementOdds`'s historical reach-back behavior.
+- Does not broaden `signalEngine.ts` beyond the one fallback line identified
+  in Decision #4 — no other behavior in that file changes.
 
 ## Follow-ups (not in scope for this task)
 
 - If genuine per-tick field-context accuracy is ever needed (not just
   fail-safe omission), revisit the rejected accumulating-history approach
   above as its own design.
+- Decision #4's fix is bounded by the actual previous-current snapshot gap,
+  which was small (~13-16s) in the one real case observed. If a future match
+  shows `previous` itself being a reach-back tick far from `current`, the
+  residual mismatch after this fix could be larger than observed here — worth
+  revisiting with fresh real data if it comes up, rather than assuming the
+  ~15s residual generalizes to every case.
