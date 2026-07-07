@@ -36,7 +36,18 @@ Five substantial features were added and verified live in production after the i
 4. **Multi-market signal detection** — independently tracks the Over/Under Total Goals market alongside 1X2, with isolated price history so the two markets never cross-contaminate each other's signals.
 5. **Live TxLINE push stream** — a persistent Server-Sent Events connection directly to TxLINE's own streaming endpoint, additive to the tested polling loop, exposed via `/health`.
 
-Also added: 17 automated unit tests covering the deterministic signal and settlement logic, and a full git-history security audit confirming no secrets were ever committed.
+Also added: 24 automated unit tests covering the deterministic signal and settlement logic (plus API key auth and Supabase persistence), and a full git-history security audit confirming no secrets were ever committed.
+
+## Production Readiness
+
+Six further features make GoalPulse deployable, not just demoable, all on free tiers with no credit card:
+
+1. **API key authentication** on the one mutating endpoint (`POST /api/agent/run-once`), fail-closed.
+2. **Rate limiting** (1200/min general, 10/min on the mutating endpoint) — the `trust proxy` value was finalized from real Render production log evidence (2 hops: Cloudflare + Render's load balancer), not a guess.
+3. **External uptime monitoring** via UptimeRobot, pinging `/health` every 5 minutes.
+4. **Interactive OpenAPI/Swagger documentation** at `GET /api/docs`, publicly browsable with zero setup.
+5. **Supabase periodic-snapshot persistence** — verified live: a manual Render restart showed the store correctly recovered older historical data from Supabase instead of resetting to empty.
+6. **Pinned, git-committed case studies** (`apps/web/src/data/pinnedCaseStudies.ts`) immune to backend restarts, plus an always-visible small-sample-size disclaimer next to the live accuracy number and P&L card.
 
 ## Key Features
 
@@ -63,7 +74,14 @@ Also added: 17 automated unit tests covering the deterministic signal and settle
 - Three-agent Council Vote and SHA-256 proof hash on every Outcome Audit run
 - Smart Money Trap detection with reversal-risk classification
 - Server-Sent Events live streaming for real-time dashboard updates
-- 17 automated unit tests
+- Pinned, git-committed case studies immune to backend restarts
+- Small-sample-size disclaimer alongside live accuracy and P&L
+- API key authentication on the mutating endpoint (fail-closed)
+- Rate limiting (1200/min general, 10/min on the mutating endpoint)
+- External uptime monitoring (UptimeRobot)
+- Interactive OpenAPI/Swagger documentation at /api/docs
+- Supabase periodic-snapshot persistence, verified surviving a real Render restart
+- 24 automated unit tests
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer
@@ -148,11 +166,12 @@ npm.cmd run test
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)
 - GET /api/live/replay-stream (Server-Sent Events, demo replay)
-- POST /api/agent/run-once
+- GET /api/docs (interactive Swagger UI documenting every endpoint)
+- POST /api/agent/run-once (requires X-API-Key header, rate-limited 10/min)
 
 ## Demo Highlights
 
-Judges should look for the live market board, TXODDS field context, Field Pressure Index, field-backed vs market-only labels, final score settlement audit, score breakdown rows, replay mode, and analytics-only compliance boundary.
+Judges should look for the live market board, TXODDS field context, Field Pressure Index, field-backed vs market-only labels, final score settlement audit, score breakdown rows, replay mode, the Verified Case Studies panel and small-sample disclaimer, the interactive API docs at /api/docs, and analytics-only compliance boundary.
 
 ## Compliance Boundary
 

@@ -30,7 +30,7 @@ Core responsibilities:
 - Detect odds compression signals
 - Attach field event context
 - Apply reliability penalties
-- Store evidence-rich signal history in memory for the demo
+- Store evidence-rich signal history in memory, periodically snapshotted to Supabase for restart recovery
 - Serve dashboard API endpoints
 
 Important backend files:
@@ -41,9 +41,12 @@ Important backend files:
 - apps/api/src/services/txlineStream.ts (live push-stream connectivity monitor)
 - apps/api/src/services/onchainValidation.ts (real on-chain Solana Merkle proof validation)
 - apps/api/src/services/alerts.ts (autonomous Discord webhook alerts)
+- apps/api/src/services/persistence.ts (Supabase periodic-snapshot save/load, fail-open)
+- apps/api/src/middleware/apiKeyAuth.ts (X-API-Key authentication, fail-closed)
+- apps/api/src/middleware/rateLimiters.ts (general + strict rate limiters)
 - apps/api/src/logic/signalEngine.ts
 - apps/api/src/agent.ts
-- apps/api/src/store.ts (in-memory state; resets on process restart)
+- apps/api/src/store.ts (in-memory state; recovered from Supabase on startup, see "Supabase Persistence" below)
 
 The frontend is a React, TypeScript, Vite, Tailwind CSS dashboard.
 
@@ -62,6 +65,8 @@ Important frontend files:
 - apps/web/src/App.tsx
 - apps/web/src/components/SignalIntelligencePanel.tsx
 - apps/web/src/components/ResultsSettlementPanel.tsx
+- apps/web/src/components/VerifiedCaseStudiesPanel.tsx (pinned, restart-immune case studies)
+- apps/web/src/data/pinnedCaseStudies.ts (frontend-bundled pinned signal data)
 
 ## TxLINE and TXODDS Scores Usage
 
@@ -192,9 +197,37 @@ Alongside the 1X2 match-winner market, GoalPulse independently tracks the full-m
 
 `apps/api/src/services/alerts.ts` sends a Discord webhook alert the instant `agent.ts` detects a HIGH severity signal, with no human triggering it. Configured via `DISCORD_WEBHOOK_URL`; silently no-ops if unset, and every delivery attempt is wrapped in try/catch with console logging so a webhook failure can never break the agent cycle. Verified live with a real "SHARP MOVE — Belgium" alert delivered the moment USA vs Belgium odds compressed 19.64%.
 
+## API Key Authentication
+
+`apps/api/src/middleware/apiKeyAuth.ts` protects `POST /api/agent/run-once` — the only mutating endpoint in the API, confirmed via a full repository search to have no existing caller before this feature (not called by the frontend, any script, or Render's own health check, which targets `/health`). Requires an `X-API-Key` header matching `API_ACCESS_KEY`; fail-closed, so an unconfigured key always rejects rather than silently allowing access. Every GET endpoint stays public by design: a key embedded in the Vite-built frontend bundle would be visible in plain text via browser devtools, so "protecting" GETs that way would add friction without adding real confidentiality.
+
+## Rate Limiting
+
+`apps/api/src/middleware/rateLimiters.ts` (via `express-rate-limit`) applies a general 1200 requests/minute-per-IP limit to every route — a single open dashboard tab generates ~132 requests/minute in steady state (measured directly from `apps/web`'s polling intervals), so this leaves wide margin for real judge/demo traffic — and a stricter 10 requests/minute limit specifically on `POST /api/agent/run-once`, stacked in front of its API key check as defense-in-depth.
+
+Correct rate limiting on Render requires Express's `trust proxy` setting to match the real number of reverse-proxy hops in front of the app, or `req.ip` either collapses every visitor into one shared bucket or becomes spoofable via a forged `X-Forwarded-For` header. No official Render documentation guarantees an exact hop count, so the backend first shipped with an interim value (`1`) and temporary diagnostic logging of the raw incoming header. Real production log evidence then showed exactly 2 hops — a Cloudflare edge IP followed by Render's internal load balancer IP — before the genuine client IP, and `trust proxy` was finalized to `2` based on that direct evidence, with the temporary logging removed.
+
+## Interactive OpenAPI/Swagger Documentation
+
+A hand-written OpenAPI 3.0.3 spec at the repo root (`openapi.yaml`) documents all 13 backend endpoints with full schema detail, including the deeply nested `/api/replay/backtest` response, the `X-API-Key` security scheme, and both rate limits. Served live via `swagger-ui-express` + `yamljs` at `GET /api/docs` — a public GET route like any other, so a judge can browse and execute real requests against the live API with zero setup. Validated with `npx @redocly/cli lint openapi.yaml` (0 errors; only cosmetic warnings remain, e.g. missing `operationId` fields).
+
+## Supabase Persistence (Periodic Snapshot Recovery)
+
+`apps/api/src/services/persistence.ts` addresses the backend's original biggest production-readiness gap: `store.ts` was entirely in-memory and reset on every Render restart. `saveSnapshot()` upserts the entire store (matches, recent finished matches, odds snapshots, signals, agent runs) as one JSONB blob into a single-row Supabase Postgres table (`store_snapshots`, always `id = 1` — never grows, no cleanup needed, stays well within the free tier's storage cap) every 30 real wall-clock seconds, tied into the existing agent-cycle scheduler rather than a separate timer. `loadSnapshot()` restores that row into the in-memory store on server startup, before the first agent cycle runs, bounded by an internal timeout so a slow/unreachable Supabase can never hang startup.
+
+Both functions are fail-open: if `SUPABASE_URL`/`SUPABASE_SERVICE_KEY` are unset or Supabase is unreachable, they no-op silently and the server runs exactly as it did before this feature existed — never blocking startup, never crashing an agent cycle. Uses Supabase's modern `sb_secret_` key format (confirmed compatible with `@supabase/supabase-js` as a drop-in replacement for the legacy `service_role` key, and confirmed to still bypass Row Level Security the same way, via Supabase's own documentation).
+
+**Verified live in production**: after configuring a real Supabase project, the Render service was manually restarted. The oldest visible `agent-run` timestamp moved from `00:07:43` (pre-restart) to `00:04:23` (post-restart) — earlier, not reset to empty — which is only possible if the store genuinely recovered older historical data from Supabase rather than starting fresh. Direct, reproducible evidence the feature works end to end.
+
+## Pinned Case Studies and Small-Sample Disclaimer
+
+`apps/web/src/data/pinnedCaseStudies.ts` bundles 4 real signals (2 from Colombia vs Ghana, 2 from Canada vs Morocco), captured verbatim from live production `/api/signals` responses on 2026-07-04/05 before a later store reset — confirmed gone from the live store by checking the endpoint directly on 2026-07-06. Rendered by `apps/web/src/components/VerifiedCaseStudiesPanel.tsx` in a dedicated "Verified Case Studies — Permanent Record" panel, entirely frontend-bundled and never touching the backend store, so it survives any future restart regardless of Supabase's own state.
+
+Because the live `strategyAccuracy` number can look worse than the strategy's real track record on a small, unlucky sample, `App.tsx` also shows an always-visible caption next to the live Accuracy stat tile and inside the P&L card (e.g. "n=5 closed — too small to be meaningful"), linking to the pinned panel so a judge always has both the honest live number and permanent, verified evidence side by side.
+
 ## Automated Test Coverage
 
-`apps/api/src/logic/signalEngine.test.ts` and `apps/api/src/store.test.ts` (Vitest, `npm run test`, 17 tests total) cover the deterministic core: severity classification at the exact 4%/8%/15% thresholds, correct side selection between home/away, multi-market `matchLabel` handling, momentum score clamping to 0-100, and signal settlement for both the 1X2 market (home/away/draw) and the Over/Under totals market (including matchId-suffix resolution back to the base fixture). `tsconfig.json` excludes `src/**/*.test.ts` so test files never ship in the production build output.
+`apps/api/src/logic/signalEngine.test.ts`, `apps/api/src/store.test.ts`, `apps/api/src/middleware/apiKeyAuth.test.ts`, and `apps/api/src/services/persistence.test.ts` (Vitest, `npm run test`, 24 tests total) cover the deterministic core: severity classification at the exact 4%/8%/15% thresholds, correct side selection between home/away, multi-market `matchLabel` handling, momentum score clamping to 0-100, signal settlement for both the 1X2 market (home/away/draw) and the Over/Under totals market (including matchId-suffix resolution back to the base fixture), the API key middleware's fail-closed behavior, and the Supabase persistence service's fail-open behavior against a mocked client. `tsconfig.json` excludes `src/**/*.test.ts` so test files never ship in the production build output.
 
 ## Signal Thresholds
 
@@ -220,6 +253,8 @@ Momentum score combines:
 - SOLANA_WALLET_SECRET_KEY (JSON array of secret key bytes; enables real on-chain validation)
 - SOLANA_RPC_URL (optional; defaults to the public Solana mainnet-beta RPC)
 - DISCORD_WEBHOOK_URL (optional; enables autonomous HIGH severity alerts)
+- API_ACCESS_KEY (optional; protects POST /api/agent/run-once via the X-API-Key header. Fail-closed: if unset, the endpoint always rejects rather than allowing access)
+- SUPABASE_URL, SUPABASE_SERVICE_KEY (optional; enable periodic store persistence to Supabase. Fail-open: if either is unset or Supabase is unreachable, the server runs in-memory only, exactly as before)
 - VITE_API_BASE_URL=https://goalpulse-agent-api.onrender.com
 
 Do not commit .env.local, .secrets, or API tokens. A full git-history audit confirmed none have ever been committed; only .env.example (a template with no real values) is tracked.
@@ -238,7 +273,8 @@ Do not commit .env.local, .secrets, or API tokens. A full git-history audit conf
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)
 - GET /api/live/replay-stream (Server-Sent Events, demo replay)
-- POST /api/agent/run-once
+- GET /api/docs (interactive Swagger UI documenting every endpoint)
+- POST /api/agent/run-once (requires X-API-Key header, rate-limited 10/min)
 
 ## Deployment
 
