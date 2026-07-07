@@ -288,3 +288,22 @@ tick with a too-new context, not selecting the tick in the first place.
   residual mismatch after this fix could be larger than observed here — worth
   revisiting with fresh real data if it comes up, rather than assuming the
   ~15s residual generalizes to every case.
+- **Known behavior, not a bug in this fix, not addressed this session:**
+  fixture 18193785 (USA vs Belgium) was still being included in
+  `fetchTxLineFeed()`'s live poll rotation many hours after full-time.
+  `selectMovementOdds` re-selects the single strongest historical
+  compression pair on every poll regardless of recency, so the same
+  long-finished odds tick keeps getting re-submitted to
+  `buildSignalFromSnapshots`. Once the underlying `OddsSnapshot` ages out of
+  the shared 800-entry cache, `snapshotAlreadyExists` no longer recognizes it
+  as already-seen, and once more than `signalAlreadyExists`'s 6-hour dedup
+  window has passed, a "new" `AgentSignal` gets created for the exact same
+  historical tick — with a fresh `createdAt` and a freshly-fetched
+  `scoresContext` from whatever `/api/scores/snapshot` reports for that
+  fixture right now. This is a separate, pre-existing characteristic of the
+  live-polling/dedup design (not something Task 1 or Task 2 introduced or
+  changed), observed directly in production on 2026-07-07 while verifying
+  this fix's deployment. Left undocumented no longer — worth a proper fix
+  (e.g., dropping long-finished fixtures from the live poll rotation, or
+  tightening `signalAlreadyExists`'s window) as its own future task, not
+  attempted here.
