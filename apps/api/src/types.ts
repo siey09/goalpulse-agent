@@ -137,6 +137,36 @@ export interface MarketMakerQuote {
   computedAt: string;
 }
 
+export type ArenaAgentId = "momentum_follower" | "contrarian";
 
+export interface ArenaPosition {
+  agentId: ArenaAgentId;
+  signalId: string;
+  matchId: string;
+  match: string;
+  side: TeamSide;
+  target: string;
+  oddsTaken: number;
+  resultStatus: "pending" | "correct" | "incorrect";
+  profitUnits: number;
+}
 
+export interface ArenaScoreboard {
+  agentId: ArenaAgentId;
+  label: string;
+  positions: ArenaPosition[];
+  settledCount: number;
+  correctCount: number;
+  incorrectCount: number;
+  winRatePct: number;
+  netUnits: number;
+  roiPercent: number;
+  openPositions: number;
+}
 
+export interface ArenaProof {
+  type: "sha256";
+  hash: string;
+  verifiableStat: { fixtureId: number; seq: number; statKey: number } | null;
+  note: string;
+}
