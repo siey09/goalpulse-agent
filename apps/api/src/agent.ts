@@ -3,6 +3,7 @@ import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { fetchSimulatedTxLineFeed } from "./services/mockTxLine";
 import { fetchTxLineFeed } from "./services/txlineClient";
 import { sendHighSeverityAlert } from "./services/alerts";
+import { archiveSignal } from "./services/archive";
 import {
   evaluatePendingSignalsForFinishedMatches,
   findPreviousSnapshot,
@@ -11,7 +12,27 @@ import {
   upsertRecentFinishedMatches,
   store,
 } from "./store";
-import { AgentRun } from "./types";
+import { AgentRun, AgentSignal } from "./types";
+
+export function findPendingSignals(signals: AgentSignal[]): AgentSignal[] {
+  return signals.filter((signal) => signal.resultStatus === "pending");
+}
+
+/**
+ * Takes signal objects already known to have been "pending" at some earlier
+ * point (by reference, not id - sidesteps the known duplicate-signal-id
+ * behavior from stale-finished-match repolling, since this only ever
+ * inspects the exact objects it was given) and returns the ones that have
+ * since transitioned away from "pending" via evaluatePendingSignalsForFinishedMatches
+ * mutating them in place.
+ */
+export function findNewlySettledSignals(
+  signalsCapturedWhilePending: AgentSignal[]
+): AgentSignal[] {
+  return signalsCapturedWhilePending.filter(
+    (signal) => signal.resultStatus !== "pending"
+  );
+}
 
 export async function processAgentCycle(): Promise<AgentRun> {
   const startedAt = new Date().toISOString();
@@ -52,6 +73,7 @@ const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.cr
       if (signal && !signalAlreadyExists(signal)) {
         store.signals.unshift(signal);
         signalsCreated += 1;
+        void archiveSignal(signal, "created");
 
         if (signal.severity === "HIGH") {
           const delayMs = highSeverityAlertCount * alertStaggerMs;
@@ -66,7 +88,12 @@ const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.cr
       }
     }
 
+    const pendingSignalsBeforeEvaluation = findPendingSignals(store.signals);
     const evaluatedSignals = evaluatePendingSignalsForFinishedMatches();
+
+    for (const signal of findNewlySettledSignals(pendingSignalsBeforeEvaluation)) {
+      void archiveSignal(signal, "settled");
+    }
 
     store.oddsSnapshots = store.oddsSnapshots.slice(0, 800);
     store.signals = store.signals.slice(0, 100);
