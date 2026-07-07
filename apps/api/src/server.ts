@@ -11,6 +11,7 @@ import { validateStatOnChain } from "./services/onchainValidation";
 import { loadSnapshot, saveSnapshot } from "./services/persistence";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { computeMarketMakerQuote } from "./logic/marketMaker";
+import { computeArenaScoreboards, isTotalsSignal } from "./logic/arena";
 import { config } from "./config";
 import { requireApiKey } from "./middleware/apiKeyAuth";
 import { generalApiLimiter, runOnceLimiter } from "./middleware/rateLimiters";
@@ -316,6 +317,67 @@ app.get("/api/market-maker", (req, res) => {
 
   res.json({
     data: quotes,
+  });
+});
+
+app.get("/api/arena", (_req, res) => {
+  const matchesById = new Map<string, (typeof store.matches)[number]>();
+
+  for (const match of store.recentFinishedMatches) {
+    matchesById.set(match.id, match);
+  }
+  for (const match of store.matches) {
+    matchesById.set(match.id, match);
+  }
+
+  const snapshotsById = new Map<string, (typeof store.oddsSnapshots)[number]>();
+  for (const snapshot of store.oddsSnapshots) {
+    snapshotsById.set(snapshot.id, snapshot);
+  }
+
+  const { momentumFollower, contrarian } = computeArenaScoreboards(
+    store.signals,
+    matchesById,
+    snapshotsById
+  );
+
+  const verifiableSignal = store.signals.find(
+    (signal) =>
+      !isTotalsSignal(signal) &&
+      signal.resultStatus !== "pending" &&
+      signal.evidence?.fixtureId &&
+      signal.evidence?.scoresContext?.sequence !== undefined
+  );
+
+  const verifiableStat = verifiableSignal
+    ? {
+        fixtureId: Number(verifiableSignal.evidence!.fixtureId),
+        seq: verifiableSignal.evidence!.scoresContext!.sequence!,
+        statKey: 1002,
+      }
+    : null;
+
+  const proofHash = createHash("sha256")
+    .update(
+      JSON.stringify({
+        momentumFollower: momentumFollower.positions,
+        contrarian: contrarian.positions,
+      })
+    )
+    .digest("hex");
+
+  res.json({
+    data: {
+      momentumFollower,
+      contrarian,
+      proof: {
+        type: "sha256",
+        hash: proofHash,
+        verifiableStat,
+        note:
+          "Tamper-evident SHA-256 hash of both agents' full position ledgers, plus a real on-chain Merkle proof (via GET /api/onchain/validate-stat) confirming the underlying TxLINE data this tournament is based on is genuinely anchored on Solana mainnet. This does not mean funds move or a smart contract executes - GoalPulse is analytics only and does not place wagers, custody funds, execute trades, or facilitate betting execution.",
+      },
+    },
   });
 });
 

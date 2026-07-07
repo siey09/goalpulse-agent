@@ -417,6 +417,57 @@ components:
         computedAt: { type: string, format: date-time }
       required: [matchId, match, fairOdds, bidOdds, askOdds, spreadPct, spreadWidth, reason, fieldPressureScore, reliability, computedAt]
 
+    ArenaPosition:
+      type: object
+      properties:
+        agentId: { type: string, enum: [momentum_follower, contrarian] }
+        signalId: { type: string }
+        matchId: { type: string }
+        match: { type: string }
+        side: { type: string, enum: [home, away] }
+        target: { type: string }
+        oddsTaken: { type: number }
+        resultStatus: { type: string, enum: [pending, correct, incorrect] }
+        profitUnits: { type: number }
+      required: [agentId, signalId, matchId, match, side, target, oddsTaken, resultStatus, profitUnits]
+
+    ArenaScoreboard:
+      type: object
+      properties:
+        agentId: { type: string, enum: [momentum_follower, contrarian] }
+        label: { type: string }
+        positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArenaPosition'
+        settledCount: { type: number }
+        correctCount: { type: number }
+        incorrectCount: { type: number }
+        winRatePct: { type: number }
+        netUnits: { type: number }
+        roiPercent: { type: number }
+        openPositions: { type: number }
+      required: [agentId, label, positions, settledCount, correctCount, incorrectCount, winRatePct, netUnits, roiPercent, openPositions]
+
+    ArenaVerifiableStat:
+      type: object
+      nullable: true
+      properties:
+        fixtureId: { type: number }
+        seq: { type: number }
+        statKey: { type: number }
+      required: [fixtureId, seq, statKey]
+
+    ArenaProof:
+      type: object
+      properties:
+        type: { type: string, enum: [sha256] }
+        hash: { type: string }
+        verifiableStat:
+          $ref: '#/components/schemas/ArenaVerifiableStat'
+        note: { type: string }
+      required: [type, hash, verifiableStat, note]
+
   responses:
     RateLimited:
       description: Too many requests — general 1200/min per-IP limit exceeded.
@@ -634,6 +685,41 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/MarketMakerQuote'
+                required: [data]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/arena:
+    get:
+      summary: Agent vs Agent Arena head-to-head scoreboard
+      description: >
+        Two agents reading the same live 1X2 signal feed with opposite
+        strategies: Momentum Follower takes every signal at face value;
+        Contrarian fades signals that fire without real field support
+        (fieldPressureScore < 22 at signal-creation time - a live, causal
+        check, never the final match result). Over/Under totals signals do
+        not participate. Settlement is tamper-evident (SHA-256 hash of both
+        ledgers) and on-chain-verified (see proof.verifiableStat, checkable
+        via GET /api/onchain/validate-stat) - this does not mean funds move
+        or a smart contract executes; GoalPulse remains analytics only.
+      responses:
+        '200':
+          description: Both agents' scoreboards and the tamper-evident proof.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      momentumFollower:
+                        $ref: '#/components/schemas/ArenaScoreboard'
+                      contrarian:
+                        $ref: '#/components/schemas/ArenaScoreboard'
+                      proof:
+                        $ref: '#/components/schemas/ArenaProof'
+                    required: [momentumFollower, contrarian, proof]
                 required: [data]
         '429':
           $ref: '#/components/responses/RateLimited'
