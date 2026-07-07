@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isScoresContextFresh } from "./txlineClient";
+import { isScoresContextFresh } from "./scoresContextFreshness";
 
 const TOLERANCE_MS = 60_000;
 

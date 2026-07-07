@@ -1,4 +1,5 @@
 ﻿import { AgentSignal, OddsSnapshot, Severity, TeamSide, TxLineScoresContext } from "../types";
+import { isScoresContextFresh, SCORES_CONTEXT_TOLERANCE_MS } from "./scoresContextFreshness";
 
 function round(value: number, decimals = 2) {
   return Number(value.toFixed(decimals));
@@ -134,7 +135,14 @@ export function buildSignalFromSnapshots(
   const oddsBefore = side === "home" ? previous.homeOdds : previous.awayOdds;
   const oddsAfter = side === "home" ? current.homeOdds : current.awayOdds;
   const scoresContext =
-    current.evidence?.scoresContext ?? previous.evidence?.scoresContext;
+    current.evidence?.scoresContext ??
+    (isScoresContextFresh(
+      new Date(current.createdAt).getTime(),
+      previous.evidence?.scoresContext?.timestamp,
+      SCORES_CONTEXT_TOLERANCE_MS
+    )
+      ? previous.evidence?.scoresContext
+      : undefined);
 
   const momentumScore = calculateMomentumScore(
     bestChangePct,

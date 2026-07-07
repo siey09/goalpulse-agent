@@ -125,3 +125,67 @@ describe("buildSignalFromSnapshots", () => {
     expect(signal?.momentumScore).toBeLessThanOrEqual(100);
   });
 });
+
+describe("buildSignalFromSnapshots scoresContext fallback", () => {
+  it("uses current's own scoresContext when present, without needing previous's", () => {
+    const previous = makeSnapshot({
+      id: "snapshot-previous",
+      createdAt: "2026-07-07T01:00:00.000Z",
+    });
+    const current = makeSnapshot({
+      id: "snapshot-current",
+      createdAt: "2026-07-07T01:00:30.000Z",
+      homeOdds: 1.8,
+      evidence: {
+        source: "txline",
+        scoresContext: { timestamp: "2026-07-07T01:00:30.000Z", fieldPressureScore: 40 },
+      },
+    });
+
+    const signal = buildSignalFromSnapshots(current, previous);
+
+    expect(signal?.evidence?.scoresContext?.fieldPressureScore).toBe(40);
+  });
+
+  it("falls back to previous's scoresContext when current has none and previous's is fresh relative to current's own timestamp", () => {
+    const previous = makeSnapshot({
+      id: "snapshot-previous",
+      createdAt: "2026-07-07T01:00:00.000Z",
+      evidence: {
+        source: "txline",
+        scoresContext: { timestamp: "2026-07-07T01:00:00.000Z", fieldPressureScore: 15 },
+      },
+    });
+    const current = makeSnapshot({
+      id: "snapshot-current",
+      createdAt: "2026-07-07T01:00:30.000Z",
+      homeOdds: 1.8,
+    });
+
+    const signal = buildSignalFromSnapshots(current, previous);
+
+    expect(signal?.evidence?.scoresContext?.fieldPressureScore).toBe(15);
+  });
+
+  it("drops to undefined when previous's scoresContext is stale relative to current's own timestamp, even though it was fresh for previous itself", () => {
+    const previous = makeSnapshot({
+      id: "snapshot-previous",
+      createdAt: "2026-07-07T01:00:00.000Z",
+      evidence: {
+        source: "txline",
+        // Fresh for previous's own moment (0s gap), but current arrives 90s
+        // later - beyond the 60s tolerance.
+        scoresContext: { timestamp: "2026-07-07T01:00:00.000Z", fieldPressureScore: 15 },
+      },
+    });
+    const current = makeSnapshot({
+      id: "snapshot-current",
+      createdAt: "2026-07-07T01:01:30.000Z",
+      homeOdds: 1.8,
+    });
+
+    const signal = buildSignalFromSnapshots(current, previous);
+
+    expect(signal?.evidence?.scoresContext).toBeUndefined();
+  });
+});
