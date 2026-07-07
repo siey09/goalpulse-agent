@@ -10,10 +10,11 @@ import { getLiveStreamState, startLiveStreamMonitor } from "./services/txlineStr
 import { validateStatOnChain } from "./services/onchainValidation";
 import { loadSnapshot, saveSnapshot } from "./services/persistence";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
+import { computeMarketMakerQuote } from "./logic/marketMaker";
 import { config } from "./config";
 import { requireApiKey } from "./middleware/apiKeyAuth";
 import { generalApiLimiter, runOnceLimiter } from "./middleware/rateLimiters";
-import { getPnlSummary, getStats, store , upsertRecentFinishedMatches } from "./store";
+import { findPreviousSnapshot, getPnlSummary, getStats, store , upsertRecentFinishedMatches } from "./store";
 import type { OddsSnapshot } from "./types";
 
 const app = express();
@@ -296,6 +297,25 @@ app.get("/api/odds-history", (req, res) => {
 
   res.json({
     data: snapshots.slice(0, 100).reverse(),
+  });
+});
+
+app.get("/api/market-maker", (req, res) => {
+  const matchId = String(req.query.matchId ?? "");
+
+  const matches = matchId
+    ? store.matches.filter((match) => match.id === matchId)
+    : store.matches;
+
+  const quotes = matches
+    .map((match) => {
+      const snapshot = findPreviousSnapshot(match.id);
+      return snapshot ? computeMarketMakerQuote(match, snapshot) : null;
+    })
+    .filter((quote): quote is NonNullable<typeof quote> => quote !== null);
+
+  res.json({
+    data: quotes,
   });
 });
 

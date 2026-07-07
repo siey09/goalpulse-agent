@@ -383,6 +383,40 @@ components:
         replayComplete: { type: boolean }
       required: [matchId, timestamp, history, signals, stats]
 
+    MarketMakerQuote:
+      type: object
+      properties:
+        matchId: { type: string }
+        match: { type: string }
+        fairOdds:
+          type: object
+          properties:
+            home: { type: number }
+            away: { type: number }
+            draw: { type: number }
+          required: [home, away, draw]
+        bidOdds:
+          type: object
+          properties:
+            home: { type: number }
+            away: { type: number }
+            draw: { type: number }
+          required: [home, away, draw]
+        askOdds:
+          type: object
+          properties:
+            home: { type: number }
+            away: { type: number }
+            draw: { type: number }
+          required: [home, away, draw]
+        spreadPct: { type: number }
+        spreadWidth: { type: string, enum: [NARROW, MODERATE, WIDE] }
+        reason: { type: string }
+        fieldPressureScore: { type: number }
+        reliability: { type: string, enum: [RELIABLE, UNRELIABLE, SUSPENDED, UNKNOWN] }
+        computedAt: { type: string, format: date-time }
+      required: [matchId, match, fairOdds, bidOdds, askOdds, spreadPct, spreadWidth, reason, fieldPressureScore, reliability, computedAt]
+
   responses:
     RateLimited:
       description: Too many requests — general 1200/min per-IP limit exceeded.
@@ -566,6 +600,40 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/OddsSnapshot'
+                required: [data]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/market-maker:
+    get:
+      summary: In-play market maker bid/ask quotes
+      description: >
+        Quotes a bid/ask spread around the current fair odds (TxLINE's own
+        de-margined price) for each currently-tracked match's home/away/draw
+        outcomes. The spread widens with fieldPressureScore (more dramatic
+        in-play action) and with TXODDS reliability problems
+        (UNRELIABLE/SUSPENDED), and narrows in calm, reliable conditions -
+        genuine market-making logic, not an arbitrary number. Computed live
+        from already-autonomously-updated data; not stored or cached.
+      parameters:
+        - name: matchId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter to a single match. Omit for one quote per currently-tracked match with an available odds snapshot.
+      responses:
+        '200':
+          description: List of market maker quotes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MarketMakerQuote'
                 required: [data]
         '429':
           $ref: '#/components/responses/RateLimited'
