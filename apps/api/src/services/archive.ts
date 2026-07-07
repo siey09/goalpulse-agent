@@ -43,7 +43,7 @@ export async function archiveSignal(
       result_status: signal.resultStatus,
       momentum_score: signal.momentumScore,
       odds_change_pct: signal.oddsChangePct,
-      signal_data: signal,
+      signal_data: { ...signal },
     });
   } catch (error) {
     console.error("[archive] Failed to archive signal to Supabase:", error);

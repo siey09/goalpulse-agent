@@ -86,4 +86,22 @@ describe("archiveSignal", () => {
 
     await expect(archiveSignal(makeSignal(), "created")).resolves.toBeUndefined();
   });
+
+  it("snapshots signal_data at call time, unaffected by later mutation of the same object", async () => {
+    config.supabaseUrl = "https://example.supabase.co";
+    config.supabaseServiceKey = "test-key";
+    insertMock.mockResolvedValue({ error: null });
+
+    const signal = makeSignal({ resultStatus: "pending" });
+
+    await archiveSignal(signal, "created");
+
+    // Simulates the same object later being mutated by
+    // evaluatePendingSignalsForFinishedMatches in a later (or the same)
+    // cycle, after the fire-and-forget "created" insert was already queued.
+    signal.resultStatus = "correct";
+
+    const insertedRow = insertMock.mock.calls[0][0];
+    expect(insertedRow.signal_data.resultStatus).toBe("pending");
+  });
 });
