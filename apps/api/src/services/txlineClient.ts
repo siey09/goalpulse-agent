@@ -313,6 +313,28 @@ function buildScoresContext(
     proofLabel: "Generated from real TXODDS Scores event context",
   };
 }
+
+const SCORES_CONTEXT_TOLERANCE_MS = 60_000;
+
+/**
+ * A single scoresContext is computed once per poll and would otherwise be
+ * stamped onto every odds tick selected that poll, including ticks
+ * selectMovementOdds reaches back for from well outside the recent window.
+ * When a tick's own timestamp is too far from the context's timestamp, the
+ * context no longer describes that tick's moment - omit it (fail safe)
+ * rather than attach a stale, potentially wrong fieldPressureScore.
+ */
+export function isScoresContextFresh(
+  tickTs: number | undefined,
+  contextTimestamp: string | undefined,
+  toleranceMs: number
+): boolean {
+  if (!tickTs || !contextTimestamp) return false;
+
+  const contextMs = new Date(contextTimestamp).getTime();
+  return Math.abs(tickTs - contextMs) <= toleranceMs;
+}
+
 const RECENT_RESULT_FIXTURES: TxLineFixture[] = [
   {
     FixtureId: 17588325,
@@ -1270,7 +1292,15 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
           ? `/api/odds/snapshot/${fixture.FixtureId}`
           : `/api/odds/updates/${fixture.FixtureId}`;
 
-      snapshots.push(normalizeOddsSnapshot(match, item, endpointUsed, scoresContext));
+      const contextForItem = isScoresContextFresh(
+        item.Ts,
+        scoresContext?.timestamp,
+        SCORES_CONTEXT_TOLERANCE_MS
+      )
+        ? scoresContext
+        : undefined;
+
+      snapshots.push(normalizeOddsSnapshot(match, item, endpointUsed, contextForItem));
     }
 
     for (const item of selectedTotalsOdds) {
@@ -1279,7 +1309,15 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
           ? `/api/odds/snapshot/${fixture.FixtureId}`
           : `/api/odds/updates/${fixture.FixtureId}`;
 
-      snapshots.push(normalizeTotalsSnapshot(match, item, endpointUsed, scoresContext));
+      const contextForItem = isScoresContextFresh(
+        item.Ts,
+        scoresContext?.timestamp,
+        SCORES_CONTEXT_TOLERANCE_MS
+      )
+        ? scoresContext
+        : undefined;
+
+      snapshots.push(normalizeTotalsSnapshot(match, item, endpointUsed, contextForItem));
     }
   }
 
@@ -1409,7 +1447,15 @@ export async function fetchRecentTxLineResults(): Promise<TxLineFeedResult> {
             ? `/api/odds/snapshot/${fixture.FixtureId}`
             : `/api/odds/updates/${fixture.FixtureId}`;
 
-        snapshots.push(normalizeOddsSnapshot(match, item, endpointUsed, scoresContext));
+        const contextForItem = isScoresContextFresh(
+          item.Ts,
+          scoresContext?.timestamp,
+          SCORES_CONTEXT_TOLERANCE_MS
+        )
+          ? scoresContext
+          : undefined;
+
+        snapshots.push(normalizeOddsSnapshot(match, item, endpointUsed, contextForItem));
       }
     } catch (error) {
       console.warn(
