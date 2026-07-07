@@ -123,6 +123,20 @@ export interface AgentRun {
   message: string;
 }
 
+export interface MarketMakerQuote {
+  matchId: string;
+  match: string;
+  fairOdds: { home: number; away: number; draw: number };
+  bidOdds: { home: number; away: number; draw: number };
+  askOdds: { home: number; away: number; draw: number };
+  spreadPct: number;
+  spreadWidth: "NARROW" | "MODERATE" | "WIDE";
+  reason: string;
+  fieldPressureScore: number;
+  reliability: "RELIABLE" | "UNRELIABLE" | "SUSPENDED" | "UNKNOWN";
+  computedAt: string;
+}
+
 
 
 
