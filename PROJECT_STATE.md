@@ -32,18 +32,13 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: Pattern-matched signal correlation (item 13) —
-implementation complete in worktree
-`.claude/worktrees/pattern-matched-correlation` (branch
-`worktree-pattern-matched-correlation`), all 5 plan tasks done and
-committed, 174/174 tests passing, clean build, openapi valid. Awaiting
-user's review of the end-of-task check-in before merge to `main` + push
-+ worktree cleanup. Signal Archive dashboard panel is separately still
-**not yet visually verified in a browser** (no browser automation tool
-was available this session) — recommend a quick visual check when
-convenient.
+🔄 In Progress: none — Pattern-matched signal correlation (item 13)
+merged and pushed to `main` (174 tests, 24 routes). Signal Archive
+dashboard panel is still **not yet visually verified in a browser** (no
+browser automation tool was available this session) — recommend a quick
+visual check when convenient.
 
-📋 Next Steps: none further queued after this merges. Await direction.
+📋 Next Steps: none queued. Await further direction from the user.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
