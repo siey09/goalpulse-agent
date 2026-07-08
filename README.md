@@ -42,10 +42,10 @@ Also added: 24 automated unit tests covering the deterministic signal and settle
 ## Latest Session (2026-07-07 to 2026-07-08)
 
 1. **Agent vs Agent Arena** (`GET /api/arena`) — two synthetic trading agents run head-to-head on the same live 1X2 signal feed with genuinely opposite strategies: **Momentum Follower** takes every signal at face value; **Contrarian** fades signals below the same `fieldPressureScore < 22` "market-only move" threshold already shown in the Signal Intelligence Panel, taking the opposite side at the real quoted price from the original snapshot. Settlement is tamper-evident (SHA-256 hash of both ledgers).
-2. **Insert-only signal archive** — every signal is appended to a permanent Supabase table (`signal_archive`) at creation and again at settlement, immune to the in-memory store's caps and to the tournament's own live-rotation window. Write-only for now (no read endpoint or dashboard panel yet).
+2. **Insert-only signal archive** — every signal is appended to a permanent Supabase table (`signal_archive`) at creation and again at settlement, immune to the in-memory store's caps and to the tournament's own live-rotation window. Readable via `GET /api/archive` (paginated, filterable by matchId/status/market/event); no dashboard panel yet.
 3. **Scores-context freshness fix** (real bug, found and fixed) — a single TXODDS Scores context fetched per poll was being stamped onto every odds tick selected that poll, including ticks reached far back in history, which could mislabel `fieldPressureScore` with a stale context. Fixed with a 60-second freshness gate at both the snapshot layer (`txlineClient.ts`) and the signal layer's historical-context fallback (`signalEngine.ts`).
 
-Also added this session: 42 more automated unit tests (66 total across 9 files, up from 24).
+Also added this session: 63 more automated unit tests (87 total across 10 files, up from 24).
 
 ## Production Readiness
 
@@ -92,8 +92,8 @@ Six further features make GoalPulse deployable, not just demoable, all on free t
 - Supabase periodic-snapshot persistence, verified surviving a real Render restart
 - In-Play Market Maker with independent implied-probability quoting
 - Agent vs Agent Arena (Momentum Follower vs Contrarian, tamper-evident SHA-256 ledger hash)
-- Insert-only permanent signal archive to Supabase (write-only for now)
-- 66 automated unit tests
+- Insert-only permanent signal archive to Supabase, readable via a paginated/filterable read endpoint
+- 87 automated unit tests
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer
@@ -176,6 +176,7 @@ npm.cmd run test
 - GET /api/recent-results
 - GET /api/market-maker (independent implied-probability quotes)
 - GET /api/arena (Momentum Follower vs Contrarian scoreboards)
+- GET /api/archive (paginated, filterable read over the permanent signal archive)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)

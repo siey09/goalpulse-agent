@@ -77,9 +77,13 @@ In addition to the 5-second REST poll loop, the backend maintains a persistent S
 
 ### 2. Insert-Only Signal Archive
 
-Every signal is now appended to a permanent Supabase table (`signal_archive`) at creation and again at settlement, deliberately separate from and never touching the existing restart-recovery snapshot table. This matters specifically for this tournament: the World Cup narrows sharply after 2026-07-11 to just a handful of matches before the July 19 final, and without this feature, most already-generated signals would simply disappear as matches and their odds history age out of the in-memory store's caps and TxLINE's own live-rotation window before the tournament even ends. Write-only for now — no read endpoint or dashboard panel yet, deliberately deferred until real data has accumulated.
+Every signal is now appended to a permanent Supabase table (`signal_archive`) at creation and again at settlement, deliberately separate from and never touching the existing restart-recovery snapshot table. This matters specifically for this tournament: the World Cup narrows sharply after 2026-07-11 to just a handful of matches before the July 19 final, and without this feature, most already-generated signals would simply disappear as matches and their odds history age out of the in-memory store's caps and TxLINE's own live-rotation window before the tournament even ends. Readable via `GET /api/archive` (see below); no dashboard panel yet, deliberately deferred until real data has accumulated.
 
-### 3. Scores-Context Freshness Fix (Real Bug, Found and Fixed)
+### 3. Signal Archive Read Endpoint
+
+`GET /api/archive` makes the accumulating archive actually queryable — previously the only way to inspect it was browsing the Supabase table directly. Paginated (`page`/`pageSize`, default 25 capped at 100) and filterable (`matchId`/`status`/`market`/`event`). Returns raw event-log rows rather than a collapsed per-signal view, since the table is insert-only by design: a signal usually has both a `created` and a `settled` row, and a caller filtering `event=settled` gets only final outcomes. The `market` filter (`1x2`/`totals`) is inferred from `matchId` containing `-totals-`, reusing the existing multi-market convention with no schema change. Fail-open like the rest of this feature: returns `200` with an empty page instead of an error if Supabase is unconfigured or unreachable.
+
+### 4. Scores-Context Freshness Fix (Real Bug, Found and Fixed)
 
 Found while verifying an Arena result. A single TXODDS Scores context is computed once per poll and was being stamped onto every odds tick selected that poll — including ticks reached far back in history (the signal engine always includes the single strongest historical compression pair, regardless of recency). A reached-back tick could get labeled with a `scoresContext` reflecting a much later real-world moment, mislabeling `fieldPressureScore` — exactly the value Arena's Contrarian agent uses to decide whether to fade a signal. Fixed with a 60-second freshness gate (derived from real gap measurements: normal jitter maxed at 48.2s, the two real violations were 128.9s/302.0s) at both the snapshot layer (`txlineClient.ts`, three call sites) and a second, narrower gap found during review in the signal layer's historical-context fallback (`signalEngine.ts`).
 
@@ -95,7 +99,7 @@ Found while verifying an Arena result. A single TXODDS Scores context is compute
 
 ## Automated Test Coverage and Security Audit
 
-- **66 automated unit tests across 9 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian position logic, the scores-context freshness gate, and the insert-only archive's fail-open behavior. Test files are excluded from the production TypeScript build output.
+- **87 automated unit tests across 10 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian position logic, the scores-context freshness gate, the insert-only archive's fail-open behavior on both write and read, and the archive read endpoint's query-param parsing/clamping. Test files are excluded from the production TypeScript build output.
 - **Git history security audit**: searched the full commit history for accidentally committed secrets (API tokens, wallet keys, webhook URLs) and confirmed none were ever committed. Only `.env.example` (a template with no real values) was ever tracked; `.env.local` and `.secrets/` are gitignored throughout.
 
 ## Production Readiness Features (Added After Core Verification)
@@ -191,8 +195,8 @@ GoalPulse uses:
 - Supabase periodic-snapshot persistence, verified surviving a real Render restart
 - In-Play Market Maker with independent implied-probability quoting
 - Agent vs Agent Arena (Momentum Follower vs Contrarian, tamper-evident SHA-256 ledger hash)
-- Insert-only permanent signal archive to Supabase (write-only for now)
-- 66 automated unit tests
+- Insert-only permanent signal archive to Supabase, readable via a paginated/filterable read endpoint
+- 87 automated unit tests
 
 ## Outcome Audit Layer
 
@@ -221,6 +225,7 @@ The frontend is built with React, TypeScript, Vite, Tailwind CSS, and Recharts. 
 - GET /api/recent-results
 - GET /api/market-maker (independent implied-probability quotes, spread widens with field pressure/reliability)
 - GET /api/arena (Momentum Follower vs Contrarian scoreboards, SHA-256 tamper-evident ledger hash)
+- GET /api/archive (paginated, filterable read over the permanent signal archive)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events, live)

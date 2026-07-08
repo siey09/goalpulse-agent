@@ -138,9 +138,19 @@ Supabase table) — appends a permanent, growing record of every signal at
 creation and again at settlement, immune to the in-memory store's caps and
 to TxLINE's live-rotation window. Deliberately separate from and never
 touching the existing `persistence.ts`/`store_snapshots` (that one is a
-restart-recovery snapshot; this one is a permanent history). Write-only for
-now — no read endpoint, no dashboard panel yet (deliberately deferred, see
-"What's left"). Spec: `docs/superpowers/specs/2026-07-07-signal-archive-design.md`.
+restart-recovery snapshot; this one is a permanent history). Spec:
+`docs/superpowers/specs/2026-07-07-signal-archive-design.md`.
+
+**4. Signal archive read endpoint** (`GET /api/archive`) — paginated
+(`page`/`pageSize`, default 25 capped at 100), filterable
+(`matchId`/`status`/`market`/`event`) read endpoint over `signal_archive`.
+Returns raw event-log rows (a signal usually appears twice: `created` and
+`settled`), never collapsed. `market` is inferred from `matchId` containing
+`-totals-` (no schema change). Fail-open: returns `200` with empty
+data/`totalCount: 0` if Supabase is unconfigured or the query fails, never an
+error. No dashboard panel yet (deliberately deferred, see "What's left").
+Spec: `docs/superpowers/specs/2026-07-08-archive-read-endpoint-design.md`,
+plan: `docs/superpowers/plans/2026-07-08-archive-read-endpoint.md`.
 
 ## Bugs found and fixed
 
@@ -223,23 +233,24 @@ live endpoint behavior, don't assume a push is live.
 
 ## Testing
 
-**66 tests across 9 files**, all passing, `npm run test` from `apps/api/`:
+**87 tests across 10 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/marketMaker.test.ts`,
-`logic/scoresContextFreshness.test.ts`, `logic/signalEngine.test.ts`,
-`middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`,
-`services/persistence.test.ts`, `store.test.ts`. Build: `npm run build`
-(`tsc`), currently clean. Convention: pure logic gets unit tests with plain
-objects/mocks; anything requiring a real TxLINE/Supabase connection is
-explicitly *not* automated (this environment has no real credentials for
-either) — verified instead by the user directly against production.
+`logic/paginationParams.test.ts`, `logic/scoresContextFreshness.test.ts`,
+`logic/signalEngine.test.ts`, `middleware/apiKeyAuth.test.ts`,
+`services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`.
+Build: `npm run build` (`tsc`), currently clean. Convention: pure logic gets
+unit tests with plain objects/mocks; anything requiring a real
+TxLINE/Supabase connection is explicitly *not* automated (this environment
+has no real credentials for either) — verified instead by the user directly
+against production.
 
-**16 backend routes total**, all documented in `openapi.yaml` (validate with
+**17 backend routes total**, all documented in `openapi.yaml` (validate with
 `npx @redocly/cli lint openapi.yaml`): `/health`, `/api/matches`,
 `/api/signals`, `/api/stats`, `/api/pnl`, `/api/agent-runs`,
 `/api/odds-history`, `/api/recent-results`, `/api/market-maker`,
-`/api/arena`, `/api/replay/backtest`, `/api/onchain/validate-stat`,
-`/api/live/odds-stream`, `/api/live/replay-stream`, `/api/docs`,
-`POST /api/agent/run-once`.
+`/api/arena`, `/api/archive`, `/api/replay/backtest`,
+`/api/onchain/validate-stat`, `/api/live/odds-stream`,
+`/api/live/replay-stream`, `/api/docs`, `POST /api/agent/run-once`.
 
 ## What still needs doing
 
@@ -247,10 +258,12 @@ either) — verified instead by the user directly against production.
    `create table` statement) against the existing Supabase project — no new
    project needed, `SUPABASE_URL`/`SUPABASE_SERVICE_KEY` are already
    configured on Render for the existing persistence feature. Then verify
-   growth by browsing the table directly (no read endpoint exists yet).
-2. **Signal archive exposure** (deliberately deferred, not started): a
-   read-only `GET /api/archive` endpoint and a "Full Tournament Archive"
-   dashboard panel, once real data has accumulated for a few days.
+   growth via the new `GET /api/archive` endpoint (or direct Supabase
+   browsing).
+2. **Signal archive dashboard panel** (deliberately deferred, not started):
+   `GET /api/archive` now exists and is queryable — only the "Full Tournament
+   Archive" frontend panel remains, once real data has accumulated for a few
+   days.
 3. **`match_archive` table** (deliberately deferred): match-level permanent
    history, if ever needed beyond what's already captured inside each
    archived signal's `signal_data` blob.
