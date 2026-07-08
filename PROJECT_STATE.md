@@ -450,12 +450,15 @@ against production.
    `confidenceScore` (a later-session field), proving the table has been
    live and accumulating correctly since before this check. This "still
    needs doing" note was stale.
-2. **Signal archive dashboard panel** — in progress now (2026-07-08),
-   following the brainstorm → spec → plan → implement pipeline.
-   Prioritized ahead of further backend features per explicit user
-   instruction: judge-facing demo completeness now outweighs backend depth,
-   given the July 19 deadline and the tournament narrowing to ~4 matches
-   after July 11.
+2. ~~Signal archive dashboard panel~~ **Done (2026-07-08)** —
+   `apps/web/src/components/SignalArchivePanel.tsx`, the session's first
+   actual frontend feature. Paginated (Prev/Next), filterable (matchId
+   search debounced 400ms; status/market/event pill toggles), defaults
+   `event` to `settled` so a signal never visibly appears twice. Verified
+   directly against the live production archive (no frontend test runner
+   exists in `apps/web`). Spec:
+   `docs/superpowers/specs/2026-07-08-signal-archive-panel-design.md`,
+   plan: `docs/superpowers/plans/2026-07-08-signal-archive-panel.md`.
 3. **`match_archive` table** (deliberately deferred): match-level permanent
    history, if ever needed beyond what's already captured inside each
    archived signal's `signal_data` blob.

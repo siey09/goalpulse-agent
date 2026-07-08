@@ -79,6 +79,7 @@ Important frontend files:
 - apps/web/src/components/MarketMakerPanel.tsx
 - apps/web/src/components/ArenaPanel.tsx
 - apps/web/src/components/ResultsSettlementPanel.tsx
+- apps/web/src/components/SignalArchivePanel.tsx (paginated/filterable view over GET /api/archive)
 - apps/web/src/components/VerifiedCaseStudiesPanel.tsx (pinned, restart-immune case studies)
 - apps/web/src/data/pinnedCaseStudies.ts (frontend-bundled pinned signal data)
 
@@ -200,7 +201,9 @@ All three settle to `correct`/`incorrect`/`pending` per position and report net 
 
 `apps/api/src/services/archive.ts` (`signal_archive` Supabase table) appends a permanent record of every signal's state at creation and again at settlement, via `agent.ts` only. Deliberately separate from and never touching `persistence.ts`/`store_snapshots` — that table is a single-row, restart-recovery snapshot; this one is an insert-only, permanently growing history immune to the in-memory store's caps (`oddsSnapshots` capped 800, `signals` capped 100) and to the tournament's own TxLINE live-rotation window. Each row snapshots a shallow copy of the signal (`signal_data: { ...signal }`) at archive-call time, not a live object reference. Fail-open: no-ops if Supabase is unconfigured, and a delivery failure is caught and logged, never thrown, so archiving can never break the agent cycle.
 
-`GET /api/archive` (`services/archive.ts`'s `getArchivedSignals`) reads the table back: paginated (`page`/`pageSize`, default 25 capped at 100) and filterable (`matchId`/`status`/`market`/`event`). Returns raw event-log rows — a signal typically appears twice (`created` and `settled`) — never collapsed to one row per signal, sorted newest-first by `archivedAt`. `market` (`1x2`/`totals`) is inferred from `matchId` containing `-totals-` (`isTotalsMatchId`), reusing the existing multi-market convention rather than requiring a schema change. Fail-open here too: returns `200` with `data: []`/`totalCount: 0` rather than an error if Supabase is unconfigured or the query itself fails. No dashboard panel exists yet. Spec: `docs/superpowers/specs/2026-07-08-archive-read-endpoint-design.md`.
+`GET /api/archive` (`services/archive.ts`'s `getArchivedSignals`) reads the table back: paginated (`page`/`pageSize`, default 25 capped at 100) and filterable (`matchId`/`status`/`market`/`event`). Returns raw event-log rows — a signal typically appears twice (`created` and `settled`) — never collapsed to one row per signal, sorted newest-first by `archivedAt`. `market` (`1x2`/`totals`) is inferred from `matchId` containing `-totals-` (`isTotalsMatchId`), reusing the existing multi-market convention rather than requiring a schema change. Fail-open here too: returns `200` with `data: []`/`totalCount: 0` rather than an error if Supabase is unconfigured or the query itself fails. Spec: `docs/superpowers/specs/2026-07-08-archive-read-endpoint-design.md`.
+
+**Frontend panel** (`apps/web/src/components/SignalArchivePanel.tsx`, the session's first actual frontend feature — everything else was backend-only) renders this endpoint with real pagination (Prev/Next) and pill-button filters for `status`/`market`/`event`, plus a debounced (400ms) free-text `matchId` search — the first panel in this codebase to need either pagination or a server-driven search, since every prior panel's filtering was either absent or purely client-side over already-loaded data. Defaults `event` to `settled`, showing one row per fully-resolved signal rather than the raw created+settled event log, so a signal never visibly appears twice by default — a visible `event` pill still exposes the raw log on demand. Spec: `docs/superpowers/specs/2026-07-08-signal-archive-panel-design.md`.
 
 Known limitation: a signal that ages out of the in-memory store's 100-cap before its match finishes never gets a "settled" archive row (pre-existing store behavior, not introduced by this feature) — not every archived signal has a matching settled counterpart.
 
@@ -369,7 +372,6 @@ Do not commit .env.local, .secrets, or API tokens. A full git-history audit conf
 
 - **Stale-finished-match repolling.** A long-finished fixture can still be included in `fetchTxLineFeed()`'s live poll rotation. `selectMovementOdds` re-selects the single strongest historical compression pair on every poll regardless of recency, so once its `OddsSnapshot` ages out of the shared 800-entry cache and more than `signalAlreadyExists`'s 6-hour dedup window has passed, a "new" `AgentSignal` gets created for the exact same historical tick with a fresh `createdAt`. Not a bug in the scores-context freshness fix (which correctly gates the mismatched context in this scenario) — a separate, pre-existing characteristic of the live-polling/dedup design.
 - **Exact 60,000ms scores-context freshness boundary is untested** (only 59s/61s either side are tested). Low-risk.
-- **Signal archive has no dashboard panel yet** — `GET /api/archive` exists and is queryable, but there's no frontend consumer yet. See "Insert-Only Signal Archive" above.
 
 ## Deployment
 
