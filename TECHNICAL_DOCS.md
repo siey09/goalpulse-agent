@@ -42,9 +42,13 @@ Important backend files:
 - apps/api/src/services/onchainValidation.ts (real on-chain Solana Merkle proof validation)
 - apps/api/src/services/alerts.ts (autonomous Discord webhook alerts)
 - apps/api/src/services/persistence.ts (Supabase periodic-snapshot save/load, fail-open)
+- apps/api/src/services/archive.ts (insert-only permanent Supabase signal archive, fail-open)
 - apps/api/src/middleware/apiKeyAuth.ts (X-API-Key authentication, fail-closed)
 - apps/api/src/middleware/rateLimiters.ts (general + strict rate limiters)
 - apps/api/src/logic/signalEngine.ts
+- apps/api/src/logic/marketMaker.ts (independent implied-probability quoting model)
+- apps/api/src/logic/arena.ts (Agent vs Agent Arena: Momentum Follower vs Contrarian)
+- apps/api/src/logic/scoresContextFreshness.ts (freshness gate for scoresContext vs. tick timestamp)
 - apps/api/src/agent.ts
 - apps/api/src/store.ts (in-memory state; recovered from Supabase on startup, see "Supabase Persistence" below)
 
@@ -55,6 +59,8 @@ Core dashboard areas:
 - Market Board
 - Odds movement chart
 - Signal Intelligence Panel
+- Market Maker Panel
+- Agent vs Agent Arena Panel
 - Results Settlement Panel
 - Replay audit demo
 - Judge Demo Guide
@@ -64,6 +70,8 @@ Important frontend files:
 
 - apps/web/src/App.tsx
 - apps/web/src/components/SignalIntelligencePanel.tsx
+- apps/web/src/components/MarketMakerPanel.tsx
+- apps/web/src/components/ArenaPanel.tsx
 - apps/web/src/components/ResultsSettlementPanel.tsx
 - apps/web/src/components/VerifiedCaseStudiesPanel.tsx (pinned, restart-immune case studies)
 - apps/web/src/data/pinnedCaseStudies.ts (frontend-bundled pinned signal data)
@@ -165,6 +173,25 @@ Audit evidence includes:
 - **Cryptographic Proof Hash** — the full dataset (snapshot ids, event ids, signal outcomes, council decisions) is hashed with SHA-256 (Node `crypto` module) and reported with a Solana devnet anchoring readiness flag (`anchoringStatus: "pending_wallet_configuration"` until a wallet/private key is configured).
 - **Live Streaming** — `GET /api/live/odds-stream` and `GET /api/live/replay-stream` push updates over Server-Sent Events so the dashboard does not need to poll.
 
+## In-Play Market Maker
+
+`apps/api/src/logic/marketMaker.ts` (`GET /api/market-maker`, `MarketMakerPanel.tsx`) computes an independent bid/ask spread around TxLINE's already-de-margined fair odds for each match's outcomes, without relying on the signal engine at all. The spread starts at a 2% base and widens with `fieldPressureScore` (more in-play action = more uncertainty, up to +6%) and with reliability problems (+4% for `UNRELIABLE`, +8% for `SUSPENDED`), clamped to 2-20%. Always computable from a single snapshot — unlike `buildSignalFromSnapshots`, it needs no previous snapshot to compare against.
+
+## Agent vs Agent Arena
+
+`apps/api/src/logic/arena.ts` (`GET /api/arena`, `ArenaPanel.tsx`) runs two synthetic trading agents head-to-head on the same live 1X2 signal feed, computed live at request time and never touching `agent.ts`/`store.ts`'s mutable state:
+
+- **Momentum Follower** takes every 1X2 signal's own side, target, and odds at face value.
+- **Contrarian** fades signals it classifies as market-only moves (`isMarketOnlyMove`, reusing the exact `fieldPressureScore < 22` threshold `SignalIntelligencePanel.tsx` already labels "MARKET-ONLY MOVE"), taking the opposite side at the real quoted price read from the original `OddsSnapshot` the signal was built from — not a synthesized value.
+
+Both settle to `correct`/`incorrect`/`pending` per position and report net units, ROI%, and win rate. Settlement is tamper-evident: a SHA-256 hash of both ledgers, and the underlying data can be independently verified via the existing `GET /api/onchain/validate-stat` — zero new on-chain code was needed. Over/Under totals signals are excluded from both agents (`isTotalsSignal`).
+
+## Insert-Only Signal Archive
+
+`apps/api/src/services/archive.ts` (`signal_archive` Supabase table) appends a permanent record of every signal's state at creation and again at settlement, via `agent.ts` only. Deliberately separate from and never touching `persistence.ts`/`store_snapshots` — that table is a single-row, restart-recovery snapshot; this one is an insert-only, permanently growing history immune to the in-memory store's caps (`oddsSnapshots` capped 800, `signals` capped 100) and to the tournament's own TxLINE live-rotation window. Each row snapshots a shallow copy of the signal (`signal_data: { ...signal }`) at archive-call time, not a live object reference. Fail-open: no-ops if Supabase is unconfigured, and a delivery failure is caught and logged, never thrown, so archiving can never break the agent cycle. Write-only for now — no read endpoint or dashboard panel exists yet.
+
+Known limitation: a signal that ages out of the in-memory store's 100-cap before its match finishes never gets a "settled" archive row (pre-existing store behavior, not introduced by this feature) — not every archived signal has a matching settled counterpart.
+
 ## Known Issues Fixed During Live Verification
 
 **Undocumented StatusId 100.** A `game_finalised` TxLINE Scores action was observed carrying `StatusId: 100`, a value not listed in the official TXODDS Scores Product API doc (v1.0, StatusId 1-18 only). The original `statusFromStatusId()` mapping in `txlineClient.ts` did not treat this as finished, so signals for completed matches stayed pending indefinitely. Fixed by adding `100` to the finished-status set.
@@ -172,6 +199,8 @@ Audit evidence includes:
 **Snapshot ordering during historical backfill.** `findPreviousSnapshot()` in `store.ts` returns the most recently stored snapshot for a match without checking that it is chronologically older than the new snapshot being processed. When a finished match was re-ingested through the recent-results backfill path, older historical snapshots could be compared against an already-stored, much later snapshot, producing nonsensical odds-compression signals (for example, comparing a pre-match snapshot to a full-time snapshot as if it were a single in-play move). Fixed in `agent.ts` by skipping signal generation whenever the candidate previous snapshot is not strictly older than the current snapshot.
 
 **Live fixture coverage could be silently dropped.** The live poll loop in `fetchTxLineFeed` processes a capped batch of fixtures per cycle (14) from `/api/fixtures/snapshot` without sorting the response first. With multiple concurrent World Cup matches, a currently in-play fixture could be pushed past the cap by unrelated future-scheduled fixtures. Fixed with `prioritizeLikelyLiveFixtures()`, which sorts fixtures whose kickoff has already passed and are within a plausible in-play window (kickoff to kickoff + 3 hours) ahead of everything else before slicing.
+
+**Scores-context freshness (found 2026-07-07, while verifying an Agent vs Agent Arena result).** `fetchTxLineFeed()`/`fetchRecentTxLineResults()` in `txlineClient.ts` each compute one `scoresContext` per poll and stamped it onto every odds tick selected that poll — including ticks `selectMovementOdds` reaches far back in history for (it always includes the single strongest historical compression pair, regardless of recency). A reached-back tick could get labeled with a `scoresContext` reflecting a much later real-world moment, mislabeling `fieldPressureScore`. Fixed in two layers: a new `isScoresContextFresh(tickTs, contextTimestamp, toleranceMs)` helper (`logic/scoresContextFreshness.ts`) gates all three `txlineClient.ts` call sites with a 60-second tolerance derived from real gap measurements (normal jitter maxed at 48.2s; the two real violations were 128.9s/302.0s); and a second, narrower gap in `signalEngine.ts`'s `buildSignalFromSnapshots`, whose `current.evidence?.scoresContext ?? previous.evidence?.scoresContext` fallback was never checked against `current`'s own timestamp, fixed the same way. Known residual risk: the gate lives at the three call sites, not inside `normalizeOddsSnapshot`/`normalizeTotalsSnapshot` themselves, so a hypothetical fourth call site that skips the gate would silently reopen the bug.
 
 ## Live TxLINE Push Stream Monitor
 
@@ -227,7 +256,7 @@ Because the live `strategyAccuracy` number can look worse than the strategy's re
 
 ## Automated Test Coverage
 
-`apps/api/src/logic/signalEngine.test.ts`, `apps/api/src/store.test.ts`, `apps/api/src/middleware/apiKeyAuth.test.ts`, and `apps/api/src/services/persistence.test.ts` (Vitest, `npm run test`, 24 tests total) cover the deterministic core: severity classification at the exact 4%/8%/15% thresholds, correct side selection between home/away, multi-market `matchLabel` handling, momentum score clamping to 0-100, signal settlement for both the 1X2 market (home/away/draw) and the Over/Under totals market (including matchId-suffix resolution back to the base fixture), the API key middleware's fail-closed behavior, and the Supabase persistence service's fail-open behavior against a mocked client. `tsconfig.json` excludes `src/**/*.test.ts` so test files never ship in the production build output.
+**66 tests across 9 files** (Vitest, `npm run test` from `apps/api/`): `agent.test.ts`, `logic/arena.test.ts`, `logic/marketMaker.test.ts`, `logic/scoresContextFreshness.test.ts`, `logic/signalEngine.test.ts`, `middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`. Covers the deterministic core: severity classification at the exact 4%/8%/15% thresholds, correct side selection between home/away, multi-market `matchLabel` handling, momentum score clamping to 0-100, signal settlement for both the 1X2 market (home/away/draw) and the Over/Under totals market (including matchId-suffix resolution back to the base fixture), the API key middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian position logic, the scores-context freshness gate, and the insert-only archive's fail-open behavior. Pure logic gets unit tests with plain objects/mocks; anything requiring a real TxLINE/Supabase connection is explicitly not automated (verified instead directly against production). `tsconfig.json` excludes `src/**/*.test.ts` so test files never ship in the production build output.
 
 ## Signal Thresholds
 
@@ -254,7 +283,7 @@ Momentum score combines:
 - SOLANA_RPC_URL (optional; defaults to the public Solana mainnet-beta RPC)
 - DISCORD_WEBHOOK_URL (optional; enables autonomous HIGH severity alerts)
 - API_ACCESS_KEY (optional; protects POST /api/agent/run-once via the X-API-Key header. Fail-closed: if unset, the endpoint always rejects rather than allowing access)
-- SUPABASE_URL, SUPABASE_SERVICE_KEY (optional; enable periodic store persistence to Supabase. Fail-open: if either is unset or Supabase is unreachable, the server runs in-memory only, exactly as before)
+- SUPABASE_URL, SUPABASE_SERVICE_KEY (optional; enable both periodic store persistence and the insert-only signal archive to Supabase. Fail-open: if either is unset or Supabase is unreachable, the server runs in-memory only, exactly as before)
 - VITE_API_BASE_URL=https://goalpulse-agent-api.onrender.com
 
 Do not commit .env.local, .secrets, or API tokens. A full git-history audit confirmed none have ever been committed; only .env.example (a template with no real values) is tracked.
@@ -269,12 +298,20 @@ Do not commit .env.local, .secrets, or API tokens. A full git-history audit conf
 - GET /api/agent-runs
 - GET /api/odds-history
 - GET /api/recent-results
+- GET /api/market-maker (independent implied-probability quotes, spread widens with field pressure/reliability)
+- GET /api/arena (Momentum Follower vs Contrarian scoreboards, SHA-256 tamper-evident ledger hash)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)
 - GET /api/live/replay-stream (Server-Sent Events, demo replay)
 - GET /api/docs (interactive Swagger UI documenting every endpoint)
 - POST /api/agent/run-once (requires X-API-Key header, rate-limited 10/min)
+
+## Known Limitations (Documented, Not Yet Fixed)
+
+- **Stale-finished-match repolling.** A long-finished fixture can still be included in `fetchTxLineFeed()`'s live poll rotation. `selectMovementOdds` re-selects the single strongest historical compression pair on every poll regardless of recency, so once its `OddsSnapshot` ages out of the shared 800-entry cache and more than `signalAlreadyExists`'s 6-hour dedup window has passed, a "new" `AgentSignal` gets created for the exact same historical tick with a fresh `createdAt`. Not a bug in the scores-context freshness fix (which correctly gates the mismatched context in this scenario) — a separate, pre-existing characteristic of the live-polling/dedup design.
+- **Exact 60,000ms scores-context freshness boundary is untested** (only 59s/61s either side are tested). Low-risk.
+- **Signal archive is write-only** — see "Insert-Only Signal Archive" above.
 
 ## Deployment
 

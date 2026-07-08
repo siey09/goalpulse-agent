@@ -28,15 +28,24 @@ See SUBMISSION_NOTES.md for the full write-up, including three real bugs found a
 
 ## Beyond the Core Loop
 
-Five substantial features were added and verified live in production after the initial write-up:
+Six substantial features were added and verified live in production after the initial write-up:
 
 1. **Real on-chain Merkle proof validation on Solana mainnet** — calls TxLINE's actual `Txoracle` program (not a self-generated hash) via a genuine `.view()` simulation call, verified live with a real stat from Colombia vs Ghana. See the "Verify on Solana" button on the dashboard.
 2. **Simulated P&L tracking** — turns "accuracy %" into a real trading performance metric (net units, ROI%, per-severity breakdown) using a flat 1-unit stake simulation against real settled outcomes.
 3. **Autonomous Discord alerts** — the agent sends a real webhook alert the instant it detects a HIGH severity signal, with no human trigger, verified live.
 4. **Multi-market signal detection** — independently tracks the Over/Under Total Goals market alongside 1X2, with isolated price history so the two markets never cross-contaminate each other's signals.
 5. **Live TxLINE push stream** — a persistent Server-Sent Events connection directly to TxLINE's own streaming endpoint, additive to the tested polling loop, exposed via `/health`.
+6. **In-Play Market Maker** (`GET /api/market-maker`) — an independent implied-probability quoting model that widens its bid/ask spread with field pressure and reliability problems, computed separately from the signal engine's own compression detection.
 
 Also added: 24 automated unit tests covering the deterministic signal and settlement logic (plus API key auth and Supabase persistence), and a full git-history security audit confirming no secrets were ever committed.
+
+## Latest Session (2026-07-07 to 2026-07-08)
+
+1. **Agent vs Agent Arena** (`GET /api/arena`) — two synthetic trading agents run head-to-head on the same live 1X2 signal feed with genuinely opposite strategies: **Momentum Follower** takes every signal at face value; **Contrarian** fades signals below the same `fieldPressureScore < 22` "market-only move" threshold already shown in the Signal Intelligence Panel, taking the opposite side at the real quoted price from the original snapshot. Settlement is tamper-evident (SHA-256 hash of both ledgers).
+2. **Insert-only signal archive** — every signal is appended to a permanent Supabase table (`signal_archive`) at creation and again at settlement, immune to the in-memory store's caps and to the tournament's own live-rotation window. Write-only for now (no read endpoint or dashboard panel yet).
+3. **Scores-context freshness fix** (real bug, found and fixed) — a single TXODDS Scores context fetched per poll was being stamped onto every odds tick selected that poll, including ticks reached far back in history, which could mislabel `fieldPressureScore` with a stale context. Fixed with a 60-second freshness gate at both the snapshot layer (`txlineClient.ts`) and the signal layer's historical-context fallback (`signalEngine.ts`).
+
+Also added this session: 42 more automated unit tests (66 total across 9 files, up from 24).
 
 ## Production Readiness
 
@@ -81,7 +90,10 @@ Six further features make GoalPulse deployable, not just demoable, all on free t
 - External uptime monitoring (UptimeRobot)
 - Interactive OpenAPI/Swagger documentation at /api/docs
 - Supabase periodic-snapshot persistence, verified surviving a real Render restart
-- 24 automated unit tests
+- In-Play Market Maker with independent implied-probability quoting
+- Agent vs Agent Arena (Momentum Follower vs Contrarian, tamper-evident SHA-256 ledger hash)
+- Insert-only permanent signal archive to Supabase (write-only for now)
+- 66 automated unit tests
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer
@@ -162,6 +174,8 @@ npm.cmd run test
 - GET /api/agent-runs
 - GET /api/odds-history
 - GET /api/recent-results
+- GET /api/market-maker (independent implied-probability quotes)
+- GET /api/arena (Momentum Follower vs Contrarian scoreboards)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)

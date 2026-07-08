@@ -41,7 +41,7 @@ The deployed backend was verified running live against real TxLINE Service Level
 
 ## Major Features Added After Initial Verification
 
-Beyond the core signal loop verified above, five substantial features were added and verified live in production:
+Beyond the core signal loop verified above, six substantial features were added and verified live in production:
 
 ### 1. Real On-Chain Merkle Proof Validation (Solana Mainnet)
 
@@ -65,6 +65,26 @@ Beyond the 1X2 match-winner market, GoalPulse independently tracks the full-matc
 
 In addition to the 5-second REST poll loop, the backend maintains a persistent Server-Sent Events connection directly to TxLINE's own real-time stream (`/api/scores/stream`), exposed via `/health` as `liveStream: { connected, lastEventAt, totalEventsReceived }`. Verified live with hundreds of real events received. This is additive and does not replace the tested polling path — it proves genuine push-based connectivity to the sponsor's streaming infrastructure rather than periodic requests.
 
+### 6. In-Play Market Maker
+
+`GET /api/market-maker` computes an independent bid/ask spread around TxLINE's already-de-margined fair odds for each match's outcomes — a genuinely separate model from the signal engine's own compression detection, not a wrapper around it. The spread widens with `fieldPressureScore` (more in-play action means more uncertainty) and with reliability problems (`UNRELIABLE`/`SUSPENDED` data), clamped to a defensible 2-20% range, matching how a real market maker would quote more cautiously on messier data.
+
+## Major Features Added This Session (2026-07-07 to 2026-07-08)
+
+### 1. Agent vs Agent Arena
+
+`GET /api/arena` runs two synthetic trading agents head-to-head on the same live 1X2 signal feed with genuinely opposite strategies, computed live at request time and never touching the mutable agent/store state: **Momentum Follower** takes every signal at face value; **Contrarian** fades signals it classifies as market-only moves (reusing the exact `fieldPressureScore < 22` threshold the dashboard already labels "MARKET-ONLY MOVE"), taking the opposite side at the real quoted price from the original odds snapshot. Settlement is tamper-evident — a SHA-256 hash of both ledgers — and the underlying data can be independently verified via the existing on-chain Merkle proof endpoint, with zero new on-chain code required.
+
+### 2. Insert-Only Signal Archive
+
+Every signal is now appended to a permanent Supabase table (`signal_archive`) at creation and again at settlement, deliberately separate from and never touching the existing restart-recovery snapshot table. This matters specifically for this tournament: the World Cup narrows sharply after 2026-07-11 to just a handful of matches before the July 19 final, and without this feature, most already-generated signals would simply disappear as matches and their odds history age out of the in-memory store's caps and TxLINE's own live-rotation window before the tournament even ends. Write-only for now — no read endpoint or dashboard panel yet, deliberately deferred until real data has accumulated.
+
+### 3. Scores-Context Freshness Fix (Real Bug, Found and Fixed)
+
+Found while verifying an Arena result. A single TXODDS Scores context is computed once per poll and was being stamped onto every odds tick selected that poll — including ticks reached far back in history (the signal engine always includes the single strongest historical compression pair, regardless of recency). A reached-back tick could get labeled with a `scoresContext` reflecting a much later real-world moment, mislabeling `fieldPressureScore` — exactly the value Arena's Contrarian agent uses to decide whether to fade a signal. Fixed with a 60-second freshness gate (derived from real gap measurements: normal jitter maxed at 48.2s, the two real violations were 128.9s/302.0s) at both the snapshot layer (`txlineClient.ts`, three call sites) and a second, narrower gap found during review in the signal layer's historical-context fallback (`signalEngine.ts`).
+
+**Deploy-lag note:** while verifying this fix live, the original bug was still reproducing in production after the fix had been merged and pushed — traced to every one of ~99 signals across an 11.5-hour window showing the old pattern, then the single most recent signal showing correct gating. Render's deploy had simply lagged behind the git push; it resolved itself with no further code changes. Lesson: verify against live endpoint behavior, don't assume a push is live.
+
 ## Bugs Found and Fixed During Live Verification
 
 **Bug 1 — Undocumented StatusId 100.** While verifying production against real matches, the agent could not close out signals for a finished match (Colombia vs Ghana stayed `"live"` at minute 90). Investigation of the raw TxLINE Scores feed showed a `game_finalised` action carrying `StatusId: 100`, a status code not documented in the official TXODDS Scores Product API doc (v1.0, which only lists StatusId 1-18). The status mapping in `txlineClient.ts` was updated to treat `StatusId 100` as `finished`, redeployed, and reverified live: the match correctly flipped to `finished` and both pending signals were immediately evaluated as `correct`, confirmed by the 100% accuracy result above.
@@ -75,7 +95,7 @@ In addition to the 5-second REST poll loop, the backend maintains a persistent S
 
 ## Automated Test Coverage and Security Audit
 
-- **24 automated unit tests** (Vitest) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, and the Supabase persistence service's fail-open behavior against a mocked client. Test files are excluded from the production TypeScript build output.
+- **66 automated unit tests across 9 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian position logic, the scores-context freshness gate, and the insert-only archive's fail-open behavior. Test files are excluded from the production TypeScript build output.
 - **Git history security audit**: searched the full commit history for accidentally committed secrets (API tokens, wallet keys, webhook URLs) and confirmed none were ever committed. Only `.env.example` (a template with no real values) was ever tracked; `.env.local` and `.secrets/` are gitignored throughout.
 
 ## Production Readiness Features (Added After Core Verification)
@@ -169,7 +189,10 @@ GoalPulse uses:
 - External uptime monitoring (UptimeRobot, every 5 minutes)
 - Interactive OpenAPI/Swagger documentation at /api/docs
 - Supabase periodic-snapshot persistence, verified surviving a real Render restart
-- 24 automated unit tests
+- In-Play Market Maker with independent implied-probability quoting
+- Agent vs Agent Arena (Momentum Follower vs Contrarian, tamper-evident SHA-256 ledger hash)
+- Insert-only permanent signal archive to Supabase (write-only for now)
+- 66 automated unit tests
 
 ## Outcome Audit Layer
 
@@ -196,6 +219,8 @@ The frontend is built with React, TypeScript, Vite, Tailwind CSS, and Recharts. 
 - GET /api/agent-runs
 - GET /api/odds-history
 - GET /api/recent-results
+- GET /api/market-maker (independent implied-probability quotes, spread widens with field pressure/reliability)
+- GET /api/arena (Momentum Follower vs Contrarian scoreboards, SHA-256 tamper-evident ledger hash)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events, live)
