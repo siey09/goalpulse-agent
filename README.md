@@ -99,7 +99,8 @@ Six further features make GoalPulse deployable, not just demoable, all on free t
 - Signal correlation: detects cross-match signal clusters within a short time window
 - Composite confidence score (0-100) on every signal, blending magnitude, field pressure, and freshness tightness
 - Historical hit-rate per signal type from the permanent archive
-- 158 automated unit tests
+- Retroactive Arena backtest (Momentum Follower + Kelly Criterion) against the full archived signal history
+- 161 automated unit tests
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer
@@ -182,6 +183,7 @@ npm.cmd run test
 - GET /api/recent-results
 - GET /api/market-maker (independent implied-probability quotes)
 - GET /api/arena (Momentum Follower vs Contrarian vs Kelly Criterion scoreboards)
+- GET /api/arena/backtest (retroactive Momentum Follower/Kelly Criterion backtest against the full archive)
 - GET /api/archive (paginated, filterable read over the permanent signal archive)
 - GET /api/feed-health (cycle health, odds freshness, fixture coverage diagnostic)
 - GET /api/market-maker/confirmations (band-breach cross-check against each signal's own severity)
