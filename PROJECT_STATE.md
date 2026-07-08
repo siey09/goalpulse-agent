@@ -32,16 +32,20 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: none — Signal Performance dashboard panel (item 14) merged
-and pushed to `main`. Item 10 (real-time push via `txlineStream.ts`) was
-assessed and recommended against — see
-`docs/superpowers/specs/2026-07-09-txlinestream-extension-assessment.md`.
-**Neither the Signal Archive nor Signal Performance panel has been
-visually verified in a browser yet** (no browser automation tool
+🔄 In Progress: none. Investigated the Signal Performance panel's
+SHARP_MOVE 33%/WATCH 88%/MOMENTUM_SHIFT 87% figures per user request — no
+bug found; all three numbers are currently ~one match's outcome (see "Open
+questions" below for the full finding and recommendation: don't patch
+`getSeverity()` yet). Resuming backend feature depth per user's explicit
+process note: this session should not decide to build more UI unprompted
+— ask first. **Neither the Signal Archive nor Signal Performance panel has
+been visually verified in a browser yet** (no browser automation tool
 available this session) — recommend a quick visual check of both when
 convenient.
 
-📋 Next Steps: none queued. Await further direction from the user.
+📋 Next Steps: `match_archive` table (deliberately deferred item) or
+another backend-depth idea, per user's direction — to be scoped via the
+usual brainstorm → spec → plan pipeline before building.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -425,21 +429,10 @@ live endpoint behavior, don't assume a push is live.
 
 ## Known limitations (documented, deliberately not fixed)
 
-- **Stale-finished-match repolling.** A long-finished fixture (confirmed:
-  USA vs Belgium, hours after full-time) can still be included in
-  `fetchTxLineFeed()`'s live poll rotation. `selectMovementOdds` re-selects
-  the single strongest historical compression pair on every poll regardless
-  of recency, so the same old tick keeps getting resubmitted. Once its
-  `OddsSnapshot` ages out of the shared 800-entry cache and more than
-  `signalAlreadyExists`'s 6-hour dedup window has passed, a "new"
-  `AgentSignal` gets created for the exact same historical tick — with a
-  fresh `createdAt` and a freshly-fetched `scoresContext`. Not a bug in the
-  freshness fix (which correctly gates the mismatched context in this
-  scenario); it's a separate, pre-existing characteristic of the
-  live-polling/dedup design. Documented in
-  `docs/superpowers/specs/2026-07-07-scores-context-freshness-design.md`'s
-  Follow-ups. Worth fixing later (e.g., drop long-finished fixtures from the
-  live rotation, or tighten the dedup window) — not attempted this session.
+- ~~Stale-finished-match repolling~~ **Fixed 2026-07-09** — see
+  `docs/superpowers/specs/2026-07-08-stale-finished-match-repolling-fix-design.md`.
+  This bullet used to describe the bug as unfixed; it was closed out and
+  this note was stale until now.
 - **Signals that age out of the 100-cap before their match finishes never
   get a "settled" archive row.** Pre-existing store behavior (not introduced
   by the archive feature) — the archive will contain some permanently
@@ -453,6 +446,52 @@ live endpoint behavior, don't assume a push is live.
   hardening if this area is touched again; not urgent.
 - **Exact 60,000ms freshness boundary is untested** (only 59s/61s either
   side are tested). Low-risk, noted twice by reviewers, never acted on.
+
+## Open questions (investigated 2026-07-09, revisit later — do not re-investigate from scratch)
+
+**Signal-type accuracy on the dashboard's Signal Performance panel is not
+yet statistically meaningful — it's currently one match, sliced three
+ways.** Investigated after the panel showed SHARP_MOVE at 33% accuracy
+(WATCH 88%, MOMENTUM_SHIFT 87%) and it looked like a real calibration
+problem. Findings:
+
+- **No settlement or labeling bug.** Verified `evaluatePendingSignalsForFinishedMatches`
+  directly — settlement compares `signal.side`/`signal.target` against the
+  real final score, with zero dependency on `severity`/`signalType`.
+- **Severe match concentration, not calibration.** Of the settled signals
+  behind these three numbers, one single match (Switzerland vs Colombia,
+  fixture `18202783`, decided in extra time) accounts for **89% of
+  SHARP_MOVE's 27**, **98.1% of WATCH's 52**, and **100% of
+  MOMENTUM_SHIFT's 23** settled signals. All three accuracy figures are
+  currently describing *one match's outcome*, sliced by severity across
+  its 1X2 market and several totals sub-markets (which are themselves
+  correlated, not independent trials) — not three diversified track
+  records. WATCH/MOMENTUM_SHIFT's high numbers are not yet confirmed as a
+  genuine reliable baseline any more than SHARP_MOVE's low number is
+  confirmed as a genuine miscalibration.
+- **A real, plausible (not yet confirmed) pattern worth re-checking once
+  diversified:** a sampled SHARP_MOVE signal showed a 56.73% compression
+  toward a side while the match's own field-event context came from the
+  *other* side — the signal's own generated text flagged "Caution: the
+  latest field event came from the home side, not the signal side," and it
+  settled incorrect. `getSeverity()` (which decides SHARP_MOVE/HIGH
+  labeling) looks at raw odds-compression magnitude only — it never
+  consults field pressure, reliability, or this kind of direction
+  mismatch, even though `confidenceScore`/`momentumScore` already compute
+  exactly that data elsewhere in the pipeline for other purposes. This is
+  a plausible real gap, but on n=3 real matches (2 of them contributing
+  only 1-2 signals each) it cannot be distinguished from one dramatic
+  match's noise.
+- **Timing note:** all currently-settled SHARP_MOVE signals predate the
+  stale-finished-match repolling fix (merged 2026-07-09); zero have
+  settled since, so whether that fix changes anything here is unknown yet.
+
+**Recommendation (agreed with user): do not patch `getSeverity()` or any
+threshold based on this data.** Revisit once settled signals span more
+matches (the tournament has ~4 left before July 19) and check whether the
+large-compression/field-pressure-mismatch pattern holds up across
+genuinely independent matches, rather than one. If it does, that's when a
+severity/confidence-blending change would be justified — not before.
 
 ## Testing
 
