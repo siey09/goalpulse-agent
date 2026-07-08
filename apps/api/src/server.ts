@@ -21,6 +21,8 @@ import {
   computeFeedHealthStatus,
   ODDS_STALE_THRESHOLD_MS,
 } from "./logic/feedHealth";
+import { assessBandBreach, summarizeBandBreaches } from "./logic/marketConfirmation";
+import type { BandBreachResult } from "./logic/marketConfirmation";
 import { parseArchiveFilters, parsePageParam, parsePageSizeParam } from "./logic/paginationParams";
 import { getArchivedSignals } from "./services/archive";
 import { config } from "./config";
@@ -422,6 +424,41 @@ app.get("/api/feed-health", (_req, res) => {
       oddsFreshness,
       fixtureCoverage,
     },
+  });
+});
+
+app.get("/api/market-maker/confirmations", (_req, res) => {
+  const matchesById = new Map<string, (typeof store.matches)[number]>();
+
+  for (const match of store.recentFinishedMatches) {
+    matchesById.set(match.id, match);
+  }
+  for (const match of store.matches) {
+    matchesById.set(match.id, match);
+  }
+
+  const snapshotsById = new Map<string, (typeof store.oddsSnapshots)[number]>();
+  for (const snapshot of store.oddsSnapshots) {
+    snapshotsById.set(snapshot.id, snapshot);
+  }
+
+  const results: BandBreachResult[] = [];
+
+  for (const signal of store.signals) {
+    const previousSnapshotId = signal.evidence?.previousSnapshotId;
+    const previousSnapshot = previousSnapshotId
+      ? snapshotsById.get(previousSnapshotId)
+      : undefined;
+    const match = matchesById.get(signal.matchId);
+
+    if (!previousSnapshot || !match) continue;
+
+    results.push(assessBandBreach(signal, match, previousSnapshot));
+  }
+
+  res.json({
+    data: results,
+    summary: summarizeBandBreaches(results),
   });
 });
 
