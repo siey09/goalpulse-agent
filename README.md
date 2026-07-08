@@ -97,7 +97,9 @@ Six further features make GoalPulse deployable, not just demoable, all on free t
 - Market Maker double-confirmation cross-check: genuinely independent band-breach test against each signal's own severity
 - Steam move detection: sustained same-direction tick-sequence pressure, distinct from single-pair compression
 - Signal correlation: detects cross-match signal clusters within a short time window
-- 132 automated unit tests
+- Composite confidence score (0-100) on every signal, blending magnitude, field pressure, and freshness tightness
+- Historical hit-rate per signal type from the permanent archive
+- 147 automated unit tests
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer
@@ -185,6 +187,7 @@ npm.cmd run test
 - GET /api/market-maker/confirmations (band-breach cross-check against each signal's own severity)
 - GET /api/steam-moves (sustained same-direction tick-sequence detection)
 - GET /api/signal-correlation (cross-match signal cluster detection)
+- GET /api/signal-performance (historical hit-rate per signal type)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)

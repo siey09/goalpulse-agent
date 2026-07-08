@@ -18,13 +18,17 @@ merge to `main` → push → clean up worktree.
 ✅ Done: #1 archive read endpoint, #2 Outcome Audit dissent detail, #3 feed
 health monitoring, #4 Market Maker double-confirmation cross-check, #5
 steam move detection, #6 signal correlation — all merged and pushed to
-`main` (132 tests, 21 routes).
+`main`.
 
-🔄 In Progress: none — ready to start #7.
+🔄 In Progress: #7 composite confidence score. Implementation complete in
+worktree `.claude/worktrees/composite-confidence-score` (branch
+`worktree-composite-confidence-score`), all 6 plan tasks done and
+committed, 147/147 tests passing, clean build, openapi valid. Awaiting
+user's review of the end-of-task check-in before merge to `main` + push +
+worktree cleanup.
 
-📋 Next Steps: #7 composite confidence scoring, #8 Arena third strategy, #9
-retroactive backtesting, #10 real-time push assessment (do last, biggest
-lift).
+📋 Next Steps: #8 Arena third strategy, #9 retroactive backtesting, #10
+real-time push assessment (do last, biggest lift).
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -256,6 +260,25 @@ cluster — each cluster reports a `severityBreakdown` instead. Backend-only,
 no dashboard panel. Spec: `docs/superpowers/specs/2026-07-08-signal-correlation-design.md`,
 plan: `docs/superpowers/plans/2026-07-08-signal-correlation.md`.
 
+**10. Composite confidence score + signal-type performance**
+(`logic/signalEngine.ts`'s `calculateConfidenceScore`,
+`logic/signalPerformance.ts`, `GET /api/signal-performance`) — split into
+two pieces after finding a real architectural tension: historical hit-rate
+needs an async Supabase query, which would introduce latency/complexity
+into the one piece of core pipeline code that's stayed fully synchronous
+all session. New `AgentSignal.confidenceScore?` (0-100, optional — matches
+the existing `discordAlertStatus?` precedent) blends magnitude (weight
+0.5, vs. the 15% HIGH threshold), field pressure (weight 0.3, vs.
+`marketMaker.ts`'s `FIELD_PRESSURE_MAX`, now exported), and a new graduated
+freshness-tightness measure (weight 0.2, `computeFreshnessTightness` in
+`scoresContextFreshness.ts`) — weights renormalize when `scoresContext` is
+absent, so missing context never lowers the score. `severity`/
+`momentumScore` are unchanged. Historical hit-rate is a separate,
+async, archive-backed endpoint reading the 500 most recent settled
+archive entries, grouped by `signalType`. Backend-only, no dashboard
+panel. Spec: `docs/superpowers/specs/2026-07-08-composite-confidence-score-design.md`,
+plan: `docs/superpowers/plans/2026-07-08-composite-confidence-score.md`.
+
 ## Bugs found and fixed
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
@@ -337,29 +360,30 @@ live endpoint behavior, don't assume a push is live.
 
 ## Testing
 
-**132 tests across 15 files**, all passing, `npm run test` from `apps/api/`:
+**147 tests across 16 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/councilDissent.test.ts`,
 `logic/feedHealth.test.ts`, `logic/marketConfirmation.test.ts`,
 `logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`,
 `logic/scoresContextFreshness.test.ts`, `logic/signalCorrelation.test.ts`,
-`logic/signalEngine.test.ts`, `logic/steamDetection.test.ts`,
-`middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`,
-`services/persistence.test.ts`, `store.test.ts`.
+`logic/signalEngine.test.ts`, `logic/signalPerformance.test.ts`,
+`logic/steamDetection.test.ts`, `middleware/apiKeyAuth.test.ts`,
+`services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`.
 Build: `npm run build` (`tsc`), currently clean. Convention: pure logic gets
 unit tests with plain objects/mocks; anything requiring a real
 TxLINE/Supabase connection is explicitly *not* automated (this environment
 has no real credentials for either) — verified instead by the user directly
 against production.
 
-**21 backend routes total**, all documented in `openapi.yaml` (validate with
+**22 backend routes total**, all documented in `openapi.yaml` (validate with
 `npx @redocly/cli lint openapi.yaml`): `/health`, `/api/matches`,
 `/api/signals`, `/api/stats`, `/api/pnl`, `/api/agent-runs`,
 `/api/odds-history`, `/api/recent-results`, `/api/market-maker`,
 `/api/arena`, `/api/archive`, `/api/feed-health`,
 `/api/market-maker/confirmations`, `/api/steam-moves`,
-`/api/signal-correlation`, `/api/replay/backtest`,
-`/api/onchain/validate-stat`, `/api/live/odds-stream`,
-`/api/live/replay-stream`, `/api/docs`, `POST /api/agent/run-once`.
+`/api/signal-correlation`, `/api/signal-performance`,
+`/api/replay/backtest`, `/api/onchain/validate-stat`,
+`/api/live/odds-stream`, `/api/live/replay-stream`, `/api/docs`,
+`POST /api/agent/run-once`.
 
 ## What still needs doing
 

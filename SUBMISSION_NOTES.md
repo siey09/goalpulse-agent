@@ -105,6 +105,12 @@ The original idea was cross-book steam detection ("odds moving the same directio
 
 `GET /api/signal-correlation` detects when signals fire across 2 or more distinct matches close together in time — a cross-match pattern the core signal engine (which only ever reasons about one match at a time) has no visibility into. Groups the entire stored signal history via session-windowing: a new group starts whenever the gap between two consecutive signals exceeds 5 minutes, so a steady trickle of correlated signals can span longer than 5 minutes in total. Only groups spanning 2+ distinct matches are reported; no severity or signal-type filtering is required to join a cluster, and each cluster reports a severity breakdown so significance can be judged directly.
 
+### 9. Composite Confidence Score and Signal-Type Performance
+
+Every signal now carries a `confidenceScore` (0-100), blending compression magnitude (weight 0.5, normalized against the existing 15% HIGH severity threshold), field pressure (weight 0.3), and a new graduated freshness-tightness measure (weight 0.2) — a companion to the existing pass/fail 60-second freshness gate that reports *how* tight the gap actually is, not just whether it passed. Weights renormalize among only the available components when no field context is attached, so a signal is never penalized for missing data it never had a chance to have. Kept entirely separate from `severity`/`momentumScore`, which are unchanged.
+
+Historical hit-rate per signal type (`GET /api/signal-performance`) is a deliberately separate, async piece: computing it requires querying the Supabase archive, which — if baked into the synchronous signal-creation loop — would introduce real latency into the one piece of core pipeline code that's stayed fully synchronous and stable all session. Instead it's its own endpoint, matching every other Supabase-dependent feature this session.
+
 ## Bugs Found and Fixed During Live Verification
 
 **Bug 1 — Undocumented StatusId 100.** While verifying production against real matches, the agent could not close out signals for a finished match (Colombia vs Ghana stayed `"live"` at minute 90). Investigation of the raw TxLINE Scores feed showed a `game_finalised` action carrying `StatusId: 100`, a status code not documented in the official TXODDS Scores Product API doc (v1.0, which only lists StatusId 1-18). The status mapping in `txlineClient.ts` was updated to treat `StatusId 100` as `finished`, redeployed, and reverified live: the match correctly flipped to `finished` and both pending signals were immediately evaluated as `correct`, confirmed by the 100% accuracy result above.
@@ -115,7 +121,7 @@ The original idea was cross-book steam detection ("odds moving the same directio
 
 ## Automated Test Coverage and Security Audit
 
-- **132 automated unit tests across 15 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian position logic, the scores-context freshness gate, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, and the signal correlation module's session-windowing/cluster-filtering logic. Test files are excluded from the production TypeScript build output.
+- **147 automated unit tests across 16 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian position logic, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's session-windowing/cluster-filtering logic, the composite confidence score's weighting/renormalization, and the signal-type performance aggregation. Test files are excluded from the production TypeScript build output.
 - **Git history security audit**: searched the full commit history for accidentally committed secrets (API tokens, wallet keys, webhook URLs) and confirmed none were ever committed. Only `.env.example` (a template with no real values) was ever tracked; `.env.local` and `.secrets/` are gitignored throughout.
 
 ## Production Readiness Features (Added After Core Verification)
@@ -216,7 +222,9 @@ GoalPulse uses:
 - Market Maker double-confirmation cross-check: genuinely independent band-breach test against each signal's own severity
 - Steam move detection: sustained same-direction tick-sequence pressure, distinct from single-pair compression
 - Signal correlation: detects cross-match signal clusters within a short time window
-- 132 automated unit tests
+- Composite confidence score (0-100) on every signal, blending magnitude, field pressure, and freshness tightness
+- Historical hit-rate per signal type from the permanent archive
+- 147 automated unit tests
 
 ## Outcome Audit Layer
 
@@ -251,6 +259,7 @@ The frontend is built with React, TypeScript, Vite, Tailwind CSS, and Recharts. 
 - GET /api/market-maker/confirmations (band-breach cross-check against each signal's own severity)
 - GET /api/steam-moves (sustained same-direction tick-sequence detection)
 - GET /api/signal-correlation (cross-match signal cluster detection)
+- GET /api/signal-performance (historical hit-rate per signal type)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events, live)
