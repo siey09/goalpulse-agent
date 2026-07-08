@@ -352,7 +352,7 @@ app.get("/api/arena", (_req, res) => {
     snapshotsById.set(snapshot.id, snapshot);
   }
 
-  const { momentumFollower, contrarian } = computeArenaScoreboards(
+  const { momentumFollower, contrarian, kellyCriterion } = computeArenaScoreboards(
     store.signals,
     matchesById,
     snapshotsById
@@ -379,6 +379,7 @@ app.get("/api/arena", (_req, res) => {
       JSON.stringify({
         momentumFollower: momentumFollower.positions,
         contrarian: contrarian.positions,
+        kellyCriterion: kellyCriterion.positions,
       })
     )
     .digest("hex");
@@ -387,12 +388,13 @@ app.get("/api/arena", (_req, res) => {
     data: {
       momentumFollower,
       contrarian,
+      kellyCriterion,
       proof: {
         type: "sha256",
         hash: proofHash,
         verifiableStat,
         note:
-          "Tamper-evident SHA-256 hash of both agents' full position ledgers, plus a real on-chain Merkle proof (via GET /api/onchain/validate-stat) confirming the underlying TxLINE data this tournament is based on is genuinely anchored on Solana mainnet. This does not mean funds move or a smart contract executes - GoalPulse is analytics only and does not place wagers, custody funds, execute trades, or facilitate betting execution.",
+          "Tamper-evident SHA-256 hash of all three agents' full position ledgers, plus a real on-chain Merkle proof (via GET /api/onchain/validate-stat) confirming the underlying TxLINE data this tournament is based on is genuinely anchored on Solana mainnet. This does not mean funds move or a smart contract executes - GoalPulse is analytics only and does not place wagers, custody funds, execute trades, or facilitate betting execution.",
       },
     },
   });

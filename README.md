@@ -41,7 +41,7 @@ Also added: 24 automated unit tests covering the deterministic signal and settle
 
 ## Latest Session (2026-07-07 to 2026-07-08)
 
-1. **Agent vs Agent Arena** (`GET /api/arena`) — two synthetic trading agents run head-to-head on the same live 1X2 signal feed with genuinely opposite strategies: **Momentum Follower** takes every signal at face value; **Contrarian** fades signals below the same `fieldPressureScore < 22` "market-only move" threshold already shown in the Signal Intelligence Panel, taking the opposite side at the real quoted price from the original snapshot. Settlement is tamper-evident (SHA-256 hash of both ledgers).
+1. **Agent vs Agent Arena** (`GET /api/arena`) — three synthetic trading agents run head-to-head on the same live 1X2 signal feed with genuinely different strategies: **Momentum Follower** takes every signal at face value; **Contrarian** fades signals below the same `fieldPressureScore < 22` "market-only move" threshold already shown in the Signal Intelligence Panel, taking the opposite side at the real quoted price from the original snapshot; **Kelly Criterion** takes the same side as the signal but sizes its stake via the Kelly formula, driven by the signal's confidence score. Settlement is tamper-evident (SHA-256 hash of all three ledgers).
 2. **Insert-only signal archive** — every signal is appended to a permanent Supabase table (`signal_archive`) at creation and again at settlement, immune to the in-memory store's caps and to the tournament's own live-rotation window. Readable via `GET /api/archive` (paginated, filterable by matchId/status/market/event); no dashboard panel yet.
 3. **Scores-context freshness fix** (real bug, found and fixed) — a single TXODDS Scores context fetched per poll was being stamped onto every odds tick selected that poll, including ticks reached far back in history, which could mislabel `fieldPressureScore` with a stale context. Fixed with a 60-second freshness gate at both the snapshot layer (`txlineClient.ts`) and the signal layer's historical-context fallback (`signalEngine.ts`).
 
@@ -91,7 +91,7 @@ Six further features make GoalPulse deployable, not just demoable, all on free t
 - Interactive OpenAPI/Swagger documentation at /api/docs
 - Supabase periodic-snapshot persistence, verified surviving a real Render restart
 - In-Play Market Maker with independent implied-probability quoting
-- Agent vs Agent Arena (Momentum Follower vs Contrarian, tamper-evident SHA-256 ledger hash)
+- Agent vs Agent Arena (Momentum Follower vs Contrarian vs Kelly Criterion, tamper-evident SHA-256 ledger hash)
 - Insert-only permanent signal archive to Supabase, readable via a paginated/filterable read endpoint
 - Feed health monitoring (cycle health, live-match odds freshness, fixture coverage) separate from match-odds signals
 - Market Maker double-confirmation cross-check: genuinely independent band-breach test against each signal's own severity
@@ -99,7 +99,7 @@ Six further features make GoalPulse deployable, not just demoable, all on free t
 - Signal correlation: detects cross-match signal clusters within a short time window
 - Composite confidence score (0-100) on every signal, blending magnitude, field pressure, and freshness tightness
 - Historical hit-rate per signal type from the permanent archive
-- 147 automated unit tests
+- 158 automated unit tests
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer
@@ -181,7 +181,7 @@ npm.cmd run test
 - GET /api/odds-history
 - GET /api/recent-results
 - GET /api/market-maker (independent implied-probability quotes)
-- GET /api/arena (Momentum Follower vs Contrarian scoreboards)
+- GET /api/arena (Momentum Follower vs Contrarian vs Kelly Criterion scoreboards)
 - GET /api/archive (paginated, filterable read over the permanent signal archive)
 - GET /api/feed-health (cycle health, odds freshness, fixture coverage diagnostic)
 - GET /api/market-maker/confirmations (band-breach cross-check against each signal's own severity)
