@@ -724,6 +724,112 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /api/archive:
+    get:
+      summary: Read the permanent signal archive
+      description: >
+        Paginated, filterable read endpoint over the insert-only signal_archive
+        Supabase table. Returns raw event-log rows (a signal typically appears
+        twice: once for "created", once for "settled") rather than a collapsed
+        per-signal view. Fail-open: returns an empty page with totalCount 0
+        instead of an error if Supabase is unconfigured or unreachable.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: 1-indexed page number. Invalid or non-positive values clamp to 1.
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+            maximum: 100
+          description: Rows per page. Invalid or non-positive values clamp to 25; values above 100 clamp to 100.
+        - name: matchId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Exact match against the archived signal's matchId.
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, correct, incorrect]
+          description: Exact match against the archived signal's resultStatus.
+        - name: market
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["1x2", totals]
+          description: >
+            Inferred from matchId (no dedicated column): totals matches
+            matchIds containing "-totals-"; 1x2 excludes them.
+        - name: event
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created, settled]
+          description: Exact match against which lifecycle event this row records.
+      responses:
+        '200':
+          description: A page of archived signal events, always 200 even if Supabase is unconfigured (fail-open).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        signalId:
+                          type: string
+                        event:
+                          type: string
+                          enum: [created, settled]
+                        matchId:
+                          type: string
+                        side:
+                          type: string
+                        signalType:
+                          type: string
+                        severity:
+                          type: string
+                        resultStatus:
+                          type: string
+                          enum: [pending, correct, incorrect]
+                        momentumScore:
+                          type: number
+                        oddsChangePct:
+                          type: number
+                        archivedAt:
+                          type: string
+                          format: date-time
+                        signalData:
+                          type: object
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      pageSize:
+                        type: integer
+                      totalCount:
+                        type: integer
+                      totalPages:
+                        type: integer
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /api/onchain/validate-stat:
     get:
       summary: Real on-chain Merkle proof validation (Solana mainnet)
