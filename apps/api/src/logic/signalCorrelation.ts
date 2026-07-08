@@ -1,4 +1,5 @@
 import type { AgentSignal, Severity } from "../types";
+import { isTotalsSignal } from "./arena";
 
 export const CORRELATION_WINDOW_MS = 5 * 60 * 1000;
 
@@ -112,4 +113,91 @@ export function findSignalClusters(
   return groups
     .filter((group) => new Set(group.map((signal) => signal.matchId)).size >= 2)
     .map(buildCluster);
+}
+
+export interface PatternCluster {
+  side: "home" | "away";
+  severity: Severity;
+  market: "1x2" | "totals";
+  matchIds: string[];
+  matchCount: number;
+  signalCount: number;
+  windowStart: string;
+  windowEnd: string;
+  spanMs: number;
+  signalIds: string[];
+}
+
+function computePatternKey(signal: AgentSignal): string {
+  const market = isTotalsSignal(signal) ? "totals" : "1x2";
+  return `${signal.side}|${signal.severity}|${market}`;
+}
+
+function buildPatternCluster(group: AgentSignal[]): PatternCluster {
+  const first = group[0];
+  const matchIds: string[] = [];
+  const seenMatchIds = new Set<string>();
+
+  for (const signal of group) {
+    if (!seenMatchIds.has(signal.matchId)) {
+      seenMatchIds.add(signal.matchId);
+      matchIds.push(signal.matchId);
+    }
+  }
+
+  const windowStart = group[0].createdAt;
+  const windowEnd = group[group.length - 1].createdAt;
+
+  return {
+    side: first.side,
+    severity: first.severity,
+    market: isTotalsSignal(first) ? "totals" : "1x2",
+    matchIds,
+    matchCount: matchIds.length,
+    signalCount: group.length,
+    windowStart,
+    windowEnd,
+    spanMs: new Date(windowEnd).getTime() - new Date(windowStart).getTime(),
+    signalIds: group.map((signal) => signal.id),
+  };
+}
+
+/**
+ * Stricter than findSignalClusters: only reports a cluster when the SAME
+ * pattern (side + severity + market) repeats across 2+ distinct matches
+ * within the window, rather than any signals firing close together
+ * regardless of what they say. Partitions signals by pattern key first,
+ * then reuses the exact same session-windowing algorithm independently
+ * within each partition - two different patterns overlapping in time are
+ * evaluated completely separately, each only reported if it independently
+ * reaches 2+ matches on its own.
+ */
+export function findPatternMatchedClusters(
+  signals: AgentSignal[],
+  windowMs: number
+): PatternCluster[] {
+  const byPatternKey = new Map<string, AgentSignal[]>();
+
+  for (const signal of signals) {
+    const key = computePatternKey(signal);
+    const existing = byPatternKey.get(key) ?? [];
+    existing.push(signal);
+    byPatternKey.set(key, existing);
+  }
+
+  const clusters: PatternCluster[] = [];
+
+  for (const group of byPatternKey.values()) {
+    const windows = sessionWindowGroups(group, (signal) => signal.createdAt, windowMs);
+
+    for (const window of windows) {
+      if (new Set(window.map((signal) => signal.matchId)).size >= 2) {
+        clusters.push(buildPatternCluster(window));
+      }
+    }
+  }
+
+  return clusters.sort(
+    (a, b) => new Date(a.windowStart).getTime() - new Date(b.windowStart).getTime()
+  );
 }

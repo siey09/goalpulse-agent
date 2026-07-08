@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { findSignalClusters, sessionWindowGroups } from "./signalCorrelation";
+import {
+  findPatternMatchedClusters,
+  findSignalClusters,
+  sessionWindowGroups,
+} from "./signalCorrelation";
 import type { AgentSignal } from "../types";
 
 const BASE_TIME = new Date("2026-07-08T14:00:00.000Z").getTime();
@@ -153,5 +157,93 @@ describe("sessionWindowGroups", () => {
     expect(groups).toHaveLength(2);
     expect(groups[0].map((item) => item.id)).toEqual(["a"]);
     expect(groups[1].map((item) => item.id)).toEqual(["b"]);
+  });
+});
+
+describe("findPatternMatchedClusters", () => {
+  it("does not report a cluster when only one match shares the pattern", () => {
+    const signals = [
+      makeSignal({ id: "s0", matchId: "match-1", createdAt: iso(0), side: "home", severity: "HIGH" }),
+      makeSignal({ id: "s1", matchId: "match-1", createdAt: iso(60), side: "home", severity: "HIGH" }),
+    ];
+
+    expect(findPatternMatchedClusters(signals, 300000)).toEqual([]);
+  });
+
+  it("reports a genuine 2-match pattern cluster within the window", () => {
+    const signals = [
+      makeSignal({ id: "s0", matchId: "match-1", createdAt: iso(0), side: "home", severity: "HIGH" }),
+      makeSignal({ id: "s1", matchId: "match-2", createdAt: iso(60), side: "home", severity: "HIGH" }),
+    ];
+
+    const clusters = findPatternMatchedClusters(signals, 300000);
+
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0]).toEqual({
+      side: "home",
+      severity: "HIGH",
+      market: "1x2",
+      matchIds: ["match-1", "match-2"],
+      matchCount: 2,
+      signalCount: 2,
+      windowStart: iso(0),
+      windowEnd: iso(60),
+      spanMs: 60000,
+      signalIds: ["s0", "s1"],
+    });
+  });
+
+  it("evaluates two different patterns in the same window independently, only reporting the one reaching 2+ matches", () => {
+    const signals = [
+      makeSignal({ id: "s0", matchId: "match-1", createdAt: iso(0), side: "home", severity: "HIGH" }),
+      makeSignal({ id: "s1", matchId: "match-2", createdAt: iso(60), side: "home", severity: "HIGH" }),
+      makeSignal({ id: "s2", matchId: "match-1", createdAt: iso(90), side: "away", severity: "LOW" }),
+    ];
+
+    const clusters = findPatternMatchedClusters(signals, 300000);
+
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0].side).toBe("home");
+    expect(clusters[0].severity).toBe("HIGH");
+    expect(clusters[0].matchIds).toEqual(["match-1", "match-2"]);
+  });
+
+  it("keeps 1x2 and totals signals separate even when side and severity match", () => {
+    const signals = [
+      makeSignal({
+        id: "s0",
+        matchId: "match-1",
+        createdAt: iso(0),
+        side: "home",
+        severity: "HIGH",
+        target: "Team A",
+      }),
+      makeSignal({
+        id: "s1",
+        matchId: "match-2",
+        createdAt: iso(60),
+        side: "home",
+        severity: "HIGH",
+        target: "Over 3.5",
+      }),
+    ];
+
+    expect(findPatternMatchedClusters(signals, 300000)).toEqual([]);
+  });
+
+  it("chains gaps into one cluster when all signals share the same pattern", () => {
+    const signals = [
+      makeSignal({ id: "s0", matchId: "match-1", createdAt: iso(0), side: "home", severity: "HIGH" }),
+      makeSignal({ id: "s1", matchId: "match-2", createdAt: iso(240), side: "home", severity: "HIGH" }),
+      makeSignal({ id: "s2", matchId: "match-1", createdAt: iso(480), side: "home", severity: "HIGH" }),
+      makeSignal({ id: "s3", matchId: "match-2", createdAt: iso(720), side: "home", severity: "HIGH" }),
+    ];
+
+    const clusters = findPatternMatchedClusters(signals, 300000);
+
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0].matchIds).toEqual(["match-1", "match-2"]);
+    expect(clusters[0].signalCount).toBe(4);
+    expect(clusters[0].spanMs).toBe(720000);
   });
 });
