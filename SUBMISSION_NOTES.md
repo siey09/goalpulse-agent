@@ -97,6 +97,10 @@ Found while verifying an Arena result. A single TXODDS Scores context is compute
 
 `GET /api/market-maker/confirmations` cross-checks every stored signal against a genuinely independent test, after finding a real circularity problem during design: the Market Maker's spread and the signal engine's momentum score both already pull from the same `fieldPressureScore`/`reliability` fields on the same snapshot, so directly comparing them would just agree by construction. Instead, it computes what the Market Maker *would have quoted* using the snapshot from before the move, then checks whether the signal's actual post-move odds broke below that old quote's bid for the signal's side — a move that outpaced the market's own prior uncertainty allowance, using data neither model currently uses for this purpose. Reports both per-signal results and an aggregate confirmation rate across the run.
 
+### 7. Steam Move Detection
+
+The original idea was cross-book steam detection ("odds moving the same direction across multiple books"). Verified against TxLINE's official documentation: TxLINE's odds feed is powered by "Stable Price," TxODDS' own consensus pricing engine — lines from global operators are already blended into a single price before reaching this API, so genuine multi-bookmaker comparison isn't buildable with real data here. Redefined for what the feed actually provides: `GET /api/steam-moves` detects sustained same-direction pressure across a *sequence* of consecutive ticks (3+ consecutive moves, each at least 1% compression, within a 5-minute window) — distinct from the core signal engine, which only ever compares exactly two snapshots. Applies to both 1X2 and Over/Under totals lines.
+
 ## Bugs Found and Fixed During Live Verification
 
 **Bug 1 — Undocumented StatusId 100.** While verifying production against real matches, the agent could not close out signals for a finished match (Colombia vs Ghana stayed `"live"` at minute 90). Investigation of the raw TxLINE Scores feed showed a `game_finalised` action carrying `StatusId: 100`, a status code not documented in the official TXODDS Scores Product API doc (v1.0, which only lists StatusId 1-18). The status mapping in `txlineClient.ts` was updated to treat `StatusId 100` as `finished`, redeployed, and reverified live: the match correctly flipped to `finished` and both pending signals were immediately evaluated as `correct`, confirmed by the 100% accuracy result above.
@@ -107,7 +111,7 @@ Found while verifying an Arena result. A single TXODDS Scores context is compute
 
 ## Automated Test Coverage and Security Audit
 
-- **119 automated unit tests across 13 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian position logic, the scores-context freshness gate, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, and the market maker band-breach cross-check/summary. Test files are excluded from the production TypeScript build output.
+- **126 automated unit tests across 14 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian position logic, the scores-context freshness gate, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, and the steam detection module's tick-sequence/window/trailing-run logic. Test files are excluded from the production TypeScript build output.
 - **Git history security audit**: searched the full commit history for accidentally committed secrets (API tokens, wallet keys, webhook URLs) and confirmed none were ever committed. Only `.env.example` (a template with no real values) was ever tracked; `.env.local` and `.secrets/` are gitignored throughout.
 
 ## Production Readiness Features (Added After Core Verification)
@@ -206,7 +210,8 @@ GoalPulse uses:
 - Insert-only permanent signal archive to Supabase, readable via a paginated/filterable read endpoint
 - Feed health monitoring (cycle health, live-match odds freshness, fixture coverage) separate from match-odds signals
 - Market Maker double-confirmation cross-check: genuinely independent band-breach test against each signal's own severity
-- 119 automated unit tests
+- Steam move detection: sustained same-direction tick-sequence pressure, distinct from single-pair compression
+- 126 automated unit tests
 
 ## Outcome Audit Layer
 
@@ -239,6 +244,7 @@ The frontend is built with React, TypeScript, Vite, Tailwind CSS, and Recharts. 
 - GET /api/archive (paginated, filterable read over the permanent signal archive)
 - GET /api/feed-health (cycle health, odds freshness, fixture coverage diagnostic)
 - GET /api/market-maker/confirmations (band-breach cross-check against each signal's own severity)
+- GET /api/steam-moves (sustained same-direction tick-sequence detection)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events, live)

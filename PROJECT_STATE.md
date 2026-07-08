@@ -17,12 +17,14 @@ merge to `main` → push → clean up worktree.
 
 ✅ Done: #1 archive read endpoint, #2 Outcome Audit dissent detail, #3 feed
 health monitoring, #4 Market Maker double-confirmation cross-check — all
-merged and pushed to `main` (119 tests, 19 routes).
+merged and pushed to `main`.
 
-🔄 In Progress: #5 steam/consensus move detection — unblocked, confirmed
-single-consensus-feed (see Architecture section above), redefined as
-multi-tick sustained same-direction movement within the feed (not
-cross-book). Brainstorming starting now.
+🔄 In Progress: #5 steam move detection. Implementation complete in
+worktree `.claude/worktrees/steam-move-detection` (branch
+`worktree-steam-move-detection`), all 4 plan tasks done and committed,
+126/126 tests passing, clean build, openapi valid. Awaiting user's review
+of the end-of-task check-in before merge to `main` + push + worktree
+cleanup.
 
 📋 Next Steps: #6 cross-match signal correlation, #7 composite confidence
 scoring, #8 Arena third strategy, #9 retroactive backtesting, #10 real-time
@@ -231,6 +233,19 @@ and totals signals. Backend-only, no dashboard panel. Spec:
 `docs/superpowers/specs/2026-07-08-market-maker-confirmation-design.md`,
 plan: `docs/superpowers/plans/2026-07-08-market-maker-confirmation.md`.
 
+**8. Steam move detection** (`logic/steamDetection.ts`, `GET /api/steam-moves`)
+— redefined from the original cross-book framing after confirming (via
+TxLINE's official docs) the feed is Stable Price consensus pricing, not
+multi-bookmaker data (see Architecture section above). Detects a trailing
+run of 3+ consecutive same-direction odds ticks, each ≥1% compression,
+spanning ≤5 minutes — distinct from the core signal engine, which only
+ever compares exactly two snapshots. Checks home side first, then away;
+`matchId`/`match` display fields come directly from the snapshots
+themselves (no separate `Match` lookup, sidestepping the totals-matchId
+suffix problem). Applies to both 1X2 and totals lines. Backend-only, no
+dashboard panel. Spec: `docs/superpowers/specs/2026-07-08-steam-move-detection-design.md`,
+plan: `docs/superpowers/plans/2026-07-08-steam-move-detection.md`.
+
 ## Bugs found and fixed
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
@@ -312,27 +327,28 @@ live endpoint behavior, don't assume a push is live.
 
 ## Testing
 
-**119 tests across 13 files**, all passing, `npm run test` from `apps/api/`:
+**126 tests across 14 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/councilDissent.test.ts`,
 `logic/feedHealth.test.ts`, `logic/marketConfirmation.test.ts`,
 `logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`,
 `logic/scoresContextFreshness.test.ts`, `logic/signalEngine.test.ts`,
-`middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`,
-`services/persistence.test.ts`, `store.test.ts`.
+`logic/steamDetection.test.ts`, `middleware/apiKeyAuth.test.ts`,
+`services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`.
 Build: `npm run build` (`tsc`), currently clean. Convention: pure logic gets
 unit tests with plain objects/mocks; anything requiring a real
 TxLINE/Supabase connection is explicitly *not* automated (this environment
 has no real credentials for either) — verified instead by the user directly
 against production.
 
-**19 backend routes total**, all documented in `openapi.yaml` (validate with
+**20 backend routes total**, all documented in `openapi.yaml` (validate with
 `npx @redocly/cli lint openapi.yaml`): `/health`, `/api/matches`,
 `/api/signals`, `/api/stats`, `/api/pnl`, `/api/agent-runs`,
 `/api/odds-history`, `/api/recent-results`, `/api/market-maker`,
 `/api/arena`, `/api/archive`, `/api/feed-health`,
-`/api/market-maker/confirmations`, `/api/replay/backtest`,
-`/api/onchain/validate-stat`, `/api/live/odds-stream`,
-`/api/live/replay-stream`, `/api/docs`, `POST /api/agent/run-once`.
+`/api/market-maker/confirmations`, `/api/steam-moves`,
+`/api/replay/backtest`, `/api/onchain/validate-stat`,
+`/api/live/odds-stream`, `/api/live/replay-stream`, `/api/docs`,
+`POST /api/agent/run-once`.
 
 ## What still needs doing
 
