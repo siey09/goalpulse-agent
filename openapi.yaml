@@ -1158,7 +1158,21 @@ paths:
                         correctCount: { type: number }
                         incorrectCount: { type: number }
                         accuracyPct: { type: number }
-                      required: [signalType, settledCount, correctCount, incorrectCount, accuracyPct]
+                        distinctMatchCount:
+                          type: number
+                          description: >
+                            How many distinct real matches this signal
+                            type's settled entries span (totals sub-markets
+                            of the same fixture collapse to one match).
+                        largestMatchSharePct:
+                          type: number
+                          description: >
+                            What percentage of this signal type's settled
+                            entries come from its single most-represented
+                            match - a high value means the accuracyPct above
+                            is not yet diversified, statistically meaningful
+                            evidence.
+                      required: [signalType, settledCount, correctCount, incorrectCount, accuracyPct, distinctMatchCount, largestMatchSharePct]
                   summary:
                     type: object
                     properties:
