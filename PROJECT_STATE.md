@@ -17,15 +17,11 @@ merge to `main` → push → clean up worktree.
 
 ✅ Done: #1 archive read endpoint, #2 Outcome Audit dissent detail, #3 feed
 health monitoring, #4 Market Maker double-confirmation cross-check, #5
-steam move detection, #6 signal correlation, #7 composite confidence score
-— all merged and pushed to `main`.
+steam move detection, #6 signal correlation, #7 composite confidence score,
+#8 Arena third strategy (Kelly Criterion) — all merged and pushed to
+`main` (158 tests, 22 routes).
 
-🔄 In Progress: #8 Arena third strategy (Kelly Criterion). Implementation
-complete in worktree `.claude/worktrees/arena-kelly-criterion` (branch
-`worktree-arena-kelly-criterion`), all 6 plan tasks done and committed,
-158/158 tests passing, clean build, openapi valid. Awaiting user's review
-of the end-of-task check-in before merge to `main` + push + worktree
-cleanup.
+🔄 In Progress: none — ready to start #9.
 
 📋 Next Steps: #9 retroactive backtesting, #10 real-time push assessment
 (do last, biggest lift).
@@ -43,8 +39,8 @@ GoalPulse Agent is an autonomous TxLINE-powered sports market intelligence
 system, built for a hackathon (TxLINE Trading Tools and Agents track,
 **deadline 2026-07-19**). It watches live World Cup odds, detects meaningful
 odds movement, enriches it with real match-event context, audits signals
-against real final scores, and — as of this session — runs two synthetic
-"trading agents" head-to-head on the same signal feed. It is explicitly
+against real final scores, and runs three synthetic "trading agents"
+head-to-head on the same signal feed. It is explicitly
 analytics-only: no wagers placed, no funds moved, no smart contract executed.
 
 **Tournament context that matters for prioritization:** the World Cup is
