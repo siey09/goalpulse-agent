@@ -32,16 +32,15 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: Signal Archive dashboard panel — implementation complete
-in worktree `.claude/worktrees/signal-archive-panel` (branch
-`worktree-signal-archive-panel`), all 3 plan tasks done and committed,
-clean build, verified directly against production (no frontend test
-runner exists). Awaiting user's review of the end-of-task check-in before
-merge to `main` + push + worktree cleanup.
+🔄 In Progress: none — Signal Archive dashboard panel merged and pushed to
+`main`. **Not yet visually verified in a browser** (no browser automation
+tool was available this session) — verified instead via clean build and
+direct API-shape testing against production. Recommend a quick visual
+check before treating it as fully confirmed.
 
-📋 Next Steps: after this merges, reassess remaining priorities
-(stale-finished-match repolling fix, orphaned worktree cleanup) against
-time left before July 19.
+📋 Next Steps: reassess remaining priorities (stale-finished-match
+repolling fix, orphaned worktree cleanup) against time left before
+July 19.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -128,8 +127,10 @@ premised on "compare multiple books/lines" needs to account for this —
 don't re-investigate, this is settled.
 
 **Frontend** (`apps/web/src/`, React/TypeScript/Vite/Tailwind): `App.tsx` plus
-`components/` — `SignalIntelligencePanel`, `MarketMakerPanel`, `ArenaPanel`
-(new), `ResultsSettlementPanel`, `VerifiedCaseStudiesPanel`.
+`components/` — `SignalIntelligencePanel`, `MarketMakerPanel`, `ArenaPanel`,
+`ResultsSettlementPanel`, `SignalArchivePanel` (new), `VerifiedCaseStudiesPanel`,
+`WhatChangedPanel`. No test runner configured — every panel is verified
+manually against a running dev server, not via automated tests.
 
 **Docs conventions this session established** (follow these for any future
 work): `docs/superpowers/specs/YYYY-MM-DD-<feature>-design.md` (brainstormed,
