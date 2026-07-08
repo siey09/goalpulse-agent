@@ -466,11 +466,10 @@ against production.
 4. **Stale-finished-match repolling fix** (see "Known limitations" above) —
    not urgent, but a real, identified gap worth closing before the July 19
    final if there's time.
-5. **Cosmetic:** two orphaned worktree directories under
-   `.claude/worktrees/` (from the Arena and signal-archive features) hit a
-   transient Windows file-lock during cleanup and were left on disk,
-   deregistered from git but not physically deleted. Harmless; delete
-   manually whenever convenient.
+5. ~~Cosmetic: orphaned worktree directories~~ **Not actually present** —
+   checked `.claude/worktrees/` directly (2026-07-08): only `agent-arena`
+   exists, which is legitimately in active use by a different Claude Code
+   session. This note was stale.
 6. No new Supabase project, no new hosting — both features this session
    reuse the existing free-tier Supabase project and Render/Vercel
    deployments already configured.
