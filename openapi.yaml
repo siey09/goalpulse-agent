@@ -298,7 +298,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CouncilVote'
-      required: [signalId, matchId, target, decision, approvals, totalAgents, votes]
+        unanimous:
+          type: boolean
+          description: True only when all agents voted "approve" (3 of 3) - the only symmetric consensus state possible, since only Agent A can literally vote "reject".
+        dissentingAgents:
+          type: array
+          items: { type: string }
+          description: Names of agents whose vote was not "approve" for this signal.
+      required: [signalId, matchId, target, decision, approvals, totalAgents, votes, unanimous, dissentingAgents]
 
     ReplayProof:
       type: object
@@ -313,6 +320,18 @@ components:
         note: { type: string }
       required: [type, hash, network, anchoringStatus, walletConfigured, transactionSignature, explorerUrl, note]
 
+    CouncilDissentSummary:
+      type: object
+      properties:
+        unanimousSignals: { type: number }
+        dissentingSignals: { type: number }
+        dissentRatePct: { type: number }
+        dissentByAgent:
+          type: object
+          additionalProperties: { type: number }
+          description: Every agent name observed in the run, mapped to how many signals it dissented on. Agents that never dissent still appear, at 0.
+      required: [unanimousSignals, dissentingSignals, dissentRatePct, dissentByAgent]
+
     ReplaySummary:
       type: object
       properties:
@@ -324,7 +343,9 @@ components:
         smartMoneyTraps: { type: number }
         confirmedTraps: { type: number }
         possibleTraps: { type: number }
-      required: [snapshotsProcessed, signalsDetected, correctSignals, incorrectSignals, accuracyPct, smartMoneyTraps, confirmedTraps, possibleTraps]
+        councilDissent:
+          $ref: '#/components/schemas/CouncilDissentSummary'
+      required: [snapshotsProcessed, signalsDetected, correctSignals, incorrectSignals, accuracyPct, smartMoneyTraps, confirmedTraps, possibleTraps, councilDissent]
 
     ReplayBacktest:
       type: object
