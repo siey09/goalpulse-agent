@@ -23,6 +23,8 @@ import {
 } from "./logic/feedHealth";
 import { assessBandBreach, summarizeBandBreaches } from "./logic/marketConfirmation";
 import type { BandBreachResult } from "./logic/marketConfirmation";
+import { detectSteamMove } from "./logic/steamDetection";
+import type { SteamMove } from "./logic/steamDetection";
 import { parseArchiveFilters, parsePageParam, parsePageSizeParam } from "./logic/paginationParams";
 import { getArchivedSignals } from "./services/archive";
 import { config } from "./config";
@@ -459,6 +461,31 @@ app.get("/api/market-maker/confirmations", (_req, res) => {
   res.json({
     data: results,
     summary: summarizeBandBreaches(results),
+  });
+});
+
+app.get("/api/steam-moves", (_req, res) => {
+  const snapshotsByMatchId = new Map<string, OddsSnapshot[]>();
+
+  for (const snapshot of store.oddsSnapshots) {
+    const existing = snapshotsByMatchId.get(snapshot.matchId) ?? [];
+    existing.push(snapshot);
+    snapshotsByMatchId.set(snapshot.matchId, existing);
+  }
+
+  const steamMoves: SteamMove[] = [];
+
+  for (const snapshots of snapshotsByMatchId.values()) {
+    const steamMove = detectSteamMove(snapshots);
+    if (steamMove) steamMoves.push(steamMove);
+  }
+
+  res.json({
+    data: steamMoves,
+    summary: {
+      matchesScanned: snapshotsByMatchId.size,
+      steamMovesDetected: steamMoves.length,
+    },
   });
 });
 
