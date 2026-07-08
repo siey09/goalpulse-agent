@@ -127,6 +127,10 @@ A genuine architectural constraint surfaced during design: **Contrarian cannot b
 
 The session's first actual frontend feature — everything else was backend-only. `apps/web/src/components/SignalArchivePanel.tsx` renders `GET /api/archive` with real pagination and filter controls (match ID search, debounced 400ms since it drives a server query rather than a client-side filter; pill-button toggles for result status, market, and event), the first panel in this codebase to need either. Defaults the `event` filter to `settled` so a signal never visibly appears twice back-to-back (the archive stores raw `created`+`settled` event-log rows under the same signal ID) — a design decision made deliberately, confirmed before implementation, rather than an accident of the data model. Verified directly against the live production archive (247+ real entries) since this environment has no automated frontend test runner, matching how every prior panel in this codebase was verified.
 
+### 13. Pattern-Matched Signal Correlation
+
+A stricter companion to the existing cross-match signal correlation (item 6): `GET /api/signal-correlation/patterns` only reports a cluster when the *same* pattern — direction (`side`), `severity`, and market type (1x2 vs. totals) — repeats across 2 or more distinct matches within the same 5-minute window, rather than any signals firing close together regardless of what they say. Confirmed directly against production data before designing this: the existing correlation feature's real clusters mix severities and markets freely, so a homogeneity filter bolted onto it would rarely fire — this instead partitions signals by pattern key first, then reuses the exact same session-windowing algorithm independently within each partition. That windowing algorithm was extracted out of the original `findSignalClusters` into a shared, generic helper (`sessionWindowGroups`) so both features stay in sync rather than duplicating the same ~15-line loop — regression-tested to confirm the extraction changed zero existing behavior before the new logic was added on top of it.
+
 ## Bugs Found and Fixed During Live Verification
 
 **Bug 1 — Undocumented StatusId 100.** While verifying production against real matches, the agent could not close out signals for a finished match (Colombia vs Ghana stayed `"live"` at minute 90). Investigation of the raw TxLINE Scores feed showed a `game_finalised` action carrying `StatusId: 100`, a status code not documented in the official TXODDS Scores Product API doc (v1.0, which only lists StatusId 1-18). The status mapping in `txlineClient.ts` was updated to treat `StatusId 100` as `finished`, redeployed, and reverified live: the match correctly flipped to `finished` and both pending signals were immediately evaluated as `correct`, confirmed by the 100% accuracy result above.
@@ -137,7 +141,7 @@ The session's first actual frontend feature — everything else was backend-only
 
 ## Automated Test Coverage and Security Audit
 
-- **161 automated unit tests across 17 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian/Kelly Criterion position logic and variable-stake ROI math, the retroactive backtest orchestration against archived signals, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's session-windowing/cluster-filtering logic, the composite confidence score's weighting/renormalization, and the signal-type performance aggregation. Test files are excluded from the production TypeScript build output.
+- **174 automated unit tests across 18 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian/Kelly Criterion position logic and variable-stake ROI math, the retroactive backtest orchestration against archived signals, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's session-windowing/cluster-filtering logic and its pattern-matched variant, the composite confidence score's weighting/renormalization, and the signal-type performance aggregation. Test files are excluded from the production TypeScript build output.
 - **Git history security audit**: searched the full commit history for accidentally committed secrets (API tokens, wallet keys, webhook URLs) and confirmed none were ever committed. Only `.env.example` (a template with no real values) was ever tracked; `.env.local` and `.secrets/` are gitignored throughout.
 
 ## Production Readiness Features (Added After Core Verification)
@@ -240,7 +244,7 @@ GoalPulse uses:
 - Signal correlation: detects cross-match signal clusters within a short time window
 - Composite confidence score (0-100) on every signal, blending magnitude, field pressure, and freshness tightness
 - Historical hit-rate per signal type from the permanent archive
-- 161 automated unit tests
+- 174 automated unit tests
 
 ## Outcome Audit Layer
 
@@ -276,6 +280,7 @@ The frontend is built with React, TypeScript, Vite, Tailwind CSS, and Recharts. 
 - GET /api/market-maker/confirmations (band-breach cross-check against each signal's own severity)
 - GET /api/steam-moves (sustained same-direction tick-sequence detection)
 - GET /api/signal-correlation (cross-match signal cluster detection)
+- GET /api/signal-correlation/patterns (pattern-matched cross-match clusters)
 - GET /api/signal-performance (historical hit-rate per signal type)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
