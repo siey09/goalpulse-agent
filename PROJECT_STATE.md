@@ -19,12 +19,17 @@ merge to `main` → push → clean up worktree.
 health monitoring, #4 Market Maker double-confirmation cross-check, #5
 steam move detection, #6 signal correlation, #7 composite confidence score,
 #8 Arena third strategy (Kelly Criterion) — all merged and pushed to
-`main` (158 tests, 22 routes).
+`main`.
 
-🔄 In Progress: none — ready to start #9.
+🔄 In Progress: #9 retroactive backtesting against the archive.
+Implementation complete in worktree
+`.claude/worktrees/arena-archive-backtest` (branch
+`worktree-arena-archive-backtest`), all 4 plan tasks done and committed,
+161/161 tests passing, clean build, openapi valid. Awaiting user's review
+of the end-of-task check-in before merge to `main` + push + worktree
+cleanup.
 
-📋 Next Steps: #9 retroactive backtesting, #10 real-time push assessment
-(do last, biggest lift).
+📋 Next Steps: #10 real-time push assessment (do last, biggest lift).
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -298,6 +303,26 @@ legitimately-zero Kelly stake settles to `+0` not `-0`
 no dashboard panel. Spec: `docs/superpowers/specs/2026-07-08-arena-kelly-criterion-design.md`,
 plan: `docs/superpowers/plans/2026-07-08-arena-kelly-criterion.md`.
 
+**12. Retroactive Arena backtesting against the archive**
+(`logic/backtest.ts`'s `computeBacktestScoreboards`,
+`GET /api/arena/backtest`) — replays Momentum Follower and Kelly Criterion
+against the 500 most recent settled archive entries, rather than the live
+`GET /api/arena`'s capped-100, in-memory `store.signals`. Both agents need
+only fields already on the archived signal itself, so this reuses their
+existing builder functions plus `arena.ts`'s own `summarize` (exported for
+this purpose) with zero duplicated logic. **Contrarian is deliberately
+excluded**: resolving its opposing-side outcome needs the real match final
+score (a signal's own `resultStatus === "incorrect"` is ambiguous between
+"opponent won" and "draw"), and neither the archive nor the archived
+signal ever captures it. Extending the archive schema to add it was
+considered and rejected — confirmed with the user — since it would only
+help newly-archived signals going forward. The route is named
+`/api/arena/backtest`, not `/api/backtest`, to stay distinct from the
+pre-existing, unrelated `GET /api/replay/backtest` (single-signal council
+vote replay). Backend-only, no dashboard panel. Spec:
+`docs/superpowers/specs/2026-07-08-arena-archive-backtest-design.md`,
+plan: `docs/superpowers/plans/2026-07-08-arena-archive-backtest.md`.
+
 ## Bugs found and fixed
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
@@ -379,25 +404,26 @@ live endpoint behavior, don't assume a push is live.
 
 ## Testing
 
-**158 tests across 16 files**, all passing, `npm run test` from `apps/api/`:
-`agent.test.ts`, `logic/arena.test.ts`, `logic/councilDissent.test.ts`,
-`logic/feedHealth.test.ts`, `logic/marketConfirmation.test.ts`,
-`logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`,
-`logic/scoresContextFreshness.test.ts`, `logic/signalCorrelation.test.ts`,
-`logic/signalEngine.test.ts`, `logic/signalPerformance.test.ts`,
-`logic/steamDetection.test.ts`, `middleware/apiKeyAuth.test.ts`,
-`services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`.
+**161 tests across 17 files**, all passing, `npm run test` from `apps/api/`:
+`agent.test.ts`, `logic/arena.test.ts`, `logic/backtest.test.ts`,
+`logic/councilDissent.test.ts`, `logic/feedHealth.test.ts`,
+`logic/marketConfirmation.test.ts`, `logic/marketMaker.test.ts`,
+`logic/paginationParams.test.ts`, `logic/scoresContextFreshness.test.ts`,
+`logic/signalCorrelation.test.ts`, `logic/signalEngine.test.ts`,
+`logic/signalPerformance.test.ts`, `logic/steamDetection.test.ts`,
+`middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`,
+`services/persistence.test.ts`, `store.test.ts`.
 Build: `npm run build` (`tsc`), currently clean. Convention: pure logic gets
 unit tests with plain objects/mocks; anything requiring a real
 TxLINE/Supabase connection is explicitly *not* automated (this environment
 has no real credentials for either) — verified instead by the user directly
 against production.
 
-**22 backend routes total**, all documented in `openapi.yaml` (validate with
+**23 backend routes total**, all documented in `openapi.yaml` (validate with
 `npx @redocly/cli lint openapi.yaml`): `/health`, `/api/matches`,
 `/api/signals`, `/api/stats`, `/api/pnl`, `/api/agent-runs`,
 `/api/odds-history`, `/api/recent-results`, `/api/market-maker`,
-`/api/arena`, `/api/archive`, `/api/feed-health`,
+`/api/arena`, `/api/arena/backtest`, `/api/archive`, `/api/feed-health`,
 `/api/market-maker/confirmations`, `/api/steam-moves`,
 `/api/signal-correlation`, `/api/signal-performance`,
 `/api/replay/backtest`, `/api/onchain/validate-stat`,

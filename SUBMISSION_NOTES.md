@@ -117,6 +117,12 @@ Momentum Follower and Contrarian both stake a flat 1 unit — they differ only i
 
 This required generalizing `ArenaPosition` with an explicit `stakeUnits` field across all three agents, since the existing ROI formula silently assumed every position staked exactly 1 unit — true for the first two agents but not once a variable-stake agent exists. A genuine correctness detail turned up during design: negating a stake for a settled-incorrect position needs to be written as `0 - stakeUnits`, not `-stakeUnits` — the latter produces JavaScript's `-0` once a stake can legitimately be exactly zero (a zero-confidence Kelly signal), and `Object.is(-0, 0)` is `false`, which the test framework's equality check uses. The flat-stake agents never surfaced this, since their stake is always exactly 1.
 
+### 11. Retroactive Arena Backtesting Against the Archive
+
+`GET /api/arena/backtest` replays Momentum Follower and Kelly Criterion against the 500 most recent settled entries in the permanent signal archive, rather than the live Arena endpoint's capped-100, in-memory signal feed — showing how these strategies would have performed across the full accumulated history, not just the recent window. Both agents needed nothing beyond fields already present on the archived signal itself, so this reuses their existing builder functions and `arena.ts`'s own aggregation function directly, with zero duplicated logic.
+
+A genuine architectural constraint surfaced during design: **Contrarian cannot be backtested from archived data.** Resolving its opposing-side outcome requires the real match's final score — a signal's own `resultStatus` of `"incorrect"` is ambiguous between "the opponent won" and "the match was a draw" (where the opposing side also loses), and only the actual score disambiguates. Neither the archive table nor the archived signal object ever captures it. Extending the already-shipped, insert-only archive schema to add it was considered and explicitly rejected — it would only help newly-archived signals going forward, leaving existing archived rows still unbacktestable for Contrarian regardless. Rather than silently dropping the third agent, the endpoint surfaces this exclusion directly in its response.
+
 ## Bugs Found and Fixed During Live Verification
 
 **Bug 1 — Undocumented StatusId 100.** While verifying production against real matches, the agent could not close out signals for a finished match (Colombia vs Ghana stayed `"live"` at minute 90). Investigation of the raw TxLINE Scores feed showed a `game_finalised` action carrying `StatusId: 100`, a status code not documented in the official TXODDS Scores Product API doc (v1.0, which only lists StatusId 1-18). The status mapping in `txlineClient.ts` was updated to treat `StatusId 100` as `finished`, redeployed, and reverified live: the match correctly flipped to `finished` and both pending signals were immediately evaluated as `correct`, confirmed by the 100% accuracy result above.
@@ -127,7 +133,7 @@ This required generalizing `ArenaPosition` with an explicit `stakeUnits` field a
 
 ## Automated Test Coverage and Security Audit
 
-- **158 automated unit tests across 16 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian/Kelly Criterion position logic and variable-stake ROI math, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's session-windowing/cluster-filtering logic, the composite confidence score's weighting/renormalization, and the signal-type performance aggregation. Test files are excluded from the production TypeScript build output.
+- **161 automated unit tests across 17 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian/Kelly Criterion position logic and variable-stake ROI math, the retroactive backtest orchestration against archived signals, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's session-windowing/cluster-filtering logic, the composite confidence score's weighting/renormalization, and the signal-type performance aggregation. Test files are excluded from the production TypeScript build output.
 - **Git history security audit**: searched the full commit history for accidentally committed secrets (API tokens, wallet keys, webhook URLs) and confirmed none were ever committed. Only `.env.example` (a template with no real values) was ever tracked; `.env.local` and `.secrets/` are gitignored throughout.
 
 ## Production Readiness Features (Added After Core Verification)
@@ -230,7 +236,7 @@ GoalPulse uses:
 - Signal correlation: detects cross-match signal clusters within a short time window
 - Composite confidence score (0-100) on every signal, blending magnitude, field pressure, and freshness tightness
 - Historical hit-rate per signal type from the permanent archive
-- 158 automated unit tests
+- 161 automated unit tests
 
 ## Outcome Audit Layer
 
@@ -260,6 +266,7 @@ The frontend is built with React, TypeScript, Vite, Tailwind CSS, and Recharts. 
 - GET /api/recent-results
 - GET /api/market-maker (independent implied-probability quotes, spread widens with field pressure/reliability)
 - GET /api/arena (Momentum Follower vs Contrarian vs Kelly Criterion scoreboards, SHA-256 tamper-evident ledger hash)
+- GET /api/arena/backtest (retroactive Momentum Follower/Kelly Criterion backtest against the full archive)
 - GET /api/archive (paginated, filterable read over the permanent signal archive)
 - GET /api/feed-health (cycle health, odds freshness, fixture coverage diagnostic)
 - GET /api/market-maker/confirmations (band-breach cross-check against each signal's own severity)
