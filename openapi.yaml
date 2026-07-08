@@ -1121,6 +1121,46 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /api/arena/backtest:
+    get:
+      summary: Retroactive Arena backtest against the full archived signal history
+      description: >
+        Replays Momentum Follower and Kelly Criterion against the 500 most
+        recent settled entries in the insert-only signal archive, not just
+        the live, capped-100 in-memory signal feed GET /api/arena reads
+        from. Contrarian is excluded: the archive stores each signal's own
+        resultStatus but not the match's final score, so its opposing-side
+        outcome (win vs. draw) can't be reconstructed from archived data
+        alone - see the response's note field. Fail-open: returns 200 with
+        empty scoreboards if Supabase is unconfigured or unreachable,
+        inherited from the existing GET /api/archive endpoint's own
+        fail-open behavior.
+      responses:
+        '200':
+          description: Backtested scoreboards for the two reconstructable agents.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      momentumFollower:
+                        $ref: '#/components/schemas/ArenaScoreboard'
+                      kellyCriterion:
+                        $ref: '#/components/schemas/ArenaScoreboard'
+                    required: [momentumFollower, kellyCriterion]
+                  summary:
+                    type: object
+                    properties:
+                      archivedSignalsScanned: { type: number }
+                    required: [archivedSignalsScanned]
+                  note: { type: string }
+                required: [data, summary, note]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /api/onchain/validate-stat:
     get:
       summary: Real on-chain Merkle proof validation (Solana mainnet)
