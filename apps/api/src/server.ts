@@ -25,6 +25,7 @@ import { assessBandBreach, summarizeBandBreaches } from "./logic/marketConfirmat
 import type { BandBreachResult } from "./logic/marketConfirmation";
 import { detectSteamMove } from "./logic/steamDetection";
 import type { SteamMove } from "./logic/steamDetection";
+import { findSignalClusters, CORRELATION_WINDOW_MS } from "./logic/signalCorrelation";
 import { parseArchiveFilters, parsePageParam, parsePageSizeParam } from "./logic/paginationParams";
 import { getArchivedSignals } from "./services/archive";
 import { config } from "./config";
@@ -485,6 +486,18 @@ app.get("/api/steam-moves", (_req, res) => {
     summary: {
       matchesScanned: snapshotsByMatchId.size,
       steamMovesDetected: steamMoves.length,
+    },
+  });
+});
+
+app.get("/api/signal-correlation", (_req, res) => {
+  const clusters = findSignalClusters(store.signals, CORRELATION_WINDOW_MS);
+
+  res.json({
+    data: clusters,
+    summary: {
+      signalsScanned: store.signals.length,
+      clustersDetected: clusters.length,
     },
   });
 });

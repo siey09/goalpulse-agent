@@ -247,6 +247,18 @@ suffix problem). Applies to both 1X2 and totals lines. Backend-only, no
 dashboard panel. Spec: `docs/superpowers/specs/2026-07-08-steam-move-detection-design.md`,
 plan: `docs/superpowers/plans/2026-07-08-steam-move-detection.md`.
 
+**9. Signal correlation across simultaneous matches** (`logic/signalCorrelation.ts`,
+`GET /api/signal-correlation`) — detects signals firing across 2+ distinct
+matches close together in time, a pattern the core signal engine (which
+only ever reasons about one match) has no visibility into. Groups the
+*entire* stored signal history via session-windowing (a new group starts
+whenever the gap to the previous signal exceeds 5 minutes, so a steady
+trickle can span longer than 5 minutes total); only groups spanning 2+
+distinct `matchId`s are reported. No severity/type filtering to join a
+cluster — each cluster reports a `severityBreakdown` instead. Backend-only,
+no dashboard panel. Spec: `docs/superpowers/specs/2026-07-08-signal-correlation-design.md`,
+plan: `docs/superpowers/plans/2026-07-08-signal-correlation.md`.
+
 ## Bugs found and fixed
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
@@ -328,28 +340,29 @@ live endpoint behavior, don't assume a push is live.
 
 ## Testing
 
-**126 tests across 14 files**, all passing, `npm run test` from `apps/api/`:
+**132 tests across 15 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/councilDissent.test.ts`,
 `logic/feedHealth.test.ts`, `logic/marketConfirmation.test.ts`,
 `logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`,
-`logic/scoresContextFreshness.test.ts`, `logic/signalEngine.test.ts`,
-`logic/steamDetection.test.ts`, `middleware/apiKeyAuth.test.ts`,
-`services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`.
+`logic/scoresContextFreshness.test.ts`, `logic/signalCorrelation.test.ts`,
+`logic/signalEngine.test.ts`, `logic/steamDetection.test.ts`,
+`middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`,
+`services/persistence.test.ts`, `store.test.ts`.
 Build: `npm run build` (`tsc`), currently clean. Convention: pure logic gets
 unit tests with plain objects/mocks; anything requiring a real
 TxLINE/Supabase connection is explicitly *not* automated (this environment
 has no real credentials for either) — verified instead by the user directly
 against production.
 
-**20 backend routes total**, all documented in `openapi.yaml` (validate with
+**21 backend routes total**, all documented in `openapi.yaml` (validate with
 `npx @redocly/cli lint openapi.yaml`): `/health`, `/api/matches`,
 `/api/signals`, `/api/stats`, `/api/pnl`, `/api/agent-runs`,
 `/api/odds-history`, `/api/recent-results`, `/api/market-maker`,
 `/api/arena`, `/api/archive`, `/api/feed-health`,
 `/api/market-maker/confirmations`, `/api/steam-moves`,
-`/api/replay/backtest`, `/api/onchain/validate-stat`,
-`/api/live/odds-stream`, `/api/live/replay-stream`, `/api/docs`,
-`POST /api/agent/run-once`.
+`/api/signal-correlation`, `/api/replay/backtest`,
+`/api/onchain/validate-stat`, `/api/live/odds-stream`,
+`/api/live/replay-stream`, `/api/docs`, `POST /api/agent/run-once`.
 
 ## What still needs doing
 

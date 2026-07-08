@@ -52,6 +52,7 @@ Important backend files:
 - apps/api/src/logic/feedHealth.ts (cycle health, odds freshness, and fixture coverage diagnostics)
 - apps/api/src/logic/marketConfirmation.ts (band-breach cross-check against the Market Maker's own prior quote)
 - apps/api/src/logic/steamDetection.ts (sustained same-direction tick-sequence detection)
+- apps/api/src/logic/signalCorrelation.ts (cross-match signal cluster detection)
 - apps/api/src/agent.ts
 - apps/api/src/store.ts (in-memory state; recovered from Supabase on startup, see "Supabase Persistence" below)
 
@@ -225,6 +226,12 @@ Redefined for a single-consensus feed: `apps/api/src/logic/steamDetection.ts` (`
 
 Computed live at request time from `store.oddsSnapshots`, grouped by `matchId`; never mutates `agent.ts`/`store.ts`'s state. Backend-only; no dashboard panel yet. Spec: `docs/superpowers/specs/2026-07-08-steam-move-detection-design.md`.
 
+## Signal Correlation Across Simultaneous Matches
+
+`apps/api/src/logic/signalCorrelation.ts` (`GET /api/signal-correlation`) detects when signals fire across 2+ distinct matches close together in time — a cross-match pattern the core signal engine (which only ever reasons about one match) has no visibility into. `findSignalClusters` groups the *entire* stored signal history (`store.signals`, capped 100) via session-windowing: sorted by `createdAt`, a new group starts whenever the gap to the previous signal in the current group exceeds 5 minutes, so a steady trickle of correlated signals can span longer than 5 minutes in total as long as no single gap exceeds it. Only groups spanning 2+ distinct `matchId`s are reported — a single match firing multiple signals in a row is normal, already-covered behavior, not correlation. No severity/type filtering is required to join a cluster; each cluster reports a `severityBreakdown` so significance can be judged directly. Unlike steam detection, the entire history is scanned (not just the trailing run), since multiple distinct clusters can exist at different points across the 100-signal cap.
+
+Computed live at request time from `store.signals`; never mutates `agent.ts`/`store.ts`'s state. Backend-only; no dashboard panel yet. Spec: `docs/superpowers/specs/2026-07-08-signal-correlation-design.md`.
+
 ## Known Issues Fixed During Live Verification
 
 **Undocumented StatusId 100.** A `game_finalised` TxLINE Scores action was observed carrying `StatusId: 100`, a value not listed in the official TXODDS Scores Product API doc (v1.0, StatusId 1-18 only). The original `statusFromStatusId()` mapping in `txlineClient.ts` did not treat this as finished, so signals for completed matches stayed pending indefinitely. Fixed by adding `100` to the finished-status set.
@@ -289,7 +296,7 @@ Because the live `strategyAccuracy` number can look worse than the strategy's re
 
 ## Automated Test Coverage
 
-**126 tests across 14 files** (Vitest, `npm run test` from `apps/api/`): `agent.test.ts`, `logic/arena.test.ts`, `logic/councilDissent.test.ts`, `logic/feedHealth.test.ts`, `logic/marketConfirmation.test.ts`, `logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`, `logic/scoresContextFreshness.test.ts`, `logic/signalEngine.test.ts`, `logic/steamDetection.test.ts`, `middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`. Covers the deterministic core: severity classification at the exact 4%/8%/15% thresholds, correct side selection between home/away, multi-market `matchLabel` handling, momentum score clamping to 0-100, signal settlement for both the 1X2 market (home/away/draw) and the Over/Under totals market (including matchId-suffix resolution back to the base fixture), the API key middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian position logic, the scores-context freshness gate, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, and the steam detection module's tick-sequence/window/trailing-run logic. Pure logic gets unit tests with plain objects/mocks; anything requiring a real TxLINE/Supabase connection is explicitly not automated (verified instead directly against production). `tsconfig.json` excludes `src/**/*.test.ts` so test files never ship in the production build output.
+**132 tests across 15 files** (Vitest, `npm run test` from `apps/api/`): `agent.test.ts`, `logic/arena.test.ts`, `logic/councilDissent.test.ts`, `logic/feedHealth.test.ts`, `logic/marketConfirmation.test.ts`, `logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`, `logic/scoresContextFreshness.test.ts`, `logic/signalCorrelation.test.ts`, `logic/signalEngine.test.ts`, `logic/steamDetection.test.ts`, `middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`. Covers the deterministic core: severity classification at the exact 4%/8%/15% thresholds, correct side selection between home/away, multi-market `matchLabel` handling, momentum score clamping to 0-100, signal settlement for both the 1X2 market (home/away/draw) and the Over/Under totals market (including matchId-suffix resolution back to the base fixture), the API key middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian position logic, the scores-context freshness gate, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, and the signal correlation module's session-windowing/cluster-filtering logic. Pure logic gets unit tests with plain objects/mocks; anything requiring a real TxLINE/Supabase connection is explicitly not automated (verified instead directly against production). `tsconfig.json` excludes `src/**/*.test.ts` so test files never ship in the production build output.
 
 ## Signal Thresholds
 
@@ -337,6 +344,7 @@ Do not commit .env.local, .secrets, or API tokens. A full git-history audit conf
 - GET /api/feed-health (cycle health, odds freshness, fixture coverage diagnostic)
 - GET /api/market-maker/confirmations (band-breach cross-check against each signal's own severity)
 - GET /api/steam-moves (sustained same-direction tick-sequence detection)
+- GET /api/signal-correlation (cross-match signal cluster detection)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)
