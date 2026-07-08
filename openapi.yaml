@@ -913,6 +913,54 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /api/market-maker/confirmations:
+    get:
+      summary: Market Maker double-confirmation cross-check
+      description: >
+        For each stored signal, computes what the Market Maker would have
+        quoted using the snapshot from before the move, then reports whether
+        the move's actual post-move odds broke through that old quote's bid
+        for the signal's side - a genuinely independent corroboration
+        signal, not a restatement of the same fieldPressureScore that
+        already feeds both the quote and the signal's own momentum score.
+        Signals whose previous snapshot has aged out of the shared
+        800-entry cache are silently skipped.
+      responses:
+        '200':
+          description: Band-breach results for every computable signal, plus an aggregate summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        signalId: { type: string }
+                        matchId: { type: string }
+                        match: { type: string }
+                        side: { type: string }
+                        severity: { type: string }
+                        oddsBefore: { type: number }
+                        oddsAfter: { type: number }
+                        previousBandBid: { type: number }
+                        previousBandAsk: { type: number }
+                        bandBreached: { type: boolean }
+                      required: [signalId, matchId, match, side, severity, oddsBefore, oddsAfter, previousBandBid, previousBandAsk, bandBreached]
+                  summary:
+                    type: object
+                    properties:
+                      totalChecked: { type: number }
+                      confirmedCount: { type: number }
+                      unconfirmedCount: { type: number }
+                      confirmationRatePct: { type: number }
+                    required: [totalChecked, confirmedCount, unconfirmedCount, confirmationRatePct]
+                required: [data, summary]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /api/onchain/validate-stat:
     get:
       summary: Real on-chain Merkle proof validation (Solana mainnet)
