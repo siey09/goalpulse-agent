@@ -26,6 +26,7 @@ import type { BandBreachResult } from "./logic/marketConfirmation";
 import { detectSteamMove } from "./logic/steamDetection";
 import type { SteamMove } from "./logic/steamDetection";
 import { findSignalClusters, CORRELATION_WINDOW_MS } from "./logic/signalCorrelation";
+import { summarizeSignalTypePerformance } from "./logic/signalPerformance";
 import { parseArchiveFilters, parsePageParam, parsePageSizeParam } from "./logic/paginationParams";
 import { getArchivedSignals } from "./services/archive";
 import { config } from "./config";
@@ -498,6 +499,19 @@ app.get("/api/signal-correlation", (_req, res) => {
     summary: {
       signalsScanned: store.signals.length,
       clustersDetected: clusters.length,
+    },
+  });
+});
+
+app.get("/api/signal-performance", async (_req, res) => {
+  const result = await getArchivedSignals({ event: "settled" }, { page: 1, pageSize: 500 });
+  const performance = summarizeSignalTypePerformance(result.data);
+
+  res.json({
+    data: performance,
+    summary: {
+      settledSignalsScanned: result.data.length,
+      signalTypesReported: performance.length,
     },
   });
 });
