@@ -96,11 +96,14 @@ signal engine → React dashboard.
   `oddsSnapshots` capped 800, `signals` capped 100, `agentRuns` capped 50);
   settlement logic (`evaluatePendingSignalsForFinishedMatches`) lives here
 - `logic/` — pure, independently-testable modules: `signalEngine.ts`,
-  `marketMaker.ts`, `arena.ts`, `scoresContextFreshness.ts`
+  `marketMaker.ts`, `arena.ts`, `scoresContextFreshness.ts`,
+  `councilDissent.ts`, `feedHealth.ts`, `marketConfirmation.ts`,
+  `paginationParams.ts`, `steamDetection.ts`
 - `services/` — external integrations: `txlineClient.ts` (the real TxLINE
   API client), `txlineStream.ts` (push-stream monitor), `onchainValidation.ts`
   (Solana), `alerts.ts` (Discord), `persistence.ts` (Supabase snapshot
-  recovery), `archive.ts` (new — Supabase permanent archive)
+  recovery), `archive.ts` (Supabase permanent archive, read + write)
+- `middleware/` — `apiKeyAuth.ts`, `rateLimiters.ts`
 
 **Confirmed fact about the odds feed (2026-07-08, via TxLINE's official
 docs at txline.txodds.com/documentation/odds/overview):** TxLINE's odds
@@ -110,7 +113,6 @@ reaching this API. `evidence.bookmaker` is effectively a single consensus
 value, **not** genuine multi-bookmaker data. Any future feature idea
 premised on "compare multiple books/lines" needs to account for this —
 don't re-investigate, this is settled.
-- `middleware/` — `apiKeyAuth.ts`, `rateLimiters.ts`
 
 **Frontend** (`apps/web/src/`, React/TypeScript/Vite/Tailwind): `App.tsx` plus
 `components/` — `SignalIntelligencePanel`, `MarketMakerPanel`, `ArenaPanel`
