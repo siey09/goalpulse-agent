@@ -18,13 +18,17 @@ merge to `main` → push → clean up worktree.
 ✅ Done: #1 archive read endpoint, #2 Outcome Audit dissent detail, #3 feed
 health monitoring, #4 Market Maker double-confirmation cross-check, #5
 steam move detection, #6 signal correlation — all merged and pushed to
-`main` (132 tests, 21 routes).
+`main`.
 
-🔄 In Progress: none — ready to start #7.
+🔄 In Progress: #7 composite confidence score. Implementation complete in
+worktree `.claude/worktrees/composite-confidence-score` (branch
+`worktree-composite-confidence-score`), all 6 plan tasks done and
+committed, 147/147 tests passing, clean build, openapi valid. Awaiting
+user's review of the end-of-task check-in before merge to `main` + push +
+worktree cleanup.
 
-📋 Next Steps: #7 composite confidence scoring, #8 Arena third strategy, #9
-retroactive backtesting, #10 real-time push assessment (do last, biggest
-lift).
+📋 Next Steps: #8 Arena third strategy, #9 retroactive backtesting, #10
+real-time push assessment (do last, biggest lift).
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
