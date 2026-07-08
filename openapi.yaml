@@ -1082,6 +1082,54 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /api/signal-correlation/patterns:
+    get:
+      summary: Pattern-matched cross-match signal correlation clusters
+      description: >
+        Stricter than GET /api/signal-correlation: only reports a cluster
+        when the same pattern (side + severity + market type) repeats
+        across 2 or more distinct matches within the same 5-minute
+        session-window, rather than any signals firing close together
+        regardless of what they say. signalType is not part of the
+        pattern key - it is already a deterministic function of severity.
+      responses:
+        '200':
+          description: Currently detected pattern-matched clusters, plus a scan summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        side: { type: string, enum: [home, away] }
+                        severity: { type: string, enum: [HIGH, MEDIUM, LOW] }
+                        market: { type: string, enum: ['1x2', totals] }
+                        matchIds:
+                          type: array
+                          items: { type: string }
+                        matchCount: { type: number }
+                        signalCount: { type: number }
+                        windowStart: { type: string, format: date-time }
+                        windowEnd: { type: string, format: date-time }
+                        spanMs: { type: number }
+                        signalIds:
+                          type: array
+                          items: { type: string }
+                      required: [side, severity, market, matchIds, matchCount, signalCount, windowStart, windowEnd, spanMs, signalIds]
+                  summary:
+                    type: object
+                    properties:
+                      signalsScanned: { type: number }
+                      patternClustersDetected: { type: number }
+                    required: [signalsScanned, patternClustersDetected]
+                required: [data, summary]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /api/signal-performance:
     get:
       summary: Historical hit-rate per signal type

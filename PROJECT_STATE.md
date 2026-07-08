@@ -339,6 +339,26 @@ vote replay). Backend-only, no dashboard panel. Spec:
 `docs/superpowers/specs/2026-07-08-arena-archive-backtest-design.md`,
 plan: `docs/superpowers/plans/2026-07-08-arena-archive-backtest.md`.
 
+**13. Pattern-matched signal correlation** (`logic/signalCorrelation.ts`'s
+`findPatternMatchedClusters`, `GET /api/signal-correlation/patterns`) —
+a stricter companion to the existing time-proximity-only signal
+correlation (item 6): only reports a cluster when the *same* pattern
+(`side`, `severity`, market via the existing `isTotalsSignal` classifier)
+repeats across 2+ distinct matches within the same 5-minute window.
+`signalType` is excluded from the pattern key since it's already a
+deterministic function of `severity`. Confirmed against real production
+data before designing this that a homogeneity filter bolted onto the
+existing clusters would rarely fire (real clusters mix severities/markets
+freely), so this partitions by pattern key first, then reuses the same
+session-windowing algorithm independently per partition — that algorithm
+was extracted from `findSignalClusters` into a shared, generic
+`sessionWindowGroups` helper, regression-tested to confirm zero behavior
+change to the existing feature. Route nested under
+`/api/signal-correlation/patterns`, distinct from the base endpoint's
+response shape. Backend-only, no dashboard panel. Spec:
+`docs/superpowers/specs/2026-07-09-pattern-matched-signal-correlation-design.md`,
+plan: `docs/superpowers/plans/2026-07-09-pattern-matched-signal-correlation.md`.
+
 ## Bugs found and fixed
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
@@ -420,7 +440,7 @@ live endpoint behavior, don't assume a push is live.
 
 ## Testing
 
-**166 tests across 18 files**, all passing, `npm run test` from `apps/api/`:
+**174 tests across 18 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/backtest.test.ts`,
 `logic/councilDissent.test.ts`, `logic/feedHealth.test.ts`,
 `logic/marketConfirmation.test.ts`, `logic/marketMaker.test.ts`,
@@ -436,13 +456,14 @@ TxLINE/Supabase connection is explicitly *not* automated (this environment
 has no real credentials for either) — verified instead by the user directly
 against production.
 
-**23 backend routes total**, all documented in `openapi.yaml` (validate with
+**24 backend routes total**, all documented in `openapi.yaml` (validate with
 `npx @redocly/cli lint openapi.yaml`): `/health`, `/api/matches`,
 `/api/signals`, `/api/stats`, `/api/pnl`, `/api/agent-runs`,
 `/api/odds-history`, `/api/recent-results`, `/api/market-maker`,
 `/api/arena`, `/api/arena/backtest`, `/api/archive`, `/api/feed-health`,
 `/api/market-maker/confirmations`, `/api/steam-moves`,
-`/api/signal-correlation`, `/api/signal-performance`,
+`/api/signal-correlation`, `/api/signal-correlation/patterns`,
+`/api/signal-performance`,
 `/api/replay/backtest`, `/api/onchain/validate-stat`,
 `/api/live/odds-stream`, `/api/live/replay-stream`, `/api/docs`,
 `POST /api/agent/run-once`.

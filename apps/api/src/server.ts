@@ -25,7 +25,11 @@ import { assessBandBreach, summarizeBandBreaches } from "./logic/marketConfirmat
 import type { BandBreachResult } from "./logic/marketConfirmation";
 import { detectSteamMove } from "./logic/steamDetection";
 import type { SteamMove } from "./logic/steamDetection";
-import { findSignalClusters, CORRELATION_WINDOW_MS } from "./logic/signalCorrelation";
+import {
+  findPatternMatchedClusters,
+  findSignalClusters,
+  CORRELATION_WINDOW_MS,
+} from "./logic/signalCorrelation";
 import { summarizeSignalTypePerformance } from "./logic/signalPerformance";
 import { computeBacktestScoreboards } from "./logic/backtest";
 import { parseArchiveFilters, parsePageParam, parsePageSizeParam } from "./logic/paginationParams";
@@ -502,6 +506,18 @@ app.get("/api/signal-correlation", (_req, res) => {
     summary: {
       signalsScanned: store.signals.length,
       clustersDetected: clusters.length,
+    },
+  });
+});
+
+app.get("/api/signal-correlation/patterns", (_req, res) => {
+  const clusters = findPatternMatchedClusters(store.signals, CORRELATION_WINDOW_MS);
+
+  res.json({
+    data: clusters,
+    summary: {
+      signalsScanned: store.signals.length,
+      patternClustersDetected: clusters.length,
     },
   });
 });
