@@ -20,11 +20,13 @@ health monitoring — all merged and pushed to `main`.
 
 🔄 In Progress: #4 Market Maker double-confirmation cross-check. Spec + plan
 on `main`. Worktree at `.claude/worktrees/market-maker-confirmation` (branch
-`worktree-market-maker-confirmation`), merged with `main`. Plan Task 1 done
-(`logic/marketConfirmation.ts` + tests, committed). Next: plan Task 2 (wire
-`GET /api/market-maker/confirmations` into `server.ts`). If worktree is
-gone, recreate via `EnterWorktree` then `git merge main` inside it first
-(every worktree this session branches from stale `origin/main`).
+`worktree-market-maker-confirmation`), merged with `main`. Plan Tasks 1-2
+done (`logic/marketConfirmation.ts` + tests, `GET
+/api/market-maker/confirmations` wired and manually verified — 119/119
+tests passing). Next: plan Task 3 (`openapi.yaml` docs), then Task 4 (final
+docs update: test count 119, route count 19). If worktree is gone, recreate
+via `EnterWorktree` then `git merge main` inside it first (every worktree
+this session branches from stale `origin/main`).
 
 📋 Next Steps: #5 steam/consensus move detection, #6 cross-match signal
 correlation, #7 composite confidence scoring, #8 Arena third strategy, #9
