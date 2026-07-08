@@ -131,6 +131,10 @@ The session's first actual frontend feature — everything else was backend-only
 
 A stricter companion to the existing cross-match signal correlation (item 6): `GET /api/signal-correlation/patterns` only reports a cluster when the *same* pattern — direction (`side`), `severity`, and market type (1x2 vs. totals) — repeats across 2 or more distinct matches within the same 5-minute window, rather than any signals firing close together regardless of what they say. Confirmed directly against production data before designing this: the existing correlation feature's real clusters mix severities and markets freely, so a homogeneity filter bolted onto it would rarely fire — this instead partitions signals by pattern key first, then reuses the exact same session-windowing algorithm independently within each partition. That windowing algorithm was extracted out of the original `findSignalClusters` into a shared, generic helper (`sessionWindowGroups`) so both features stay in sync rather than duplicating the same ~15-line loop — regression-tested to confirm the extraction changed zero existing behavior before the new logic was added on top of it.
 
+### 14. Signal Performance Dashboard Panel
+
+The historical hit-rate data from `GET /api/signal-performance` (item 7) had zero dashboard visibility until now — one of several capabilities this session built that existed only as backend routes. `apps/web/src/components/SignalPerformancePanel.tsx` surfaces it directly: one card per signal type, sorted by settled count, color-coded by an accuracy threshold. Confirmed against real production data before shipping: WATCH 88% (52 settled), MOMENTUM_SHIFT 87% (23 settled), SHARP_MOVE only 33% (27 settled) — left fully visible as an honest track record rather than only surfacing favorable numbers.
+
 ## Bugs Found and Fixed During Live Verification
 
 **Bug 1 — Undocumented StatusId 100.** While verifying production against real matches, the agent could not close out signals for a finished match (Colombia vs Ghana stayed `"live"` at minute 90). Investigation of the raw TxLINE Scores feed showed a `game_finalised` action carrying `StatusId: 100`, a status code not documented in the official TXODDS Scores Product API doc (v1.0, which only lists StatusId 1-18). The status mapping in `txlineClient.ts` was updated to treat `StatusId 100` as `finished`, redeployed, and reverified live: the match correctly flipped to `finished` and both pending signals were immediately evaluated as `correct`, confirmed by the 100% accuracy result above.
@@ -243,7 +247,7 @@ GoalPulse uses:
 - Steam move detection: sustained same-direction tick-sequence pressure, distinct from single-pair compression
 - Signal correlation: detects cross-match signal clusters within a short time window
 - Composite confidence score (0-100) on every signal, blending magnitude, field pressure, and freshness tightness
-- Historical hit-rate per signal type from the permanent archive
+- Historical hit-rate per signal type from the permanent archive, now visible on the dashboard's Signal Performance panel
 - 174 automated unit tests
 
 ## Outcome Audit Layer

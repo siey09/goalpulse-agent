@@ -32,13 +32,18 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: none — Pattern-matched signal correlation (item 13)
-merged and pushed to `main` (174 tests, 24 routes). Signal Archive
-dashboard panel is still **not yet visually verified in a browser** (no
-browser automation tool was available this session) — recommend a quick
-visual check when convenient.
+🔄 In Progress: Signal Performance dashboard panel (item 14) —
+implementation complete in worktree
+`.claude/worktrees/signal-performance-panel` (branch
+`worktree-signal-performance-panel`), both plan tasks done and committed,
+clean build. Item 10 (real-time push via txlineStream.ts) was assessed
+and recommended against — see spec doc. Awaiting user's review before
+merge + push + worktree cleanup. Signal Archive dashboard panel is
+separately still **not yet visually verified in a browser** (no browser
+automation tool was available this session) — recommend a quick visual
+check when convenient, alongside this new panel.
 
-📋 Next Steps: none queued. Await further direction from the user.
+📋 Next Steps: none further queued after this merges. Await direction.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -353,6 +358,23 @@ change to the existing feature. Route nested under
 response shape. Backend-only, no dashboard panel. Spec:
 `docs/superpowers/specs/2026-07-09-pattern-matched-signal-correlation-design.md`,
 plan: `docs/superpowers/plans/2026-07-09-pattern-matched-signal-correlation.md`.
+
+**14. Signal Performance dashboard panel**
+(`apps/web/src/components/SignalPerformancePanel.tsx`) — surfaces
+`GET /api/signal-performance` (item 7), which had zero dashboard
+visibility until now. Built directly on the user's own judgment call
+("do your best, win this") after the real-time-push track (item 10)
+assessed as a firm no-go before the deadline (see
+`docs/superpowers/specs/2026-07-09-txlinestream-extension-assessment.md`):
+of everything built this session with no UI, historical accuracy per
+signal type is the single most persuasive "this system has a real track
+record" evidence, so it's the one surfaced first. One card per signal
+type, sorted by settled count, color-coded by accuracy threshold.
+Confirmed against real production data: WATCH 88% (52 settled),
+MOMENTUM_SHIFT 87% (23 settled), SHARP_MOVE only 33% (27 settled) — left
+fully visible, not cherry-picked. Spec:
+`docs/superpowers/specs/2026-07-09-signal-performance-panel-design.md`,
+plan: `docs/superpowers/plans/2026-07-09-signal-performance-panel.md`.
 
 ## Bugs found and fixed
 

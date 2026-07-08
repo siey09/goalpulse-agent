@@ -98,7 +98,7 @@ Six further features make GoalPulse deployable, not just demoable, all on free t
 - Steam move detection: sustained same-direction tick-sequence pressure, distinct from single-pair compression
 - Signal correlation: detects cross-match signal clusters within a short time window
 - Composite confidence score (0-100) on every signal, blending magnitude, field pressure, and freshness tightness
-- Historical hit-rate per signal type from the permanent archive
+- Historical hit-rate per signal type from the permanent archive, now visible on the dashboard's Signal Performance panel
 - Retroactive Arena backtest (Momentum Follower + Kelly Criterion) against the full archived signal history
 - Pattern-matched signal correlation: same side/severity/market repeating across matches
 - 174 automated unit tests
