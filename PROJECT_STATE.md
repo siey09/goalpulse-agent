@@ -32,20 +32,21 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: none. Investigated the Signal Performance panel's
-SHARP_MOVE 33%/WATCH 88%/MOMENTUM_SHIFT 87% figures per user request — no
-bug found; all three numbers are currently ~one match's outcome (see "Open
-questions" below for the full finding and recommendation: don't patch
-`getSeverity()` yet). Resuming backend feature depth per user's explicit
-process note: this session should not decide to build more UI unprompted
-— ask first. **Neither the Signal Archive nor Signal Performance panel has
-been visually verified in a browser yet** (no browser automation tool
+🔄 In Progress: Signal-performance match-diversity metrics (item 15) —
+implementation complete in worktree
+`.claude/worktrees/signal-performance-match-diversity` (branch
+`worktree-signal-performance-match-diversity`), both plan tasks done and
+committed, 176/176 tests passing, clean build, openapi valid. Directly
+motivated by the SHARP_MOVE investigation (see "Open questions" below).
+Awaiting user's review before merge + push + worktree cleanup. **Neither
+the Signal Archive nor Signal Performance dashboard panel has been
+visually verified in a browser yet** (no browser automation tool
 available this session) — recommend a quick visual check of both when
 convenient.
 
-📋 Next Steps: `match_archive` table (deliberately deferred item) or
-another backend-depth idea, per user's direction — to be scoped via the
-usual brainstorm → spec → plan pipeline before building.
+📋 Next Steps: none further queued after this merges — `match_archive`
+table remains available if the user wants it, but was not chosen this
+round.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
