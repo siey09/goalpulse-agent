@@ -14,6 +14,13 @@ import { computeMarketMakerQuote } from "./logic/marketMaker";
 import { computeArenaScoreboards, isTotalsSignal } from "./logic/arena";
 import { computeDissent, summarizeDissent } from "./logic/councilDissent";
 import type { CouncilVoteEntry } from "./logic/councilDissent";
+import {
+  assessCycleHealth,
+  assessFixtureCoverage,
+  assessOddsFreshness,
+  computeFeedHealthStatus,
+  ODDS_STALE_THRESHOLD_MS,
+} from "./logic/feedHealth";
 import { parseArchiveFilters, parsePageParam, parsePageSizeParam } from "./logic/paginationParams";
 import { getArchivedSignals } from "./services/archive";
 import { config } from "./config";
@@ -393,6 +400,29 @@ app.get("/api/archive", async (req, res) => {
   const result = await getArchivedSignals(filters, { page, pageSize });
 
   res.json(result);
+});
+
+app.get("/api/feed-health", (_req, res) => {
+  const now = Date.now();
+
+  const cycleHealth = assessCycleHealth(store.agentRuns, now, config.agentIntervalMs);
+  const oddsFreshness = assessOddsFreshness(
+    store.matches,
+    store.oddsSnapshots,
+    now,
+    ODDS_STALE_THRESHOLD_MS
+  );
+  const fixtureCoverage = assessFixtureCoverage(store.agentRuns);
+  const status = computeFeedHealthStatus(cycleHealth, oddsFreshness, fixtureCoverage);
+
+  res.json({
+    data: {
+      status,
+      cycleHealth,
+      oddsFreshness,
+      fixtureCoverage,
+    },
+  });
 });
 
 const replayBacktestSnapshots: OddsSnapshot[] = [
