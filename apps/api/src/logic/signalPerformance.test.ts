@@ -60,6 +60,8 @@ describe("summarizeSignalTypePerformance", () => {
         correctCount: 2,
         incorrectCount: 1,
         accuracyPct: 67,
+        distinctMatchCount: 1,
+        largestMatchSharePct: 100,
       },
     ]);
   });
@@ -74,8 +76,24 @@ describe("summarizeSignalTypePerformance", () => {
     const result = summarizeSignalTypePerformance(entries);
 
     expect(result).toEqual([
-      { signalType: "SHARP_MOVE", settledCount: 1, correctCount: 1, incorrectCount: 0, accuracyPct: 100 },
-      { signalType: "MOMENTUM_SHIFT", settledCount: 2, correctCount: 1, incorrectCount: 1, accuracyPct: 50 },
+      {
+        signalType: "SHARP_MOVE",
+        settledCount: 1,
+        correctCount: 1,
+        incorrectCount: 0,
+        accuracyPct: 100,
+        distinctMatchCount: 1,
+        largestMatchSharePct: 100,
+      },
+      {
+        signalType: "MOMENTUM_SHIFT",
+        settledCount: 2,
+        correctCount: 1,
+        incorrectCount: 1,
+        accuracyPct: 50,
+        distinctMatchCount: 1,
+        largestMatchSharePct: 100,
+      },
     ]);
   });
 
@@ -88,7 +106,50 @@ describe("summarizeSignalTypePerformance", () => {
     const result = summarizeSignalTypePerformance(entries);
 
     expect(result).toEqual([
-      { signalType: "SHARP_MOVE", settledCount: 1, correctCount: 1, incorrectCount: 0, accuracyPct: 100 },
+      {
+        signalType: "SHARP_MOVE",
+        settledCount: 1,
+        correctCount: 1,
+        incorrectCount: 0,
+        accuracyPct: 100,
+        distinctMatchCount: 1,
+        largestMatchSharePct: 100,
+      },
     ]);
+  });
+
+  it("reports distinctMatchCount and largestMatchSharePct across two evenly-split matches", () => {
+    const entries = [
+      makeEntry({ signalId: "s0", signalType: "SHARP_MOVE", matchId: "match-1", resultStatus: "correct" }),
+      makeEntry({ signalId: "s1", signalType: "SHARP_MOVE", matchId: "match-2", resultStatus: "incorrect" }),
+    ];
+
+    const result = summarizeSignalTypePerformance(entries);
+
+    expect(result[0].distinctMatchCount).toBe(2);
+    expect(result[0].largestMatchSharePct).toBe(50);
+  });
+
+  it("collapses totals sub-markets of the same fixture into one match for diversity counting", () => {
+    const entries = [
+      makeEntry({ signalId: "s0", signalType: "SHARP_MOVE", matchId: "18202783", resultStatus: "correct" }),
+      makeEntry({
+        signalId: "s1",
+        signalType: "SHARP_MOVE",
+        matchId: "18202783-totals-0.75",
+        resultStatus: "incorrect",
+      }),
+      makeEntry({
+        signalId: "s2",
+        signalType: "SHARP_MOVE",
+        matchId: "18202783-totals-1.5",
+        resultStatus: "incorrect",
+      }),
+    ];
+
+    const result = summarizeSignalTypePerformance(entries);
+
+    expect(result[0].distinctMatchCount).toBe(1);
+    expect(result[0].largestMatchSharePct).toBe(100);
   });
 });

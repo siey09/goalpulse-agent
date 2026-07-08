@@ -6,6 +6,19 @@ export interface SignalTypePerformance {
   correctCount: number;
   incorrectCount: number;
   accuracyPct: number;
+  distinctMatchCount: number;
+  largestMatchSharePct: number;
+}
+
+/**
+ * A totals signal's matchId is `<fixtureId>-totals-<line>` (see
+ * isTotalsMatchId in archive.ts) - six different total-goals lines for
+ * the same real match would otherwise count as six "distinct matches,"
+ * understating concentration exactly as found during the SHARP_MOVE
+ * accuracy investigation (2026-07-09).
+ */
+function baseMatchId(matchId: string): string {
+  return matchId.split("-totals-")[0];
 }
 
 /**
@@ -31,12 +44,22 @@ export function summarizeSignalTypePerformance(
     const correctCount = group.filter((entry) => entry.resultStatus === "correct").length;
     const incorrectCount = group.length - correctCount;
 
+    const matchCounts = new Map<string, number>();
+    for (const entry of group) {
+      const base = baseMatchId(entry.matchId);
+      matchCounts.set(base, (matchCounts.get(base) ?? 0) + 1);
+    }
+
+    const largestMatchCount = Math.max(...matchCounts.values());
+
     return {
       signalType,
       settledCount: group.length,
       correctCount,
       incorrectCount,
       accuracyPct: Math.round((correctCount / group.length) * 100),
+      distinctMatchCount: matchCounts.size,
+      largestMatchSharePct: Math.round((largestMatchCount / group.length) * 100),
     };
   });
 }
