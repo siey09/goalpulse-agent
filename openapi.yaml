@@ -451,21 +451,27 @@ components:
     ArenaPosition:
       type: object
       properties:
-        agentId: { type: string, enum: [momentum_follower, contrarian] }
+        agentId: { type: string, enum: [momentum_follower, contrarian, kelly_criterion] }
         signalId: { type: string }
         matchId: { type: string }
         match: { type: string }
         side: { type: string, enum: [home, away] }
         target: { type: string }
         oddsTaken: { type: number }
+        stakeUnits:
+          type: number
+          description: >
+            Units staked on this position. Momentum Follower and Contrarian
+            always stake exactly 1 (flat staking); Kelly Criterion varies
+            this per position based on confidenceScore.
         resultStatus: { type: string, enum: [pending, correct, incorrect] }
         profitUnits: { type: number }
-      required: [agentId, signalId, matchId, match, side, target, oddsTaken, resultStatus, profitUnits]
+      required: [agentId, signalId, matchId, match, side, target, oddsTaken, stakeUnits, resultStatus, profitUnits]
 
     ArenaScoreboard:
       type: object
       properties:
-        agentId: { type: string, enum: [momentum_follower, contrarian] }
+        agentId: { type: string, enum: [momentum_follower, contrarian, kelly_criterion] }
         label: { type: string }
         positions:
           type: array
@@ -724,18 +730,22 @@ paths:
     get:
       summary: Agent vs Agent Arena head-to-head scoreboard
       description: >
-        Two agents reading the same live 1X2 signal feed with opposite
+        Three agents reading the same live 1X2 signal feed with different
         strategies: Momentum Follower takes every signal at face value;
         Contrarian fades signals that fire without real field support
         (fieldPressureScore < 22 at signal-creation time - a live, causal
-        check, never the final match result). Over/Under totals signals do
-        not participate. Settlement is tamper-evident (SHA-256 hash of both
-        ledgers) and on-chain-verified (see proof.verifiableStat, checkable
-        via GET /api/onchain/validate-stat) - this does not mean funds move
-        or a smart contract executes; GoalPulse remains analytics only.
+        check, never the final match result); Kelly Criterion takes the
+        same side as the signal but sizes its stake using the Kelly
+        formula, deriving an implied edge from confidenceScore blended
+        with the market's own implied probability. Over/Under totals
+        signals do not participate in any of the three. Settlement is
+        tamper-evident (SHA-256 hash of all three ledgers) and
+        on-chain-verified (see proof.verifiableStat, checkable via GET
+        /api/onchain/validate-stat) - this does not mean funds move or a
+        smart contract executes; GoalPulse remains analytics only.
       responses:
         '200':
-          description: Both agents' scoreboards and the tamper-evident proof.
+          description: All three agents' scoreboards and the tamper-evident proof.
           content:
             application/json:
               schema:
@@ -748,9 +758,11 @@ paths:
                         $ref: '#/components/schemas/ArenaScoreboard'
                       contrarian:
                         $ref: '#/components/schemas/ArenaScoreboard'
+                      kellyCriterion:
+                        $ref: '#/components/schemas/ArenaScoreboard'
                       proof:
                         $ref: '#/components/schemas/ArenaProof'
-                    required: [momentumFollower, contrarian, proof]
+                    required: [momentumFollower, contrarian, kellyCriterion, proof]
                 required: [data]
         '429':
           $ref: '#/components/responses/RateLimited'
