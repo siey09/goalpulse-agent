@@ -19,20 +19,14 @@ merge to `main` → push → clean up worktree.
 health monitoring, #4 Market Maker double-confirmation cross-check — all
 merged and pushed to `main` (119 tests, 19 routes).
 
-🔄 In Progress: #5 steam/consensus move detection is **blocked**. Found
-during brainstorming: every odds tick carries an `evidence.bookmaker` field,
-but nothing in `txlineClient.ts` ever groups/compares by bookmaker — unclear
-whether this TxLINE integration genuinely surfaces multiple distinct
-bookmakers per fixture (real cross-book steam detection possible) or
-`Bookmaker` is effectively a constant single value here (would need
-redefining "steam" as multi-tick sustained same-direction movement within
-one book instead). User is checking the live API/docs to confirm before
-design proceeds — do not resume #5's brainstorm until they report back.
+🔄 In Progress: #5 steam/consensus move detection — unblocked, confirmed
+single-consensus-feed (see Architecture section above), redefined as
+multi-tick sustained same-direction movement within the feed (not
+cross-book). Brainstorming starting now.
 
 📋 Next Steps: #6 cross-match signal correlation, #7 composite confidence
 scoring, #8 Arena third strategy, #9 retroactive backtesting, #10 real-time
-push assessment (do last, biggest lift). #5 resumes once bookmaker
-diversity is confirmed one way or the other.
+push assessment (do last, biggest lift).
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -105,6 +99,15 @@ signal engine → React dashboard.
   API client), `txlineStream.ts` (push-stream monitor), `onchainValidation.ts`
   (Solana), `alerts.ts` (Discord), `persistence.ts` (Supabase snapshot
   recovery), `archive.ts` (new — Supabase permanent archive)
+
+**Confirmed fact about the odds feed (2026-07-08, via TxLINE's official
+docs at txline.txodds.com/documentation/odds/overview):** TxLINE's odds
+feed is powered by "Stable Price," TxODDS' consensus pricing engine — lines
+across global operators are already blended into a single price before
+reaching this API. `evidence.bookmaker` is effectively a single consensus
+value, **not** genuine multi-bookmaker data. Any future feature idea
+premised on "compare multiple books/lines" needs to account for this —
+don't re-investigate, this is settled.
 - `middleware/` — `apiKeyAuth.ts`, `rateLimiters.ts`
 
 **Frontend** (`apps/web/src/`, React/TypeScript/Vite/Tailwind): `App.tsx` plus
