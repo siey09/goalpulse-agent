@@ -5,6 +5,7 @@ import { ArenaPanel } from "./components/ArenaPanel";
 import { ResultsSettlementPanel } from "./components/ResultsSettlementPanel";
 import { VerifiedCaseStudiesPanel } from "./components/VerifiedCaseStudiesPanel";
 import { WhatChangedPanel } from "./components/WhatChangedPanel";
+import { SignalArchivePanel } from "./components/SignalArchivePanel";
 import {
   Activity,
   BarChart3,
@@ -2318,6 +2319,8 @@ function App() {
           <ArenaPanel />
 
           <ResultsSettlementPanel />
+
+          <SignalArchivePanel />
 
           <VerifiedCaseStudiesPanel />
 
