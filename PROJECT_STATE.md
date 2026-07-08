@@ -17,13 +17,17 @@ merge to `main` → push → clean up worktree.
 
 ✅ Done: #1 archive read endpoint, #2 Outcome Audit dissent detail, #3 feed
 health monitoring, #4 Market Maker double-confirmation cross-check, #5
-steam move detection — all merged and pushed to `main` (126 tests, 20 routes).
+steam move detection — all merged and pushed to `main`.
 
-🔄 In Progress: none — ready to start #6.
+🔄 In Progress: #6 signal correlation. Implementation complete in worktree
+`.claude/worktrees/signal-correlation` (branch `worktree-signal-correlation`),
+all 4 plan tasks done and committed, 132/132 tests passing, clean build,
+openapi valid. Awaiting user's review of the end-of-task check-in before
+merge to `main` + push + worktree cleanup.
 
-📋 Next Steps: #6 cross-match signal correlation, #7 composite confidence
-scoring, #8 Arena third strategy, #9 retroactive backtesting, #10 real-time
-push assessment (do last, biggest lift).
+📋 Next Steps: #7 composite confidence scoring, #8 Arena third strategy, #9
+retroactive backtesting, #10 real-time push assessment (do last, biggest
+lift).
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
