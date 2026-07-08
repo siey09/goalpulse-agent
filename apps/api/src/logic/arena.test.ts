@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildContrarianPosition,
+  buildKellyCriterionPosition,
   buildMomentumFollowerPosition,
+  calculateKellyStake,
   computeArenaScoreboards,
   isMarketOnlyMove,
   isTotalsSignal,
@@ -112,6 +114,7 @@ describe("buildMomentumFollowerPosition", () => {
     expect(position?.side).toBe("home");
     expect(position?.target).toBe("Team A");
     expect(position?.oddsTaken).toBe(1.5);
+    expect(position?.stakeUnits).toBe(1);
     // profit = 1 * (1.5 - 1) = 0.5
     expect(position?.profitUnits).toBe(0.5);
   });
@@ -173,6 +176,7 @@ describe("buildContrarianPosition", () => {
     expect(position?.side).toBe("away");
     expect(position?.target).toBe("Team B");
     expect(position?.oddsTaken).toBe(6.0);
+    expect(position?.stakeUnits).toBe(1);
   });
 
   it("loses when the original signal's side won", () => {
@@ -265,7 +269,7 @@ describe("computeArenaScoreboards", () => {
       }),
     ];
 
-    const { momentumFollower, contrarian } = computeArenaScoreboards(
+    const { momentumFollower, contrarian, kellyCriterion } = computeArenaScoreboards(
       signals,
       matchesById,
       snapshotsById
@@ -284,5 +288,146 @@ describe("computeArenaScoreboards", () => {
     expect(contrarian.settledCount).toBe(1);
     expect(contrarian.netUnits).toBe(-1);
     expect(contrarian.winRatePct).toBe(0);
+
+    // Kelly: neither signal in this fixture sets confidenceScore, so both
+    // are treated as zero edge and stake nothing - regression check that
+    // a real pre-item-7 signal shape doesn't crash Kelly, it just sits out.
+    expect(kellyCriterion.settledCount).toBe(2);
+    expect(kellyCriterion.netUnits).toBe(0);
+    expect(kellyCriterion.roiPercent).toBe(0);
+  });
+
+  it("computes Kelly's variable stakes correctly across multiple signals", () => {
+    const signals: AgentSignal[] = [
+      makeSignal({
+        id: "signal-a",
+        resultStatus: "correct",
+        oddsAfter: 2.0,
+        confidenceScore: 100,
+      }),
+      makeSignal({
+        id: "signal-b",
+        resultStatus: "incorrect",
+        oddsAfter: 2.0,
+        confidenceScore: 50,
+      }),
+    ];
+
+    const { kellyCriterion } = computeArenaScoreboards(
+      signals,
+      new Map(),
+      new Map()
+    );
+
+    expect(kellyCriterion.positions[0].stakeUnits).toBe(2.0);
+    expect(kellyCriterion.positions[1].stakeUnits).toBe(1.5);
+    expect(kellyCriterion.settledCount).toBe(2);
+    expect(kellyCriterion.correctCount).toBe(1);
+    expect(kellyCriterion.incorrectCount).toBe(1);
+    // netUnits = 2.0 + (-1.5) = 0.5; totalStaked = 2.0 + 1.5 = 3.5
+    // roiPercent = round((0.5 / 3.5) * 100) = 14.29
+    expect(kellyCriterion.netUnits).toBe(0.5);
+    expect(kellyCriterion.roiPercent).toBe(14.29);
+    expect(kellyCriterion.winRatePct).toBe(50);
+  });
+});
+
+describe("calculateKellyStake", () => {
+  it("stakes exactly 0 when confidenceScore is 0, regardless of odds", () => {
+    // Zero assumed edge means our probability estimate equals the market's
+    // own implied probability exactly, which algebraically zeroes the
+    // Kelly fraction for any odds value - not a coincidence of one
+    // particular odds price.
+    expect(calculateKellyStake(3.0, 0)).toBe(0);
+  });
+
+  it("computes an uncapped stake for a mid-range confidence", () => {
+    // odds=2.0: marketImpliedProb=0.5, edgeFraction=0.5*0.15=0.075,
+    // ourProbEstimate=0.575, b=1.0, q=0.425.
+    // kellyFraction = (1*0.575 - 0.425) / 1 = 0.15 (below the 0.2 cap).
+    // stake = 0.15 * 10 = 1.5.
+    expect(calculateKellyStake(2.0, 50)).toBe(1.5);
+  });
+
+  it("caps the stake at MAX_STAKE_FRACTION for a high-confidence, short-odds signal", () => {
+    // odds=2.0, confidenceScore=100: ourProbEstimate=0.65, b=1.0, q=0.35.
+    // kellyFraction raw = (0.65-0.35)/1 = 0.30, capped at 0.2.
+    // stake = 0.2 * 10 = 2.0.
+    expect(calculateKellyStake(2.0, 100)).toBe(2.0);
+  });
+
+  it("stakes 0 for odds at or below 1, avoiding division by zero", () => {
+    expect(calculateKellyStake(1.0, 100)).toBe(0);
+  });
+});
+
+describe("buildKellyCriterionPosition", () => {
+  it("returns null for totals signals", () => {
+    const signal = makeSignal({ target: "Over 3.5", confidenceScore: 100 });
+
+    expect(buildKellyCriterionPosition(signal)).toBeNull();
+  });
+
+  it("takes the signal's own side/target/odds, sized by confidenceScore", () => {
+    const signal = makeSignal({
+      side: "home",
+      target: "Team A",
+      oddsAfter: 2.0,
+      confidenceScore: 100,
+      resultStatus: "correct",
+    });
+
+    const position = buildKellyCriterionPosition(signal);
+
+    expect(position).not.toBeNull();
+    expect(position?.side).toBe("home");
+    expect(position?.target).toBe("Team A");
+    expect(position?.oddsTaken).toBe(2.0);
+    expect(position?.stakeUnits).toBe(2.0);
+    // profit = 2.0 * (2.0 - 1) = 2.0
+    expect(position?.profitUnits).toBe(2.0);
+  });
+
+  it("settles a loss proportional to the computed stake for an incorrect signal", () => {
+    const signal = makeSignal({
+      oddsAfter: 2.0,
+      confidenceScore: 100,
+      resultStatus: "incorrect",
+    });
+
+    const position = buildKellyCriterionPosition(signal);
+
+    expect(position?.stakeUnits).toBe(2.0);
+    expect(position?.profitUnits).toBe(-2.0);
+  });
+
+  it("settles 0 profit for a pending signal", () => {
+    const signal = makeSignal({ confidenceScore: 100, resultStatus: "pending" });
+
+    const position = buildKellyCriterionPosition(signal);
+
+    expect(position?.profitUnits).toBe(0);
+  });
+
+  it("treats a missing confidenceScore as zero edge, staking nothing", () => {
+    const signal = makeSignal({ confidenceScore: undefined, resultStatus: "pending" });
+
+    const position = buildKellyCriterionPosition(signal);
+
+    expect(position?.stakeUnits).toBe(0);
+    expect(position?.profitUnits).toBe(0);
+  });
+
+  it("settles a zero-stake incorrect position to +0, not -0", () => {
+    const signal = makeSignal({
+      oddsAfter: 2.0,
+      confidenceScore: 0,
+      resultStatus: "incorrect",
+    });
+
+    const position = buildKellyCriterionPosition(signal);
+
+    expect(position?.stakeUnits).toBe(0);
+    expect(position?.profitUnits).toBe(0);
   });
 });

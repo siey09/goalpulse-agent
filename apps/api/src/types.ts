@@ -175,7 +175,7 @@ export interface MarketMakerQuote {
   computedAt: string;
 }
 
-export type ArenaAgentId = "momentum_follower" | "contrarian";
+export type ArenaAgentId = "momentum_follower" | "contrarian" | "kelly_criterion";
 
 export interface ArenaPosition {
   agentId: ArenaAgentId;
@@ -185,6 +185,7 @@ export interface ArenaPosition {
   side: TeamSide;
   target: string;
   oddsTaken: number;
+  stakeUnits: number;
   resultStatus: "pending" | "correct" | "incorrect";
   profitUnits: number;
 }
