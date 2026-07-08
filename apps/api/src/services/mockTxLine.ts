@@ -45,6 +45,7 @@ function roundOdds(value: number) {
 export function fetchSimulatedTxLineFeed(): {
   matches: Match[];
   snapshots: OddsSnapshot[];
+  rawFixtureCount: number;
 } {
   tick += 1;
 
@@ -121,5 +122,6 @@ export function fetchSimulatedTxLineFeed(): {
   return {
     matches: updatedMatches,
     snapshots,
+    rawFixtureCount: updatedMatches.length,
   };
 }

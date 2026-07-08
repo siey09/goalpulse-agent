@@ -5,6 +5,7 @@ import { isScoresContextFresh, SCORES_CONTEXT_TOLERANCE_MS } from "../logic/scor
 export interface TxLineFeedResult {
   matches: Match[];
   snapshots: OddsSnapshot[];
+  rawFixtureCount?: number;
 }
 
 interface TxLineFixture {
@@ -1318,6 +1319,7 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
   return {
     matches,
     snapshots: normalizedSnapshots,
+    rawFixtureCount: fixtures.length,
   };
 }
 

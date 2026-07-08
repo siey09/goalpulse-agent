@@ -105,6 +105,7 @@ const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.cr
       matchesProcessed: feed.matches.length,
       snapshotsCreated,
       signalsCreated,
+      rawFixtureCount: feed.rawFixtureCount ?? feed.matches.length,
       status: "success",
       message: `Processed ${feed.matches.length} matches, stored ${snapshotsCreated} new snapshot(s), generated ${signalsCreated} signal(s), and evaluated ${evaluatedSignals} pending signal(s).`,
     };
@@ -121,6 +122,7 @@ const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.cr
       matchesProcessed: 0,
       snapshotsCreated: 0,
       signalsCreated: 0,
+      rawFixtureCount: 0,
       status: "error",
       message: error instanceof Error ? error.message : "Unknown agent error",
     };

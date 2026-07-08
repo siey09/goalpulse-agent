@@ -155,6 +155,7 @@ export interface AgentRun {
   matchesProcessed: number;
   snapshotsCreated: number;
   signalsCreated: number;
+  rawFixtureCount: number;
   status: "success" | "error";
   message: string;
 }
