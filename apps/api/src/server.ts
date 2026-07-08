@@ -27,6 +27,7 @@ import { detectSteamMove } from "./logic/steamDetection";
 import type { SteamMove } from "./logic/steamDetection";
 import { findSignalClusters, CORRELATION_WINDOW_MS } from "./logic/signalCorrelation";
 import { summarizeSignalTypePerformance } from "./logic/signalPerformance";
+import { computeBacktestScoreboards } from "./logic/backtest";
 import { parseArchiveFilters, parsePageParam, parsePageSizeParam } from "./logic/paginationParams";
 import { getArchivedSignals } from "./services/archive";
 import { config } from "./config";
@@ -515,6 +516,21 @@ app.get("/api/signal-performance", async (_req, res) => {
       settledSignalsScanned: result.data.length,
       signalTypesReported: performance.length,
     },
+  });
+});
+
+app.get("/api/arena/backtest", async (_req, res) => {
+  const result = await getArchivedSignals({ event: "settled" }, { page: 1, pageSize: 500 });
+  const archivedSignals = result.data.map((entry) => entry.signalData);
+  const { momentumFollower, kellyCriterion } = computeBacktestScoreboards(archivedSignals);
+
+  res.json({
+    data: { momentumFollower, kellyCriterion },
+    summary: {
+      archivedSignalsScanned: result.data.length,
+    },
+    note:
+      "Contrarian is excluded from backtesting: the archive stores each signal's own resultStatus but not the match's final score, so Contrarian's opposing-side outcome (win vs. draw) can't be reconstructed from archived data alone.",
   });
 });
 
