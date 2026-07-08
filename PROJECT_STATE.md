@@ -1,0 +1,284 @@
+# GoalPulse Agent — Project State
+
+**As of:** 2026-07-08. This document is a session-handoff brief — read this
+first, before `README.md`/`TECHNICAL_DOCS.md`/`SUBMISSION_NOTES.md` (which are
+judge/submission-facing and slightly stale relative to this file as of this
+writing — they predate the three features this document adds in the
+"This Session" section below). If a claim here ever conflicts with the actual
+code, trust the code and treat this file as needing an update, not the other
+way around.
+
+## What this project is
+
+GoalPulse Agent is an autonomous TxLINE-powered sports market intelligence
+system, built for a hackathon (TxLINE Trading Tools and Agents track,
+**deadline 2026-07-19**). It watches live World Cup odds, detects meaningful
+odds movement, enriches it with real match-event context, audits signals
+against real final scores, and — as of this session — runs two synthetic
+"trading agents" head-to-head on the same signal feed. It is explicitly
+analytics-only: no wagers placed, no funds moved, no smart contract executed.
+
+**Tournament context that matters for prioritization:** the World Cup is
+narrowing sharply — only ~4 matches remain after 2026-07-11, then the final
+on 2026-07-19. This is *why* the signal-archive feature (see below) exists:
+without it, most already-generated signals would simply disappear as matches
+and their odds history age out of in-memory caps and TxLINE's own live
+rotation window, before the tournament even ends.
+
+## Deployment (current, live)
+
+- **Frontend:** Vercel — https://goalpulse-agent.vercel.app
+- **Backend:** Render — https://goalpulse-agent-api.onrender.com
+- **Health check:** https://goalpulse-agent-api.onrender.com/health
+- **Repository:** https://github.com/siey09/goalpulse-agent, `main` branch
+- **Git state right now:** `main` and `origin/main` are both at `26857ad`,
+  fully in sync. No open feature branches, no uncommitted changes (one
+  harmless untracked file, `docs/superpowers/plans/2026-07-07-agent-arena-plan.md`
+  — a duplicate of already-committed content, safe to ignore or delete).
+- **Render auto-deploy has historically lagged behind pushes to `main` by
+  a nontrivial amount** — confirmed directly in production during this
+  session (see "Deploy-lag incident" below). Don't assume a push is live
+  within minutes; verify against real endpoint behavior if it matters.
+
+### Environment variables (Render backend)
+
+- `PORT`, `AGENT_INTERVAL_MS=5000`, `USE_SIMULATED_FEED=false`
+- `TXLINE_API_BASE_URL`, `TXLINE_API_TOKEN`/`TXLINE_API_KEY`
+- `SOLANA_WALLET_SECRET_KEY` (enables real on-chain validation), `SOLANA_RPC_URL` (optional)
+- `DISCORD_WEBHOOK_URL` (optional, HIGH-severity alerts)
+- `API_ACCESS_KEY` (protects `POST /api/agent/run-once`, fail-closed)
+- `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (enable both Supabase features below, fail-open if unset)
+- `VITE_API_BASE_URL` (frontend build-time, points at the Render backend)
+
+Never commit `.env.local`/`.secrets`/real tokens — audited clean historically,
+only `.env.example` (template, no real values) is tracked.
+
+## Architecture
+
+Four layers: TxLINE feed ingestion → TXODDS Scores enrichment → autonomous
+signal engine → React dashboard.
+
+**Backend** (`apps/api/src/`, Node/Express/TypeScript):
+- `server.ts` — all routes, agent-cycle scheduling
+- `agent.ts` — `processAgentCycle()`, the autonomous loop; now also exports
+  two small pure helpers (`findPendingSignals`, `findNewlySettledSignals`)
+  added this session
+- `store.ts` — in-memory state (`matches`, `recentFinishedMatches`,
+  `oddsSnapshots` capped 800, `signals` capped 100, `agentRuns` capped 50);
+  settlement logic (`evaluatePendingSignalsForFinishedMatches`) lives here
+- `logic/` — pure, independently-testable modules: `signalEngine.ts`,
+  `marketMaker.ts`, `arena.ts`, `scoresContextFreshness.ts`
+- `services/` — external integrations: `txlineClient.ts` (the real TxLINE
+  API client), `txlineStream.ts` (push-stream monitor), `onchainValidation.ts`
+  (Solana), `alerts.ts` (Discord), `persistence.ts` (Supabase snapshot
+  recovery), `archive.ts` (new — Supabase permanent archive)
+- `middleware/` — `apiKeyAuth.ts`, `rateLimiters.ts`
+
+**Frontend** (`apps/web/src/`, React/TypeScript/Vite/Tailwind): `App.tsx` plus
+`components/` — `SignalIntelligencePanel`, `MarketMakerPanel`, `ArenaPanel`
+(new), `ResultsSettlementPanel`, `VerifiedCaseStudiesPanel`.
+
+**Docs conventions this session established** (follow these for any future
+work): `docs/superpowers/specs/YYYY-MM-DD-<feature>-design.md` (brainstormed,
+approved design specs) and `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`
+(TDD-style implementation plans, executed via subagent-driven-development —
+fresh subagent per task, task-level review, then a final whole-branch review
+before merge). Every feature this session followed this exact pipeline:
+brainstorm → spec → plan → implement (per task, reviewed) → final review →
+merge to `main` → push. Continue this pattern for new work.
+
+## Complete feature list
+
+### Pre-existing (before this session — see `TECHNICAL_DOCS.md`/`SUBMISSION_NOTES.md` for full detail)
+
+- Core signal engine: odds-compression detection (LOW ≥4%, MEDIUM ≥8%, HIGH
+  ≥15%), TXODDS Scores enrichment, field pressure index, reliability filter
+- Final-score audit / settlement (`evaluatePendingSignalsForFinishedMatches`)
+- Outcome Audit Layer: 3-agent council vote, Smart Money Trap classification,
+  SHA-256 proof hash (`GET /api/replay/backtest`)
+- Live TxLINE push-stream monitor (`txlineStream.ts`, additive to polling)
+- Real on-chain Merkle proof validation against TxLINE's `Txoracle` Solana
+  mainnet program (`GET /api/onchain/validate-stat`)
+- Simulated P&L / trading performance (`GET /api/pnl`)
+- Autonomous Discord alerts on HIGH severity signals
+- Multi-market signal detection (1X2 + Over/Under totals, isolated matchIds)
+- API key auth on the one mutating endpoint (`POST /api/agent/run-once`)
+- Rate limiting (1200/min general, 10/min on the mutating endpoint;
+  `trust proxy = 2`, confirmed against real Render/Cloudflare log evidence)
+- Interactive OpenAPI/Swagger docs (`GET /api/docs`)
+- **Supabase periodic-snapshot persistence** (`persistence.ts`,
+  `store_snapshots` table) — single-row, upserted every 30s, restart
+  recovery only, verified surviving a real Render restart
+- Pinned case studies (frontend-bundled, restart-immune) + small-sample
+  disclaimer
+- In-Play Market Maker (`marketMaker.ts`, `GET /api/market-maker`,
+  `MarketMakerPanel.tsx`)
+
+### This session (2026-07-07 to 2026-07-08)
+
+**1. Agent vs Agent Arena** (`logic/arena.ts`, `GET /api/arena`,
+`ArenaPanel.tsx`) — two synthetic agents on the same live 1X2 signal feed
+with genuinely opposite strategies: **Momentum Follower** takes every signal
+at face value; **Contrarian** fades signals with `fieldPressureScore < 22`
+(the exact threshold `SignalIntelligencePanel.tsx` already uses for
+"MARKET-ONLY MOVE"), taking the opposite side at the real quoted price from
+the original snapshot. Settlement is tamper-evident (SHA-256 hash of both
+ledgers) and points at the existing `GET /api/onchain/validate-stat` for
+on-chain verification of the underlying data — zero new on-chain code.
+Computed live at request time; never touches `agent.ts`/`store.ts`'s mutable
+state. Spec: `docs/superpowers/specs/2026-07-07-agent-arena-design.md`.
+
+**2. Scores-context freshness fix** (real bug, found and fixed) — see "Bugs
+found and fixed" below. Spec (with two amendment rounds documenting the full
+investigation):
+`docs/superpowers/specs/2026-07-07-scores-context-freshness-design.md`.
+
+**3. Insert-only signal archive** (`services/archive.ts`, `signal_archive`
+Supabase table) — appends a permanent, growing record of every signal at
+creation and again at settlement, immune to the in-memory store's caps and
+to TxLINE's live-rotation window. Deliberately separate from and never
+touching the existing `persistence.ts`/`store_snapshots` (that one is a
+restart-recovery snapshot; this one is a permanent history). Write-only for
+now — no read endpoint, no dashboard panel yet (deliberately deferred, see
+"What's left"). Spec: `docs/superpowers/specs/2026-07-07-signal-archive-design.md`.
+
+## Bugs found and fixed
+
+**Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
+undocumented `StatusId 100` not treated as finished; snapshot-ordering during
+historical backfill (fixed in `agent.ts` by requiring the previous snapshot
+be strictly chronologically older); live fixture coverage silently dropped
+past a 14-fixture-per-cycle cap (fixed by prioritizing in-play fixtures
+before slicing).
+
+**This session — the scores-context freshness bug**, found while verifying
+an Arena result (Momentum Follower 18/18 losses on USA vs Belgium — that
+specific result was itself confirmed *correct*, a real 1-4 loss, not a bug).
+The real bug: `fetchTxLineFeed()`/`fetchRecentTxLineResults()` in
+`txlineClient.ts` each compute one `scoresContext` per poll and stamped it
+onto *every* odds tick selected that poll — including ticks
+`selectMovementOdds` reaches far back in history for (it always includes the
+single strongest historical compression pair, regardless of recency). A
+reached-back tick could get labeled with a `scoresContext` reflecting a much
+later real-world moment, mislabeling `fieldPressureScore` — which is exactly
+what Arena's Contrarian agent uses to decide whether to fade a signal.
+
+Fixed in two layers, both merged:
+- **Snapshot layer** (`services/txlineClient.ts`, three call sites): new
+  `isScoresContextFresh(tickTs, contextTimestamp, toleranceMs)` in a shared
+  `logic/scoresContextFreshness.ts` module, gating with a 60-second
+  tolerance derived from real gap measurements on the actual anomalous
+  match (clean separation: normal jitter maxed at 48.2s, the two real
+  violations were 128.9s/302.0s).
+- **Signal layer** (`logic/signalEngine.ts`): a *second*, narrower gap found
+  during Task 1's own final review — `buildSignalFromSnapshots`'s
+  `current.evidence?.scoresContext ?? previous.evidence?.scoresContext`
+  fallback was never checked against `current`'s own timestamp (only ever
+  implicitly against `previous`'s, and only became reachable at all once the
+  snapshot-layer fix started producing `undefined` values). Fixed by gating
+  the fallback the same way, checked against `current`'s timestamp.
+- **Post-merge fix**: the branch's own final review found `signal_data` in
+  the *archive* feature (see below) stored a live object reference, not a
+  point-in-time snapshot — fixed with a shallow copy at archive-call time.
+
+**Deploy-lag incident (not a code bug, but worth knowing):** while verifying
+this fix's live behavior, found the exact original bug still reproducing in
+production *after* the fix had been merged and pushed — traced precisely by
+scanning the full current signal store: every one of ~99 signals spanning an
+11.5-hour window showed the old violation pattern, then the single most
+recent signal showed correct gating. Render's deploy had simply lagged well
+behind the git push. Resolved itself; no code issue. Lesson: verify against
+live endpoint behavior, don't assume a push is live.
+
+## Known limitations (documented, deliberately not fixed)
+
+- **Stale-finished-match repolling.** A long-finished fixture (confirmed:
+  USA vs Belgium, hours after full-time) can still be included in
+  `fetchTxLineFeed()`'s live poll rotation. `selectMovementOdds` re-selects
+  the single strongest historical compression pair on every poll regardless
+  of recency, so the same old tick keeps getting resubmitted. Once its
+  `OddsSnapshot` ages out of the shared 800-entry cache and more than
+  `signalAlreadyExists`'s 6-hour dedup window has passed, a "new"
+  `AgentSignal` gets created for the exact same historical tick — with a
+  fresh `createdAt` and a freshly-fetched `scoresContext`. Not a bug in the
+  freshness fix (which correctly gates the mismatched context in this
+  scenario); it's a separate, pre-existing characteristic of the
+  live-polling/dedup design. Documented in
+  `docs/superpowers/specs/2026-07-07-scores-context-freshness-design.md`'s
+  Follow-ups. Worth fixing later (e.g., drop long-finished fixtures from the
+  live rotation, or tighten the dedup window) — not attempted this session.
+- **Signals that age out of the 100-cap before their match finishes never
+  get a "settled" archive row.** Pre-existing store behavior (not introduced
+  by the archive feature) — the archive will contain some permanently
+  `"pending"`/unverified entries. Don't assume every archived signal has a
+  matching settled counterpart.
+- **Future-call-site risk in the freshness gate.** The gate lives at the
+  three `txlineClient.ts` call sites, not inside
+  `normalizeOddsSnapshot`/`normalizeTotalsSnapshot` themselves — a
+  hypothetical fourth call site that skips the gate would silently reopen
+  the original bug. Flagged by the final reviewer as the one thing worth
+  hardening if this area is touched again; not urgent.
+- **Exact 60,000ms freshness boundary is untested** (only 59s/61s either
+  side are tested). Low-risk, noted twice by reviewers, never acted on.
+
+## Testing
+
+**66 tests across 9 files**, all passing, `npm run test` from `apps/api/`:
+`agent.test.ts`, `logic/arena.test.ts`, `logic/marketMaker.test.ts`,
+`logic/scoresContextFreshness.test.ts`, `logic/signalEngine.test.ts`,
+`middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`,
+`services/persistence.test.ts`, `store.test.ts`. Build: `npm run build`
+(`tsc`), currently clean. Convention: pure logic gets unit tests with plain
+objects/mocks; anything requiring a real TxLINE/Supabase connection is
+explicitly *not* automated (this environment has no real credentials for
+either) — verified instead by the user directly against production.
+
+**16 backend routes total**, all documented in `openapi.yaml` (validate with
+`npx @redocly/cli lint openapi.yaml`): `/health`, `/api/matches`,
+`/api/signals`, `/api/stats`, `/api/pnl`, `/api/agent-runs`,
+`/api/odds-history`, `/api/recent-results`, `/api/market-maker`,
+`/api/arena`, `/api/replay/backtest`, `/api/onchain/validate-stat`,
+`/api/live/odds-stream`, `/api/live/replay-stream`, `/api/docs`,
+`POST /api/agent/run-once`.
+
+## What still needs doing
+
+1. **Run the `signal_archive` SQL** (`apps/api/supabase-schema.sql`, second
+   `create table` statement) against the existing Supabase project — no new
+   project needed, `SUPABASE_URL`/`SUPABASE_SERVICE_KEY` are already
+   configured on Render for the existing persistence feature. Then verify
+   growth by browsing the table directly (no read endpoint exists yet).
+2. **Signal archive exposure** (deliberately deferred, not started): a
+   read-only `GET /api/archive` endpoint and a "Full Tournament Archive"
+   dashboard panel, once real data has accumulated for a few days.
+3. **`match_archive` table** (deliberately deferred): match-level permanent
+   history, if ever needed beyond what's already captured inside each
+   archived signal's `signal_data` blob.
+4. **Stale-finished-match repolling fix** (see "Known limitations" above) —
+   not urgent, but a real, identified gap worth closing before the July 19
+   final if there's time.
+5. **Cosmetic:** two orphaned worktree directories under
+   `.claude/worktrees/` (from the Arena and signal-archive features) hit a
+   transient Windows file-lock during cleanup and were left on disk,
+   deregistered from git but not physically deleted. Harmless; delete
+   manually whenever convenient.
+6. No new Supabase project, no new hosting — both features this session
+   reuse the existing free-tier Supabase project and Render/Vercel
+   deployments already configured.
+
+## If you're a fresh session picking this up
+
+- Read this file first. Then, if you need deeper pre-session detail, read
+  `TECHNICAL_DOCS.md` (architecture/feature detail) and `SUBMISSION_NOTES.md`
+  (narrative/verification evidence) — both otherwise complete and accurate,
+  just missing this session's three additions (now covered above).
+- For any new feature or bugfix: use `/brainstorm` first (design spec →
+  implementation plan → subagent-driven-development), matching this
+  session's established pattern exactly. Don't skip straight to code.
+- For any investigation of "why does this data look wrong," check the live
+  production API directly (`https://goalpulse-agent-api.onrender.com`)
+  before assuming the deployed code matches what's in `main` — deploys have
+  lagged before (see "Deploy-lag incident").
+- This repo is a shared, live, deployed system — treat any git branch/worktree
+  operations with the same care already established this session (isolate in
+  a worktree, never force-push, confirm before destructive actions).
