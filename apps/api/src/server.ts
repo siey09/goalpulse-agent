@@ -12,6 +12,8 @@ import { loadSnapshot, saveSnapshot } from "./services/persistence";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { computeMarketMakerQuote } from "./logic/marketMaker";
 import { computeArenaScoreboards, isTotalsSignal } from "./logic/arena";
+import { parseArchiveFilters, parsePageParam, parsePageSizeParam } from "./logic/paginationParams";
+import { getArchivedSignals } from "./services/archive";
 import { config } from "./config";
 import { requireApiKey } from "./middleware/apiKeyAuth";
 import { generalApiLimiter, runOnceLimiter } from "./middleware/rateLimiters";
@@ -379,6 +381,16 @@ app.get("/api/arena", (_req, res) => {
       },
     },
   });
+});
+
+app.get("/api/archive", async (req, res) => {
+  const page = parsePageParam(req.query.page);
+  const pageSize = parsePageSizeParam(req.query.pageSize);
+  const filters = parseArchiveFilters(req.query as Record<string, unknown>);
+
+  const result = await getArchivedSignals(filters, { page, pageSize });
+
+  res.json(result);
 });
 
 const replayBacktestSnapshots: OddsSnapshot[] = [
