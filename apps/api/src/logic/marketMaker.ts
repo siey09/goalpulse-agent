@@ -2,7 +2,7 @@ import { Match, MarketMakerQuote, OddsSnapshot } from "../types";
 
 const BASE_SPREAD_PCT = 2;
 const MAX_PRESSURE_CONTRIBUTION_PCT = 6;
-const FIELD_PRESSURE_MAX = 45;
+export const FIELD_PRESSURE_MAX = 45;
 const UNRELIABLE_PENALTY_PCT = 4;
 const SUSPENDED_PENALTY_PCT = 8;
 const MIN_SPREAD_PCT = 2;

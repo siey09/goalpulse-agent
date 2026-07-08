@@ -18,3 +18,26 @@ export function isScoresContextFresh(
   const contextMs = new Date(contextTimestamp).getTime();
   return Math.abs(tickTs - contextMs) <= toleranceMs;
 }
+
+/**
+ * Graduated companion to isScoresContextFresh: instead of a pass/fail
+ * gate, reports how tight the gap actually is on a 0-100 scale - a
+ * context that arrived instantly scores 100, one right at the tolerance
+ * boundary scores 0. Used by signalEngine.ts's confidenceScore, which
+ * cares about degree of freshness, not just whether the existing gate was
+ * passed. Only returns null when the inputs themselves are missing
+ * (matching isScoresContextFresh's own null-condition precedent) - any
+ * computable gap, however large, clamps to 0 rather than going negative.
+ */
+export function computeFreshnessTightness(
+  tickTs: number | undefined,
+  contextTimestamp: string | undefined,
+  toleranceMs: number
+): number | null {
+  if (!tickTs || !contextTimestamp) return null;
+
+  const contextMs = new Date(contextTimestamp).getTime();
+  const gapMs = Math.abs(tickTs - contextMs);
+
+  return Math.max(0, 100 - (gapMs / toleranceMs) * 100);
+}

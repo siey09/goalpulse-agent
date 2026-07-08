@@ -143,6 +143,15 @@ components:
         oddsAfter: { type: number }
         oddsChangePct: { type: number }
         momentumScore: { type: number }
+        confidenceScore:
+          type: number
+          description: >
+            Composite measure (0-100) blending compression magnitude, field
+            pressure, and scoresContext freshness tightness. Weights
+            renormalize among only the available components when
+            scoresContext is absent, so missing context never lowers the
+            score. Separate from severity/momentumScore, which are
+            unchanged.
         explanation: { type: string }
         createdAt: { type: string, format: date-time }
         resultStatus: { type: string, enum: [pending, correct, incorrect] }
@@ -1057,6 +1066,45 @@ paths:
                       signalsScanned: { type: number }
                       clustersDetected: { type: number }
                     required: [signalsScanned, clustersDetected]
+                required: [data, summary]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/signal-performance:
+    get:
+      summary: Historical hit-rate per signal type
+      description: >
+        Reads the most recent 500 settled entries from the insert-only
+        signal archive and reports accuracy per signal type
+        (SHARP_MOVE/WATCH/MOMENTUM_SHIFT/NO_ACTION). Fail-open: returns
+        200 with empty data if Supabase is unconfigured or unreachable,
+        inherited from the existing GET /api/archive endpoint's own
+        fail-open behavior.
+      responses:
+        '200':
+          description: Historical accuracy per signal type, plus a scan summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        signalType: { type: string }
+                        settledCount: { type: number }
+                        correctCount: { type: number }
+                        incorrectCount: { type: number }
+                        accuracyPct: { type: number }
+                      required: [signalType, settledCount, correctCount, incorrectCount, accuracyPct]
+                  summary:
+                    type: object
+                    properties:
+                      settledSignalsScanned: { type: number }
+                      signalTypesReported: { type: number }
+                    required: [settledSignalsScanned, signalTypesReported]
                 required: [data, summary]
         '429':
           $ref: '#/components/responses/RateLimited'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSignalFromSnapshots } from "./signalEngine";
+import { buildSignalFromSnapshots, calculateConfidenceScore } from "./signalEngine";
 import type { OddsSnapshot } from "../types";
 
 function makeSnapshot(overrides: Partial<OddsSnapshot> = {}): OddsSnapshot {
@@ -123,6 +123,70 @@ describe("buildSignalFromSnapshots", () => {
 
     expect(signal?.momentumScore).toBeGreaterThanOrEqual(0);
     expect(signal?.momentumScore).toBeLessThanOrEqual(100);
+  });
+
+  it("computes a fully-blended confidenceScore when scoresContext is attached", () => {
+    const previous = makeSnapshot({
+      homeOdds: 2.0,
+      awayOdds: 2.0,
+      createdAt: "2026-07-08T10:00:00.000Z",
+    });
+    const current = makeSnapshot({
+      homeOdds: 1.7,
+      awayOdds: 2.0,
+      createdAt: "2026-07-08T10:01:00.000Z",
+      evidence: {
+        source: "txline",
+        scoresContext: {
+          fieldPressureScore: 45,
+          timestamp: "2026-07-08T10:01:00.000Z",
+        },
+      },
+    });
+
+    const signal = buildSignalFromSnapshots(current, previous);
+
+    expect(signal).not.toBeNull();
+    expect(signal?.confidenceScore).toBe(100);
+  });
+
+  it("falls back to a magnitude-only confidenceScore when no scoresContext is attached", () => {
+    const previous = makeSnapshot({
+      homeOdds: 2.0,
+      awayOdds: 2.0,
+      createdAt: "2026-07-08T10:00:00.000Z",
+    });
+    const current = makeSnapshot({
+      homeOdds: 1.85,
+      awayOdds: 2.0,
+      createdAt: "2026-07-08T10:01:00.000Z",
+    });
+
+    const signal = buildSignalFromSnapshots(current, previous);
+
+    expect(signal).not.toBeNull();
+    expect(signal?.confidenceScore).toBe(50);
+  });
+});
+
+describe("calculateConfidenceScore", () => {
+  it("falls back to the magnitude component alone when no scoresContext is present", () => {
+    // 7.5% is half of the 15% magnitude reference, so magnitudeScore is 50;
+    // with no scoresContext, weight renormalizes to the magnitude component
+    // alone, so the result is exactly 50, not dragged down by two missing
+    // components.
+    expect(calculateConfidenceScore(7.5, undefined, null)).toBe(50);
+  });
+
+  it("clamps the magnitude component at 100 for a move beyond the 15% reference", () => {
+    expect(calculateConfidenceScore(25, undefined, null)).toBe(100);
+  });
+
+  it("blends all three components with their configured weights", () => {
+    // magnitude=15% -> 100, fieldPressureScore=0 -> 0, freshnessTightness=0.
+    // Expected: 100*0.5 + 0*0.3 + 0*0.2 = 50.
+    const scoresContext = { fieldPressureScore: 0 };
+    expect(calculateConfidenceScore(15, scoresContext, 0)).toBe(50);
   });
 });
 
