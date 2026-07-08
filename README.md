@@ -80,7 +80,7 @@ Six further features make GoalPulse deployable, not just demoable, all on free t
 - Autonomous Discord alerts on HIGH severity signals
 - Replay mode for repeatable hackathon demos
 - Evidence chain with endpoints, fixture IDs, message IDs, bookmakers, and proof labels
-- Three-agent Council Vote and SHA-256 proof hash on every Outcome Audit run
+- Three-agent Council Vote and SHA-256 proof hash on every Outcome Audit run, with queryable dissenting-vote detail (per-signal and aggregate)
 - Smart Money Trap detection with reversal-risk classification
 - Server-Sent Events live streaming for real-time dashboard updates
 - Pinned, git-committed case studies immune to backend restarts
@@ -93,7 +93,7 @@ Six further features make GoalPulse deployable, not just demoable, all on free t
 - In-Play Market Maker with independent implied-probability quoting
 - Agent vs Agent Arena (Momentum Follower vs Contrarian, tamper-evident SHA-256 ledger hash)
 - Insert-only permanent signal archive to Supabase, readable via a paginated/filterable read endpoint
-- 87 automated unit tests
+- 95 automated unit tests
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer

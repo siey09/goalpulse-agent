@@ -152,6 +152,20 @@ error. No dashboard panel yet (deliberately deferred, see "What's left").
 Spec: `docs/superpowers/specs/2026-07-08-archive-read-endpoint-design.md`,
 plan: `docs/superpowers/plans/2026-07-08-archive-read-endpoint.md`.
 
+**5. Outcome Audit dissenting-vote detail** (`logic/councilDissent.ts`,
+`GET /api/replay/backtest`) — each `councilVotes[]` entry now includes
+`unanimous` (true only when all 3 agents approved — the only symmetric
+consensus state possible, since only the Movement Detector can literally
+vote "reject") and `dissentingAgents` (which agent(s) didn't approve). The
+response's `summary.councilDissent` aggregates this across the run:
+`unanimousSignals`, `dissentingSignals`, `dissentRatePct`,
+`dissentByAgent` (every agent's dissent count, including agents who never
+dissent, at 0). Backend-only (frontend's council panel still only renders
+`councilVotes[0]` — separate, pre-existing gap, not addressed). Covered by
+the same tamper-evident SHA-256 proof hash as the rest of the audit. Spec:
+`docs/superpowers/specs/2026-07-08-council-dissent-detail-design.md`, plan:
+`docs/superpowers/plans/2026-07-08-council-dissent-detail.md`.
+
 ## Bugs found and fixed
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
@@ -233,11 +247,12 @@ live endpoint behavior, don't assume a push is live.
 
 ## Testing
 
-**87 tests across 10 files**, all passing, `npm run test` from `apps/api/`:
-`agent.test.ts`, `logic/arena.test.ts`, `logic/marketMaker.test.ts`,
-`logic/paginationParams.test.ts`, `logic/scoresContextFreshness.test.ts`,
-`logic/signalEngine.test.ts`, `middleware/apiKeyAuth.test.ts`,
-`services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`.
+**95 tests across 11 files**, all passing, `npm run test` from `apps/api/`:
+`agent.test.ts`, `logic/arena.test.ts`, `logic/councilDissent.test.ts`,
+`logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`,
+`logic/scoresContextFreshness.test.ts`, `logic/signalEngine.test.ts`,
+`middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`,
+`services/persistence.test.ts`, `store.test.ts`.
 Build: `npm run build` (`tsc`), currently clean. Convention: pure logic gets
 unit tests with plain objects/mocks; anything requiring a real
 TxLINE/Supabase connection is explicitly *not* automated (this environment
