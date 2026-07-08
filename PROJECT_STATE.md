@@ -18,12 +18,17 @@ merge to `main` → push → clean up worktree.
 ✅ Done: #1 archive read endpoint, #2 Outcome Audit dissent detail, #3 feed
 health monitoring, #4 Market Maker double-confirmation cross-check, #5
 steam move detection, #6 signal correlation, #7 composite confidence score
-— all merged and pushed to `main` (147 tests, 22 routes).
+— all merged and pushed to `main`.
 
-🔄 In Progress: none — ready to start #8.
+🔄 In Progress: #8 Arena third strategy (Kelly Criterion). Implementation
+complete in worktree `.claude/worktrees/arena-kelly-criterion` (branch
+`worktree-arena-kelly-criterion`), all 6 plan tasks done and committed,
+158/158 tests passing, clean build, openapi valid. Awaiting user's review
+of the end-of-task check-in before merge to `main` + push + worktree
+cleanup.
 
-📋 Next Steps: #8 Arena third strategy, #9 retroactive backtesting, #10
-real-time push assessment (do last, biggest lift).
+📋 Next Steps: #9 retroactive backtesting, #10 real-time push assessment
+(do last, biggest lift).
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -274,6 +279,29 @@ archive entries, grouped by `signalType`. Backend-only, no dashboard
 panel. Spec: `docs/superpowers/specs/2026-07-08-composite-confidence-score-design.md`,
 plan: `docs/superpowers/plans/2026-07-08-composite-confidence-score.md`.
 
+**11. Arena third strategy: Kelly Criterion** (`logic/arena.ts`'s
+`calculateKellyStake`/`buildKellyCriterionPosition`, `GET /api/arena`) —
+Momentum Follower/Contrarian both stake a flat 1 unit, differing only in
+side, never sizing; Kelly takes the *same* side as the signal but varies
+its stake via the Kelly formula, a genuinely different mechanism (chosen
+over a "Sharp-Only" filter, which would've just been a filter on the same
+flat-staking mechanism). Since `confidenceScore` isn't a literal win
+probability, it scales an assumed edge over the market's own implied
+probability (`1/oddsTaken`), capped at `MAX_EDGE = 0.15`; the raw Kelly
+fraction is capped at `MAX_STAKE_FRACTION = 0.2` then scaled by
+`KELLY_BANKROLL_UNITS = 10`. At `confidenceScore = 0` the fraction is
+exactly 0 for any odds — an algebraic property, not an approximation.
+Required generalizing `ArenaPosition` with an explicit `stakeUnits` field
+across all three agents (`settleStake` replacing `settleUnit`) so
+`roiPercent` divides by the *sum of actual stakes*, not
+`settledCount * 1` — 100% behavior-preserving for the first two agents
+since their stake is always exactly 1. Found during design: negating a
+stake must be written as `0 - stakeUnits`, not `-stakeUnits`, so a
+legitimately-zero Kelly stake settles to `+0` not `-0`
+(`Object.is(-0, 0)` is `false`, which Vitest's `toBe()` uses). Backend-only,
+no dashboard panel. Spec: `docs/superpowers/specs/2026-07-08-arena-kelly-criterion-design.md`,
+plan: `docs/superpowers/plans/2026-07-08-arena-kelly-criterion.md`.
+
 ## Bugs found and fixed
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
@@ -355,7 +383,7 @@ live endpoint behavior, don't assume a push is live.
 
 ## Testing
 
-**147 tests across 16 files**, all passing, `npm run test` from `apps/api/`:
+**158 tests across 16 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/councilDissent.test.ts`,
 `logic/feedHealth.test.ts`, `logic/marketConfirmation.test.ts`,
 `logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`,
