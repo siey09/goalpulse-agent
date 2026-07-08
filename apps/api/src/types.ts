@@ -112,6 +112,42 @@ export interface AgentSignal {
   discordAlertStatus?: "sent" | "failed" | "not_configured";
 }
 
+export interface ArchiveFilters {
+  matchId?: string;
+  status?: "pending" | "correct" | "incorrect";
+  market?: "1x2" | "totals";
+  event?: "created" | "settled";
+}
+
+export interface ArchivePagination {
+  page: number;
+  pageSize: number;
+}
+
+export interface ArchiveEntry {
+  signalId: string;
+  event: "created" | "settled";
+  matchId: string;
+  side: TeamSide;
+  signalType: SignalType;
+  severity: Severity;
+  resultStatus: "pending" | "correct" | "incorrect";
+  momentumScore: number;
+  oddsChangePct: number;
+  archivedAt: string;
+  signalData: AgentSignal;
+}
+
+export interface ArchiveQueryResult {
+  data: ArchiveEntry[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages: number;
+  };
+}
+
 export interface AgentRun {
   id: string;
   startedAt: string;
