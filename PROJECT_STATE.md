@@ -166,6 +166,22 @@ the same tamper-evident SHA-256 proof hash as the rest of the audit. Spec:
 `docs/superpowers/specs/2026-07-08-council-dissent-detail-design.md`, plan:
 `docs/superpowers/plans/2026-07-08-council-dissent-detail.md`.
 
+**6. Feed health / data-quality monitoring** (`logic/feedHealth.ts`,
+`GET /api/feed-health`) — three independent checks, separate from
+match-odds signals and from `GET /health`'s liveness probe: **cycle
+health** (a gap over 3x `config.agentIntervalMs`, either right now or
+between two historical runs, is flagged), **odds freshness** (a live
+match's most recent odds snapshot going quiet for over 5 minutes — not the
+match's own `lastUpdated`, which can't actually go stale given how
+`store.matches` is wholesale-replaced every cycle), and **fixture
+coverage** (a new `AgentRun.rawFixtureCount` field compared against
+`matchesProcessed` detects when the existing 14-fixture-per-cycle cap
+silently dropped coverage). Status is `"down"` if the current cycle gap is
+exceeded, `"degraded"` if any historical missed cycle/stale match/coverage
+drop exists, `"healthy"` otherwise. Backend-only, no dashboard panel. Spec:
+`docs/superpowers/specs/2026-07-08-feed-health-monitoring-design.md`, plan:
+`docs/superpowers/plans/2026-07-08-feed-health-monitoring.md`.
+
 ## Bugs found and fixed
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
@@ -247,23 +263,23 @@ live endpoint behavior, don't assume a push is live.
 
 ## Testing
 
-**95 tests across 11 files**, all passing, `npm run test` from `apps/api/`:
+**113 tests across 12 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/councilDissent.test.ts`,
-`logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`,
-`logic/scoresContextFreshness.test.ts`, `logic/signalEngine.test.ts`,
-`middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`,
-`services/persistence.test.ts`, `store.test.ts`.
+`logic/feedHealth.test.ts`, `logic/marketMaker.test.ts`,
+`logic/paginationParams.test.ts`, `logic/scoresContextFreshness.test.ts`,
+`logic/signalEngine.test.ts`, `middleware/apiKeyAuth.test.ts`,
+`services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`.
 Build: `npm run build` (`tsc`), currently clean. Convention: pure logic gets
 unit tests with plain objects/mocks; anything requiring a real
 TxLINE/Supabase connection is explicitly *not* automated (this environment
 has no real credentials for either) — verified instead by the user directly
 against production.
 
-**17 backend routes total**, all documented in `openapi.yaml` (validate with
+**18 backend routes total**, all documented in `openapi.yaml` (validate with
 `npx @redocly/cli lint openapi.yaml`): `/health`, `/api/matches`,
 `/api/signals`, `/api/stats`, `/api/pnl`, `/api/agent-runs`,
 `/api/odds-history`, `/api/recent-results`, `/api/market-maker`,
-`/api/arena`, `/api/archive`, `/api/replay/backtest`,
+`/api/arena`, `/api/archive`, `/api/feed-health`, `/api/replay/backtest`,
 `/api/onchain/validate-stat`, `/api/live/odds-stream`,
 `/api/live/replay-stream`, `/api/docs`, `POST /api/agent/run-once`.
 

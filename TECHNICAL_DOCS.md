@@ -49,6 +49,7 @@ Important backend files:
 - apps/api/src/logic/marketMaker.ts (independent implied-probability quoting model)
 - apps/api/src/logic/arena.ts (Agent vs Agent Arena: Momentum Follower vs Contrarian)
 - apps/api/src/logic/scoresContextFreshness.ts (freshness gate for scoresContext vs. tick timestamp)
+- apps/api/src/logic/feedHealth.ts (cycle health, odds freshness, and fixture coverage diagnostics)
 - apps/api/src/agent.ts
 - apps/api/src/store.ts (in-memory state; recovered from Supabase on startup, see "Supabase Persistence" below)
 
@@ -195,6 +196,17 @@ Both settle to `correct`/`incorrect`/`pending` per position and report net units
 
 Known limitation: a signal that ages out of the in-memory store's 100-cap before its match finishes never gets a "settled" archive row (pre-existing store behavior, not introduced by this feature) — not every archived signal has a matching settled counterpart.
 
+## Feed Health / Data-Quality Monitoring
+
+`apps/api/src/logic/feedHealth.ts` (`GET /api/feed-health`) reports on feed degradation as its own concern, separate from match-odds signals and from `GET /health`'s fast liveness probe:
+
+- **Cycle health** (`assessCycleHealth`) — a gap, either since the last `AgentRun` or between two consecutive historical runs, counts as "missed" past 3x `config.agentIntervalMs`. Reports both the current gap state (`isCurrentGapExceeded`) and a historical count (`recentMissedCycles`) across all stored `agentRuns`.
+- **Odds freshness** (`assessOddsFreshness`) — for each match marked `"live"`, checks its most recent `OddsSnapshot.createdAt` against a fixed 5-minute threshold (`ODDS_STALE_THRESHOLD_MS`), not a multiple of the poll interval, since odds ticks don't arrive every cycle even when healthy. A `Match`'s own `lastUpdated` can't actually go stale while present in `store.matches` (it's wholesale-replaced and re-stamped every cycle), so this checks the odds snapshot instead. A live match with no odds snapshot at all is not flagged — nothing to compare against.
+- **Fixture coverage** (`assessFixtureCoverage`) — compares the new `AgentRun.rawFixtureCount` (the count TxLINE returned before the existing 14-fixture-per-cycle cap) against `matchesProcessed` (the post-cap count); a drop means live coverage was silently capped that cycle.
+- **Status** (`computeFeedHealthStatus`) — `"down"` if the current cycle gap is exceeded (overrides everything else); `"degraded"` if any historical missed cycle, stale live match, or coverage drop exists; `"healthy"` otherwise.
+
+Backend-only; no dashboard panel yet. Spec: `docs/superpowers/specs/2026-07-08-feed-health-monitoring-design.md`.
+
 ## Known Issues Fixed During Live Verification
 
 **Undocumented StatusId 100.** A `game_finalised` TxLINE Scores action was observed carrying `StatusId: 100`, a value not listed in the official TXODDS Scores Product API doc (v1.0, StatusId 1-18 only). The original `statusFromStatusId()` mapping in `txlineClient.ts` did not treat this as finished, so signals for completed matches stayed pending indefinitely. Fixed by adding `100` to the finished-status set.
@@ -259,7 +271,7 @@ Because the live `strategyAccuracy` number can look worse than the strategy's re
 
 ## Automated Test Coverage
 
-**95 tests across 11 files** (Vitest, `npm run test` from `apps/api/`): `agent.test.ts`, `logic/arena.test.ts`, `logic/councilDissent.test.ts`, `logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`, `logic/scoresContextFreshness.test.ts`, `logic/signalEngine.test.ts`, `middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`. Covers the deterministic core: severity classification at the exact 4%/8%/15% thresholds, correct side selection between home/away, multi-market `matchLabel` handling, momentum score clamping to 0-100, signal settlement for both the 1X2 market (home/away/draw) and the Over/Under totals market (including matchId-suffix resolution back to the base fixture), the API key middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian position logic, the scores-context freshness gate, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, and the Outcome Audit council's dissent computation/aggregation. Pure logic gets unit tests with plain objects/mocks; anything requiring a real TxLINE/Supabase connection is explicitly not automated (verified instead directly against production). `tsconfig.json` excludes `src/**/*.test.ts` so test files never ship in the production build output.
+**113 tests across 12 files** (Vitest, `npm run test` from `apps/api/`): `agent.test.ts`, `logic/arena.test.ts`, `logic/councilDissent.test.ts`, `logic/feedHealth.test.ts`, `logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`, `logic/scoresContextFreshness.test.ts`, `logic/signalEngine.test.ts`, `middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`. Covers the deterministic core: severity classification at the exact 4%/8%/15% thresholds, correct side selection between home/away, multi-market `matchLabel` handling, momentum score clamping to 0-100, signal settlement for both the 1X2 market (home/away/draw) and the Over/Under totals market (including matchId-suffix resolution back to the base fixture), the API key middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian position logic, the scores-context freshness gate, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, and the feed health module's cycle/odds/coverage checks and status derivation. Pure logic gets unit tests with plain objects/mocks; anything requiring a real TxLINE/Supabase connection is explicitly not automated (verified instead directly against production). `tsconfig.json` excludes `src/**/*.test.ts` so test files never ship in the production build output.
 
 ## Signal Thresholds
 
@@ -304,6 +316,7 @@ Do not commit .env.local, .secrets, or API tokens. A full git-history audit conf
 - GET /api/market-maker (independent implied-probability quotes, spread widens with field pressure/reliability)
 - GET /api/arena (Momentum Follower vs Contrarian scoreboards, SHA-256 tamper-evident ledger hash)
 - GET /api/archive (paginated, filterable read over the permanent signal archive)
+- GET /api/feed-health (cycle health, odds freshness, fixture coverage diagnostic)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)
