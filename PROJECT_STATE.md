@@ -27,9 +27,16 @@ push wouldn't visibly help; this session was explicitly backend-only, not
 frontend/UX; real remaining risk given the 2026-07-19 deadline). Assessment:
 `docs/superpowers/specs/2026-07-08-realtime-push-assessment.md`.
 
-**10-item feature queue is now complete.** No 🔄 In Progress.
+**10-item feature queue is complete.** New phase started 2026-07-08 per
+explicit user instruction: close out remaining setup work, then prioritize
+judge-facing demo completeness over further backend depth, given the
+July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-📋 Next Steps: none queued. Await further direction from the user.
+🔄 In Progress: Signal Archive dashboard panel (see "What still needs
+doing" #2 below) — brainstorming now.
+
+📋 Next Steps: implement the panel, then reassess remaining priorities
+(stale-finished-match repolling fix, worktree cleanup) against time left.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -432,16 +439,18 @@ against production.
 
 ## What still needs doing
 
-1. **Run the `signal_archive` SQL** (`apps/api/supabase-schema.sql`, second
-   `create table` statement) against the existing Supabase project — no new
-   project needed, `SUPABASE_URL`/`SUPABASE_SERVICE_KEY` are already
-   configured on Render for the existing persistence feature. Then verify
-   growth via the new `GET /api/archive` endpoint (or direct Supabase
-   browsing).
-2. **Signal archive dashboard panel** (deliberately deferred, not started):
-   `GET /api/archive` now exists and is queryable — only the "Full Tournament
-   Archive" frontend panel remains, once real data has accumulated for a few
-   days.
+1. ~~Run the `signal_archive` SQL against Supabase~~ **Already done** —
+   confirmed 2026-07-08 by querying production `GET /api/archive` directly:
+   247 real entries, spanning 2026-07-07T19:45Z through today, including
+   `confidenceScore` (a later-session field), proving the table has been
+   live and accumulating correctly since before this check. This "still
+   needs doing" note was stale.
+2. **Signal archive dashboard panel** — in progress now (2026-07-08),
+   following the brainstorm → spec → plan → implement pipeline.
+   Prioritized ahead of further backend features per explicit user
+   instruction: judge-facing demo completeness now outweighs backend depth,
+   given the July 19 deadline and the tournament narrowing to ~4 matches
+   after July 11.
 3. **`match_archive` table** (deliberately deferred): match-level permanent
    history, if ever needed beyond what's already captured inside each
    archived signal's `signal_data` blob.
