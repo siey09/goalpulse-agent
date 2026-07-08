@@ -1,6 +1,7 @@
 ﻿import { config } from "../config";
 import { Match, OddsSnapshot, TxLineScoresContext } from "../types";
 import { isScoresContextFresh, SCORES_CONTEXT_TOLERANCE_MS } from "../logic/scoresContextFreshness";
+import { store } from "../store";
 
 export interface TxLineFeedResult {
   matches: Match[];
@@ -1167,6 +1168,29 @@ function sortSnapshotsChronologically(
  * full time plus stoppage/extra time/penalties) ahead of everything else,
  * then falls back to soonest-kickoff-first for the remaining slots.
  */
+
+/**
+ * A fixture already confirmed finished in the previous poll cycle's
+ * store.matches should never be reprocessed - prioritizeLikelyLiveFixtures
+ * only re-ranks by a StartTime heuristic, it never filters, so without
+ * this a long-finished fixture can keep occupying a rotation slot
+ * indefinitely, wasting TxLINE calls and eventually producing a "new"
+ * signal for the same historical tick once it outlives the odds-cache
+ * and dedup windows. Matched by fixture ID against whatever store.matches
+ * held at the start of this cycle (agent.ts replaces store.matches with
+ * this cycle's own results only after fetchTxLineFeed returns, so the
+ * previous cycle's confirmed statuses are still there to read).
+ */
+export function filterOutConfirmedFinishedFixtures(
+  fixtures: TxLineFixture[],
+  priorMatchesById: Map<string, Match>
+): TxLineFixture[] {
+  return fixtures.filter((fixture) => {
+    const priorMatch = priorMatchesById.get(String(fixture.FixtureId));
+    return !priorMatch || priorMatch.status !== "finished";
+  });
+}
+
 function prioritizeLikelyLiveFixtures(fixtures: TxLineFixture[]): TxLineFixture[] {
   const nowMs = Date.now();
   const maxLikelyMatchDurationMs = 3 * 60 * 60 * 1000;
@@ -1201,7 +1225,9 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
 
   const jwt = await getGuestJwt();
   const fixtures = await txlineGet<TxLineFixture[]>("/api/fixtures/snapshot", jwt);
-  const prioritizedFixtures = prioritizeLikelyLiveFixtures(fixtures);
+  const priorMatchesById = new Map(store.matches.map((match) => [match.id, match]));
+  const liveFixtures = filterOutConfirmedFinishedFixtures(fixtures, priorMatchesById);
+  const prioritizedFixtures = prioritizeLikelyLiveFixtures(liveFixtures);
 
   const nowIso = new Date().toISOString();
   const matches: Match[] = [];
