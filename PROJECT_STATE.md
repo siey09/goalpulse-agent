@@ -8,78 +8,37 @@ writing — they predate the three features this document adds in the
 code, trust the code and treat this file as needing an update, not the other
 way around.
 
-## ⏸ SESSION HANDOFF — RESUME HERE (saved 2026-07-08, mid-session)
+## ⏸ SESSION HANDOFF (updated after every milestone — see status below)
 
-**Read this section first if you're picking this up fresh.** The user is
-about to run out of tokens/usage and asked to save exact state before
-stopping. Everything below is precise and current as of this save.
+Working through a 10-item feature queue, each via brainstorm → spec → plan →
+**Inline Execution** (standing user preference, not subagent-driven) →
+end-of-task check-in (diff + test + build) → user says "proceed"/"push" →
+merge to `main` → push → clean up worktree.
 
-**Overarching task:** the user is working through a 10-item feature queue
-(their own words: "Depth and capability first," docs sync already done).
-Each item follows: brainstorm → spec → plan → **Inline Execution** (not
-subagent-driven — explicit user preference, stated twice, to save tokens) →
-single end-of-task check-in (diff summary + test run + build confirmation)
-→ user says "proceed"/"push" → merge to `main` → push → clean up the
-worktree. Do **not** re-ask which execution mode; the user has established
-Inline Execution as the standing preference for this queue.
+✅ Done: #1 archive read endpoint, #2 Outcome Audit dissent detail, #3 feed
+health monitoring — all merged and pushed to `main`.
 
-**Queue status:**
-1. ✅ `GET /api/archive` read endpoint — merged, pushed.
-2. ✅ Outcome Audit dissenting-vote detail — merged, pushed.
-3. ✅ Feed health / data-quality monitoring — merged, pushed.
-4. 🔄 **Market Maker double-confirmation cross-check — IN PROGRESS, resume here.**
-5. ⬜ Steam/consensus move detection
-6. ⬜ Signal correlation across simultaneous matches
-7. ⬜ Composite confidence/reliability scoring upgrade
-8. ⬜ Arena expansion: add a third strategy
-9. ⬜ Retroactive backtesting against the archive
-10. ⬜ Assess real-time push (WebSocket/SSE) for frontend — effort/benefit assessment only, biggest lift, do last
+🔄 In Progress: #4 Market Maker double-confirmation cross-check. Spec + plan
+approved and committed (`docs/superpowers/specs/2026-07-08-market-maker-confirmation-design.md`,
+`docs/superpowers/plans/2026-07-08-market-maker-confirmation.md`). Worktree
+at `.claude/worktrees/market-maker-confirmation` (branch
+`worktree-market-maker-confirmation`), merged with `main`, baseline verified
+clean. No implementation code written yet — next step is Task 1 of the plan
+(`logic/marketConfirmation.ts` + tests). If worktree is gone, recreate via
+`EnterWorktree` then `git merge main` inside it first (every worktree this
+session branches from stale `origin/main`).
 
-**Item 4 exact state:**
-- Spec approved and committed: `docs/superpowers/specs/2026-07-08-market-maker-confirmation-design.md`
-- Plan approved and committed: `docs/superpowers/plans/2026-07-08-market-maker-confirmation.md`
-- Both are already on `main` (commits `85f7651`, `78c7ab6`).
-- **An isolated worktree already exists** at
-  `.claude/worktrees/market-maker-confirmation`, branch
-  `worktree-market-maker-confirmation`, already merged up to date with
-  `main` (`78c7ab6`), `npm install` already run, baseline test suite already
-  verified clean (113/113 passing). **No implementation code has been
-  written yet in that worktree** — Tasks 1-4 of the plan have not been
-  started. If that worktree directory is gone when you resume, just
-  re-create it (`EnterWorktree`, name `market-maker-confirmation`, then
-  `git merge main` inside it before doing anything else — every worktree
-  this session has branched from a stale `origin/main`, not local `main`,
-  so this merge step is required every time before starting work).
-- **To resume:** re-enter that worktree (or make a fresh one), then execute
-  the plan's 4 tasks inline exactly as written (each task's exact code is
-  fully spelled out in the plan file, no guessing needed): (1) pure
-  `logic/marketConfirmation.ts` + tests, (2) wire `GET
-  /api/market-maker/confirmations` in `server.ts`, (3) `openapi.yaml` docs,
-  (4) final verification + docs update (`PROJECT_STATE.md`/`README.md`/
-  `TECHNICAL_DOCS.md`/`SUBMISSION_NOTES.md`, test count currently 113,
-  route count currently 18 — both need incrementing per the plan's exact
-  Task 4 instructions). Then present the standard end-of-task check-in
-  (diff summary, `npm run test`, `npm run build`) and wait for the user's
-  go-ahead before merging.
+📋 Next Steps: #5 steam/consensus move detection, #6 cross-match signal
+correlation, #7 composite confidence scoring, #8 Arena third strategy, #9
+retroactive backtesting, #10 real-time push assessment (do last, biggest
+lift).
 
-**Known environment gotchas hit repeatedly this session** (see also
-`feedback_windows_dev_server_gotchas.md` in memory):
-- This machine accumulates stray leftover `tsx watch` / dev-server
-  processes across sessions, sometimes bound to port 4000 from the *main*
-  repo path, not the worktree. Before manual `curl` verification, check
-  `netstat -ano | grep ":4000.*LISTENING"` and confirm the PID's command
-  line actually points at the worktree you're working in before either
-  using it or killing it; prefer starting on an alternate port
-  (`PORT=4030 npm run dev`) over killing a process you didn't start.
-- Worktree removal (`git worktree remove`) can fail with "Device or
-  resource busy" on Windows if a leftover `tsx watch`/`esbuild` child
-  process from earlier manual verification still has the directory open —
-  find and kill the exact PID (check via `Get-CimInstance Win32_Process`
-  filtering the worktree path), then retry the remove.
-- A worktree named `agent-arena` at `.claude/worktrees/agent-arena` is
-  **currently in active use by a different Claude Code session**
-  (confirmed via its process command line: `claude.exe --resume ...
-  --claude-worktrees-agent-arena...`). Do not delete or modify it.
+**Environment notes:** stray leftover dev-server processes accumulate on
+this machine across sessions — verify a PID's command line before
+using/killing it, prefer an alternate port. Worktree removal can fail with
+"Device or resource busy" — kill the exact leftover PID first, then retry.
+`.claude/worktrees/agent-arena` is in active use by a different Claude Code
+session — do not touch it.
 
 ## What this project is
 
