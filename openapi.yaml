@@ -160,9 +160,10 @@ components:
         matchesProcessed: { type: number }
         snapshotsCreated: { type: number }
         signalsCreated: { type: number }
+        rawFixtureCount: { type: number }
         status: { type: string, enum: [success, error] }
         message: { type: string }
-      required: [id, startedAt, finishedAt, matchesProcessed, snapshotsCreated, signalsCreated, status, message]
+      required: [id, startedAt, finishedAt, matchesProcessed, snapshotsCreated, signalsCreated, rawFixtureCount, status, message]
 
     LiveStreamState:
       type: object
@@ -848,6 +849,67 @@ paths:
                         type: integer
                       totalPages:
                         type: integer
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/feed-health:
+    get:
+      summary: TxLINE feed health and data-quality diagnostic
+      description: >
+        Reports on feed degradation separate from match-odds signals: whether
+        the autonomous agent's cycle is running on schedule, whether any live
+        match's odds feed has gone quiet, and whether the live poll loop's
+        per-cycle fixture cap silently dropped coverage. Separate from GET
+        /health, which is a fast liveness probe.
+      responses:
+        '200':
+          description: Current feed health status and the three underlying checks.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: [healthy, degraded, down]
+                      cycleHealth:
+                        type: object
+                        properties:
+                          lastRunAt: { type: string, format: date-time, nullable: true }
+                          cycleGapMs: { type: number, nullable: true }
+                          expectedIntervalMs: { type: number }
+                          isCurrentGapExceeded: { type: boolean }
+                          recentMissedCycles: { type: number }
+                        required: [lastRunAt, cycleGapMs, expectedIntervalMs, isCurrentGapExceeded, recentMissedCycles]
+                      oddsFreshness:
+                        type: object
+                        properties:
+                          staleThresholdMs: { type: number }
+                          staleLiveMatchCount: { type: number }
+                          staleLiveMatches:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                matchId: { type: string }
+                                match: { type: string }
+                                lastOddsAt: { type: string, format: date-time }
+                                staleForMs: { type: number }
+                              required: [matchId, match, lastOddsAt, staleForMs]
+                        required: [staleThresholdMs, staleLiveMatchCount, staleLiveMatches]
+                      fixtureCoverage:
+                        type: object
+                        properties:
+                          lastRunRawFixtureCount: { type: number, nullable: true }
+                          lastRunProcessedCount: { type: number, nullable: true }
+                          isCoverageDropped: { type: boolean }
+                          recentCoverageDrops: { type: number }
+                        required: [lastRunRawFixtureCount, lastRunProcessedCount, isCoverageDropped, recentCoverageDrops]
+                    required: [status, cycleHealth, oddsFreshness, fixtureCoverage]
+                required: [data]
         '429':
           $ref: '#/components/responses/RateLimited'
 
