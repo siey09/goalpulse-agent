@@ -32,11 +32,16 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: Signal Archive dashboard panel (see "What still needs
-doing" #2 below) — brainstorming now.
+🔄 In Progress: Signal Archive dashboard panel — implementation complete
+in worktree `.claude/worktrees/signal-archive-panel` (branch
+`worktree-signal-archive-panel`), all 3 plan tasks done and committed,
+clean build, verified directly against production (no frontend test
+runner exists). Awaiting user's review of the end-of-task check-in before
+merge to `main` + push + worktree cleanup.
 
-📋 Next Steps: implement the panel, then reassess remaining priorities
-(stale-finished-match repolling fix, worktree cleanup) against time left.
+📋 Next Steps: after this merges, reassess remaining priorities
+(stale-finished-match repolling fix, orphaned worktree cleanup) against
+time left before July 19.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
