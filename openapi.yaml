@@ -961,6 +961,52 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /api/steam-moves:
+    get:
+      summary: Sustained same-direction odds pressure across a tick sequence
+      description: >
+        Detects a trailing run of 3+ consecutive same-direction odds ticks
+        (each at least 1% compression, spanning no more than 5 minutes
+        first-to-last) for a match/side - distinct from the core signal
+        engine, which only ever compares exactly two snapshots. TxLINE's
+        feed is Stable Price consensus pricing, not multi-bookmaker data,
+        so this detects sustained pressure within the single consensus
+        feed rather than cross-book agreement. Applies to both 1X2 and
+        Over/Under totals lines.
+      responses:
+        '200':
+          description: Currently detected steam moves, plus a scan summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        matchId: { type: string }
+                        match: { type: string }
+                        side: { type: string }
+                        tickCount: { type: number }
+                        totalMovePct: { type: number }
+                        windowMs: { type: number }
+                        firstOdds: { type: number }
+                        lastOdds: { type: number }
+                        firstTickAt: { type: string, format: date-time }
+                        lastTickAt: { type: string, format: date-time }
+                      required: [matchId, match, side, tickCount, totalMovePct, windowMs, firstOdds, lastOdds, firstTickAt, lastTickAt]
+                  summary:
+                    type: object
+                    properties:
+                      matchesScanned: { type: number }
+                      steamMovesDetected: { type: number }
+                    required: [matchesScanned, steamMovesDetected]
+                required: [data, summary]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /api/onchain/validate-stat:
     get:
       summary: Real on-chain Merkle proof validation (Solana mainnet)
