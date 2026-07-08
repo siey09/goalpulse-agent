@@ -32,21 +32,14 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: Signal-performance match-diversity metrics (item 15) —
-implementation complete in worktree
-`.claude/worktrees/signal-performance-match-diversity` (branch
-`worktree-signal-performance-match-diversity`), both plan tasks done and
-committed, 176/176 tests passing, clean build, openapi valid. Directly
-motivated by the SHARP_MOVE investigation (see "Open questions" below).
-Awaiting user's review before merge + push + worktree cleanup. **Neither
-the Signal Archive nor Signal Performance dashboard panel has been
-visually verified in a browser yet** (no browser automation tool
-available this session) — recommend a quick visual check of both when
-convenient.
+🔄 In Progress: none — Signal-performance match-diversity metrics (item 15)
+merged and pushed to `main` (176 tests). **Neither the Signal Archive nor
+Signal Performance dashboard panel has been visually verified in a browser
+yet** (no browser automation tool available this session) — recommend a
+quick visual check of both when convenient.
 
-📋 Next Steps: none further queued after this merges — `match_archive`
-table remains available if the user wants it, but was not chosen this
-round.
+📋 Next Steps: none queued. `match_archive` table remains available if the
+user wants it, but was not chosen this round. Await further direction.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
