@@ -12,6 +12,8 @@ import { loadSnapshot, saveSnapshot } from "./services/persistence";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { computeMarketMakerQuote } from "./logic/marketMaker";
 import { computeArenaScoreboards, isTotalsSignal } from "./logic/arena";
+import { computeDissent, summarizeDissent } from "./logic/councilDissent";
+import type { CouncilVoteEntry } from "./logic/councilDissent";
 import { parseArchiveFilters, parsePageParam, parsePageSizeParam } from "./logic/paginationParams";
 import { getArchivedSignals } from "./services/archive";
 import { config } from "./config";
@@ -724,7 +726,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
         )
       ) || signal.momentumScore >= 8;
 
-    const votes = [
+    const votes: CouncilVoteEntry[] = [
       {
         agent: "Agent A - Movement Detector",
         vote: movementApproved ? "approve" : "reject",
@@ -751,6 +753,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
     const approvals = votes.filter((vote) => vote.vote === "approve").length;
     const decision =
       approvals >= 2 ? "approved" : approvals === 1 ? "watch" : "rejected";
+    const dissent = computeDissent(votes);
 
     return {
       signalId: signal.id,
@@ -760,8 +763,12 @@ app.get("/api/replay/backtest", async (_req, res) => {
       approvals,
       totalAgents: votes.length,
       votes,
+      unanimous: dissent.unanimous,
+      dissentingAgents: dissent.dissentingAgents,
     };
   });
+
+  const councilDissentSummary = summarizeDissent(councilVotes.map((vote) => vote.votes));
 
   const correctSignals = detectedSignals.filter(
     (signal) => signal.resultStatus === "correct"
@@ -815,6 +822,8 @@ app.get("/api/replay/backtest", async (_req, res) => {
           decision: councilVote.decision,
           approvals: councilVote.approvals,
           totalAgents: councilVote.totalAgents,
+          unanimous: councilVote.unanimous,
+          dissentingAgents: councilVote.dissentingAgents,
         })),
       })
     )
@@ -835,6 +844,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
             ? Math.round((correctSignals / settledSignalCount) * 100)
             : 0,
         smartMoneyTraps,
+        councilDissent: councilDissentSummary,
         confirmedTraps,
         possibleTraps,
       },
