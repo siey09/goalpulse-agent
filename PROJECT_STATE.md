@@ -18,15 +18,12 @@ merge to `main` → push → clean up worktree.
 ✅ Done: #1 archive read endpoint, #2 Outcome Audit dissent detail, #3 feed
 health monitoring — all merged and pushed to `main`.
 
-🔄 In Progress: #4 Market Maker double-confirmation cross-check. Spec + plan
-on `main`. Worktree at `.claude/worktrees/market-maker-confirmation` (branch
-`worktree-market-maker-confirmation`), merged with `main`. Plan Tasks 1-2
-done (`logic/marketConfirmation.ts` + tests, `GET
-/api/market-maker/confirmations` wired and manually verified — 119/119
-tests passing). Next: plan Task 3 (`openapi.yaml` docs), then Task 4 (final
-docs update: test count 119, route count 19). If worktree is gone, recreate
-via `EnterWorktree` then `git merge main` inside it first (every worktree
-this session branches from stale `origin/main`).
+🔄 In Progress: #4 Market Maker double-confirmation cross-check.
+Implementation complete in worktree `.claude/worktrees/market-maker-confirmation`
+(branch `worktree-market-maker-confirmation`), all 4 plan tasks done and
+committed, 119/119 tests passing, clean build, openapi valid. Awaiting
+user's review of the end-of-task check-in before merge to `main` + push +
+worktree cleanup.
 
 📋 Next Steps: #5 steam/consensus move detection, #6 cross-match signal
 correlation, #7 composite confidence scoring, #8 Arena third strategy, #9
