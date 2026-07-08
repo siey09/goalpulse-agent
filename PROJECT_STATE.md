@@ -16,15 +16,10 @@ end-of-task check-in (diff + test + build) → user says "proceed"/"push" →
 merge to `main` → push → clean up worktree.
 
 ✅ Done: #1 archive read endpoint, #2 Outcome Audit dissent detail, #3 feed
-health monitoring, #4 Market Maker double-confirmation cross-check — all
-merged and pushed to `main`.
+health monitoring, #4 Market Maker double-confirmation cross-check, #5
+steam move detection — all merged and pushed to `main` (126 tests, 20 routes).
 
-🔄 In Progress: #5 steam move detection. Implementation complete in
-worktree `.claude/worktrees/steam-move-detection` (branch
-`worktree-steam-move-detection`), all 4 plan tasks done and committed,
-126/126 tests passing, clean build, openapi valid. Awaiting user's review
-of the end-of-task check-in before merge to `main` + push + worktree
-cleanup.
+🔄 In Progress: none — ready to start #6.
 
 📋 Next Steps: #6 cross-match signal correlation, #7 composite confidence
 scoring, #8 Arena third strategy, #9 retroactive backtesting, #10 real-time
