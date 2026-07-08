@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isScoresContextFresh } from "./scoresContextFreshness";
+import { computeFreshnessTightness, isScoresContextFresh } from "./scoresContextFreshness";
 
 const TOLERANCE_MS = 60_000;
 
@@ -49,5 +49,47 @@ describe("isScoresContextFresh", () => {
     const contextTimestamp = "2026-07-07T01:02:00.000Z";
 
     expect(isScoresContextFresh(tickTs, contextTimestamp, TOLERANCE_MS)).toBe(false);
+  });
+});
+
+describe("computeFreshnessTightness", () => {
+  it("scores 100 when the gap is exactly zero", () => {
+    const tickTs = new Date("2026-07-07T01:00:00.000Z").getTime();
+    const contextTimestamp = "2026-07-07T01:00:00.000Z";
+
+    expect(computeFreshnessTightness(tickTs, contextTimestamp, TOLERANCE_MS)).toBe(100);
+  });
+
+  it("scores 0 when the gap is exactly at the tolerance boundary", () => {
+    const tickTs = new Date("2026-07-07T01:01:00.000Z").getTime();
+    const contextTimestamp = "2026-07-07T01:00:00.000Z";
+
+    expect(computeFreshnessTightness(tickTs, contextTimestamp, TOLERANCE_MS)).toBe(0);
+  });
+
+  it("scores 50 when the gap is halfway to the tolerance boundary", () => {
+    const tickTs = new Date("2026-07-07T01:00:30.000Z").getTime();
+    const contextTimestamp = "2026-07-07T01:00:00.000Z";
+
+    expect(computeFreshnessTightness(tickTs, contextTimestamp, TOLERANCE_MS)).toBe(50);
+  });
+
+  it("clamps to 0, not negative, when the gap exceeds the tolerance", () => {
+    const tickTs = new Date("2026-07-07T01:01:30.000Z").getTime();
+    const contextTimestamp = "2026-07-07T01:00:00.000Z";
+
+    expect(computeFreshnessTightness(tickTs, contextTimestamp, TOLERANCE_MS)).toBe(0);
+  });
+
+  it("returns null when the tick timestamp is missing", () => {
+    expect(
+      computeFreshnessTightness(undefined, "2026-07-07T01:00:00.000Z", TOLERANCE_MS)
+    ).toBeNull();
+  });
+
+  it("returns null when the context timestamp is missing", () => {
+    const tickTs = new Date("2026-07-07T01:00:00.000Z").getTime();
+
+    expect(computeFreshnessTightness(tickTs, undefined, TOLERANCE_MS)).toBeNull();
   });
 });
