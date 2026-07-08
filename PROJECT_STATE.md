@@ -97,7 +97,7 @@ signal engine → React dashboard.
 - `logic/` — pure, independently-testable modules: `signalEngine.ts`,
   `marketMaker.ts`, `arena.ts`, `scoresContextFreshness.ts`,
   `councilDissent.ts`, `feedHealth.ts`, `marketConfirmation.ts`,
-  `paginationParams.ts`, `steamDetection.ts`
+  `paginationParams.ts`, `steamDetection.ts`, `signalCorrelation.ts`
 - `services/` — external integrations: `txlineClient.ts` (the real TxLINE
   API client), `txlineStream.ts` (push-stream monitor), `onchainValidation.ts`
   (Solana), `alerts.ts` (Discord), `persistence.ts` (Supabase snapshot
