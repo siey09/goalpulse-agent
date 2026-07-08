@@ -20,10 +20,16 @@ health monitoring, #4 Market Maker double-confirmation cross-check, #5
 steam move detection, #6 signal correlation, #7 composite confidence score,
 #8 Arena third strategy (Kelly Criterion), #9 retroactive backtesting
 against the archive — all merged and pushed to `main` (161 tests, 23 routes).
+#10 real-time push effort/benefit assessment — written up, no code change
+(assessment-only deliverable); recommendation is **do not build now**
+(backend's own 3-5s agent cycle already bounds real-world freshness, so
+push wouldn't visibly help; this session was explicitly backend-only, not
+frontend/UX; real remaining risk given the 2026-07-19 deadline). Assessment:
+`docs/superpowers/specs/2026-07-08-realtime-push-assessment.md`.
 
-🔄 In Progress: none — ready to start #10.
+**10-item feature queue is now complete.** No 🔄 In Progress.
 
-📋 Next Steps: #10 real-time push assessment (do last, biggest lift).
+📋 Next Steps: none queued. Await further direction from the user.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
