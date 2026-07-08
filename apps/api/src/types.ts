@@ -105,6 +105,7 @@ export interface AgentSignal {
   oddsAfter: number;
   oddsChangePct: number;
   momentumScore: number;
+  confidenceScore?: number;
   explanation: string;
   createdAt: string;
   resultStatus: "pending" | "correct" | "incorrect";

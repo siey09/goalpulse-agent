@@ -1,5 +1,10 @@
 ﻿import { AgentSignal, OddsSnapshot, Severity, TeamSide, TxLineScoresContext } from "../types";
-import { isScoresContextFresh, SCORES_CONTEXT_TOLERANCE_MS } from "./scoresContextFreshness";
+import {
+  computeFreshnessTightness,
+  isScoresContextFresh,
+  SCORES_CONTEXT_TOLERANCE_MS,
+} from "./scoresContextFreshness";
+import { FIELD_PRESSURE_MAX } from "./marketMaker";
 
 function round(value: number, decimals = 2) {
   return Number(value.toFixed(decimals));
@@ -38,6 +43,46 @@ function calculateMomentumScore(
         : 0;
 
   return round(clamp(oddsWeight + scoreImpact + timePressure + fieldPressure - reliabilityPenalty, 0, 100));
+}
+
+const MAGNITUDE_REFERENCE_PCT = 15;
+
+/**
+ * A composite confidence measure, separate from severity/momentumScore:
+ * magnitude (weight 0.5, normalized against the existing 15% HIGH severity
+ * threshold), field pressure (weight 0.3, normalized against
+ * marketMaker.ts's own FIELD_PRESSURE_MAX), and freshness tightness
+ * (weight 0.2). Weights are renormalized among only the available
+ * components when scoresContext is absent, so a signal with no field
+ * context is scored on magnitude alone rather than penalized for missing
+ * data it never had a chance to have.
+ */
+export function calculateConfidenceScore(
+  changePct: number,
+  scoresContext: TxLineScoresContext | undefined,
+  freshnessTightness: number | null
+): number {
+  const magnitudeScore = clamp((changePct / MAGNITUDE_REFERENCE_PCT) * 100, 0, 100);
+
+  const components: { score: number; weight: number }[] = [{ score: magnitudeScore, weight: 0.5 }];
+
+  if (scoresContext && freshnessTightness !== null) {
+    const fieldPressureScore = clamp(
+      ((scoresContext.fieldPressureScore ?? 0) / FIELD_PRESSURE_MAX) * 100,
+      0,
+      100
+    );
+    components.push({ score: fieldPressureScore, weight: 0.3 });
+    components.push({ score: clamp(freshnessTightness, 0, 100), weight: 0.2 });
+  }
+
+  const totalWeight = components.reduce((sum, component) => sum + component.weight, 0);
+  const weightedSum = components.reduce(
+    (sum, component) => sum + component.score * component.weight,
+    0
+  );
+
+  return round(weightedSum / totalWeight);
 }
 
 function sideLabel(side?: TxLineScoresContext["actionTeam"]) {
@@ -144,12 +189,22 @@ export function buildSignalFromSnapshots(
       ? previous.evidence?.scoresContext
       : undefined);
 
+  const freshnessTightness = scoresContext
+    ? computeFreshnessTightness(
+        new Date(current.createdAt).getTime(),
+        scoresContext.timestamp,
+        SCORES_CONTEXT_TOLERANCE_MS
+      )
+    : null;
+
   const momentumScore = calculateMomentumScore(
     bestChangePct,
     current.minute,
     scoreChanged,
     scoresContext
   );
+
+  const confidenceScore = calculateConfidenceScore(bestChangePct, scoresContext, freshnessTightness);
 
   const signalType =
     severity === "HIGH"
@@ -194,6 +249,7 @@ export function buildSignalFromSnapshots(
     oddsAfter,
     oddsChangePct: round(bestChangePct),
     momentumScore,
+    confidenceScore,
     explanation,
     createdAt: new Date().toISOString(),
     resultStatus: "pending",
