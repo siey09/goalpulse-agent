@@ -19,10 +19,12 @@ merge to `main` → push → clean up worktree.
 health monitoring, #4 Market Maker double-confirmation cross-check — all
 merged and pushed to `main` (119 tests, 19 routes).
 
-🔄 In Progress: #5 steam/consensus move detection — unblocked, confirmed
-single-consensus-feed (see Architecture section above), redefined as
-multi-tick sustained same-direction movement within the feed (not
-cross-book). Brainstorming starting now.
+🔄 In Progress: #5 steam move detection. Implementation complete in
+worktree `.claude/worktrees/steam-move-detection` (branch
+`worktree-steam-move-detection`), all 4 plan tasks done and committed,
+126/126 tests passing, clean build, openapi valid. Awaiting user's review
+of the end-of-task check-in before merge to `main` + push + worktree
+cleanup.
 
 📋 Next Steps: #6 cross-match signal correlation, #7 composite confidence
 scoring, #8 Arena third strategy, #9 retroactive backtesting, #10 real-time
