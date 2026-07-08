@@ -200,7 +200,7 @@ export function buildKellyCriterionPosition(signal: AgentSignal): ArenaPosition 
   };
 }
 
-function summarize(
+export function summarize(
   agentId: ArenaAgentId,
   label: string,
   positions: ArenaPosition[]
