@@ -32,15 +32,18 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: none — Signal Archive dashboard panel merged and pushed to
-`main`. **Not yet visually verified in a browser** (no browser automation
-tool was available this session) — verified instead via clean build and
-direct API-shape testing against production. Recommend a quick visual
-check before treating it as fully confirmed.
+🔄 In Progress: Stale-finished-match repolling fix — implementation
+complete in worktree `.claude/worktrees/stale-match-repolling-fix`
+(branch `worktree-stale-match-repolling-fix`), both plan tasks done and
+committed, 166/166 tests passing, clean build. Awaiting user's review of
+the end-of-task check-in before merge to `main` + push + worktree
+cleanup. Signal Archive dashboard panel is separately still **not yet
+visually verified in a browser** (no browser automation tool was
+available this session) — recommend a quick visual check when convenient.
 
-📋 Next Steps: reassess remaining priorities (stale-finished-match
-repolling fix, orphaned worktree cleanup) against time left before
-July 19.
+📋 Next Steps: after this merges, every item explicitly flagged in "What
+still needs doing" is resolved except the deliberately-deferred
+`match_archive` table. Await further direction.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
