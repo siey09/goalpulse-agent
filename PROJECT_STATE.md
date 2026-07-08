@@ -18,16 +18,10 @@ merge to `main` → push → clean up worktree.
 ✅ Done: #1 archive read endpoint, #2 Outcome Audit dissent detail, #3 feed
 health monitoring, #4 Market Maker double-confirmation cross-check, #5
 steam move detection, #6 signal correlation, #7 composite confidence score,
-#8 Arena third strategy (Kelly Criterion) — all merged and pushed to
-`main`.
+#8 Arena third strategy (Kelly Criterion), #9 retroactive backtesting
+against the archive — all merged and pushed to `main` (161 tests, 23 routes).
 
-🔄 In Progress: #9 retroactive backtesting against the archive.
-Implementation complete in worktree
-`.claude/worktrees/arena-archive-backtest` (branch
-`worktree-arena-archive-backtest`), all 4 plan tasks done and committed,
-161/161 tests passing, clean build, openapi valid. Awaiting user's review
-of the end-of-task check-in before merge to `main` + push + worktree
-cleanup.
+🔄 In Progress: none — ready to start #10.
 
 📋 Next Steps: #10 real-time push assessment (do last, biggest lift).
 
