@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findSignalClusters } from "./signalCorrelation";
+import { findSignalClusters, sessionWindowGroups } from "./signalCorrelation";
 import type { AgentSignal } from "../types";
 
 const BASE_TIME = new Date("2026-07-08T14:00:00.000Z").getTime();
@@ -111,5 +111,47 @@ describe("findSignalClusters", () => {
 
     expect(clusters).toHaveLength(1);
     expect(clusters[0].severityBreakdown).toEqual({ high: 1, medium: 1, low: 1 });
+  });
+});
+
+describe("sessionWindowGroups", () => {
+  type TimedItem = { id: string; ts: string };
+
+  it("groups items within the window into a single group", () => {
+    const items: TimedItem[] = [
+      { id: "a", ts: iso(0) },
+      { id: "b", ts: iso(60) },
+    ];
+
+    const groups = sessionWindowGroups(items, (item) => item.ts, 300000);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].map((item) => item.id)).toEqual(["a", "b"]);
+  });
+
+  it("chains gaps each individually under the window into one group", () => {
+    const items: TimedItem[] = [
+      { id: "a", ts: iso(0) },
+      { id: "b", ts: iso(240) },
+      { id: "c", ts: iso(480) },
+    ];
+
+    const groups = sessionWindowGroups(items, (item) => item.ts, 300000);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toHaveLength(3);
+  });
+
+  it("splits into separate groups when a gap exceeds the window", () => {
+    const items: TimedItem[] = [
+      { id: "a", ts: iso(0) },
+      { id: "b", ts: iso(400) },
+    ];
+
+    const groups = sessionWindowGroups(items, (item) => item.ts, 300000);
+
+    expect(groups).toHaveLength(2);
+    expect(groups[0].map((item) => item.id)).toEqual(["a"]);
+    expect(groups[1].map((item) => item.id)).toEqual(["b"]);
   });
 });

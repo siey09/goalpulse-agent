@@ -60,36 +60,54 @@ function buildCluster(group: AgentSignal[]): SignalCluster {
  * signals in a row is normal, already-covered signal-engine behavior, not
  * cross-match correlation.
  */
-export function findSignalClusters(
-  signals: AgentSignal[],
+/**
+ * Generic session-windowing: sorts items by timestamp, then starts a new
+ * group whenever the gap to the previous item in the current group
+ * exceeds windowMs. Shared by findSignalClusters (any signals close in
+ * time across matches) and findPatternMatchedClusters (only signals
+ * sharing the same side/severity/market, so the "same pattern repeating"
+ * question can reuse the exact same windowing algorithm).
+ */
+export function sessionWindowGroups<T>(
+  items: T[],
+  getTimestamp: (item: T) => string,
   windowMs: number
-): SignalCluster[] {
-  const sorted = [...signals].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+): T[][] {
+  const sorted = [...items].sort(
+    (a, b) => new Date(getTimestamp(a)).getTime() - new Date(getTimestamp(b)).getTime()
   );
 
-  const groups: AgentSignal[][] = [];
-  let current: AgentSignal[] = [];
+  const groups: T[][] = [];
+  let current: T[] = [];
 
-  for (const signal of sorted) {
+  for (const item of sorted) {
     if (current.length === 0) {
-      current = [signal];
+      current = [item];
       continue;
     }
 
-    const lastSignal = current[current.length - 1];
+    const lastItem = current[current.length - 1];
     const gapMs =
-      new Date(signal.createdAt).getTime() - new Date(lastSignal.createdAt).getTime();
+      new Date(getTimestamp(item)).getTime() - new Date(getTimestamp(lastItem)).getTime();
 
     if (gapMs <= windowMs) {
-      current.push(signal);
+      current.push(item);
     } else {
       groups.push(current);
-      current = [signal];
+      current = [item];
     }
   }
 
   if (current.length > 0) groups.push(current);
+
+  return groups;
+}
+
+export function findSignalClusters(
+  signals: AgentSignal[],
+  windowMs: number
+): SignalCluster[] {
+  const groups = sessionWindowGroups(signals, (signal) => signal.createdAt, windowMs);
 
   return groups
     .filter((group) => new Set(group.map((signal) => signal.matchId)).size >= 2)
