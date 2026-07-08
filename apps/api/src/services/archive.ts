@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { config } from "../config";
-import type { AgentSignal } from "../types";
+import type { AgentSignal, ArchiveEntry, ArchiveFilters, ArchivePagination, ArchiveQueryResult } from "../types";
 
 const ARCHIVE_TABLE = "signal_archive";
 
@@ -47,5 +47,107 @@ export async function archiveSignal(
     });
   } catch (error) {
     console.error("[archive] Failed to archive signal to Supabase:", error);
+  }
+}
+
+/**
+ * Totals signals use a matchId of the form <fixtureId>-totals-<line> (see
+ * agent.ts/arena.ts's existing multi-market convention) - there is no
+ * dedicated market column on signal_archive, so market filtering is done by
+ * checking for this substring rather than requiring a schema migration.
+ */
+export function isTotalsMatchId(matchId: string): boolean {
+  return matchId.includes("-totals-");
+}
+
+interface ArchiveRow {
+  signal_id: string;
+  event: "created" | "settled";
+  match_id: string;
+  side: ArchiveEntry["side"];
+  signal_type: ArchiveEntry["signalType"];
+  severity: ArchiveEntry["severity"];
+  result_status: ArchiveEntry["resultStatus"];
+  momentum_score: number;
+  odds_change_pct: number;
+  signal_data: AgentSignal;
+  archived_at: string;
+}
+
+function mapArchiveRow(row: ArchiveRow): ArchiveEntry {
+  return {
+    signalId: row.signal_id,
+    event: row.event,
+    matchId: row.match_id,
+    side: row.side,
+    signalType: row.signal_type,
+    severity: row.severity,
+    resultStatus: row.result_status,
+    momentumScore: row.momentum_score,
+    oddsChangePct: row.odds_change_pct,
+    archivedAt: row.archived_at,
+    signalData: row.signal_data,
+  };
+}
+
+function emptyResult(pagination: ArchivePagination): ArchiveQueryResult {
+  return {
+    data: [],
+    pagination: { ...pagination, totalCount: 0, totalPages: 0 },
+  };
+}
+
+/**
+ * Reads back rows from the insert-only signal_archive table: raw event-log
+ * rows (a signal usually appears twice, once per "created"/"settled" event),
+ * never collapsed - the caller filters by event if they only want one state.
+ * Fail-open: returns an empty page (never throws/errors) if Supabase is
+ * unconfigured or the query itself fails, matching archiveSignal's existing
+ * fail-open convention.
+ */
+export async function getArchivedSignals(
+  filters: ArchiveFilters,
+  pagination: ArchivePagination
+): Promise<ArchiveQueryResult> {
+  const client = getClient();
+
+  if (!client) {
+    return emptyResult(pagination);
+  }
+
+  const from = (pagination.page - 1) * pagination.pageSize;
+  const to = from + pagination.pageSize - 1;
+
+  let query = client
+    .from(ARCHIVE_TABLE)
+    .select("*", { count: "exact" })
+    .order("archived_at", { ascending: false })
+    .range(from, to);
+
+  if (filters.matchId) query = query.eq("match_id", filters.matchId);
+  if (filters.status) query = query.eq("result_status", filters.status);
+  if (filters.event) query = query.eq("event", filters.event);
+  if (filters.market === "totals") query = query.like("match_id", "%-totals-%");
+  if (filters.market === "1x2") query = query.not("match_id", "like", "%-totals-%");
+
+  try {
+    const { data, count, error } = await query;
+
+    if (error || !data) {
+      console.error("[archive] Failed to read signal_archive from Supabase:", error);
+      return emptyResult(pagination);
+    }
+
+    return {
+      data: (data as ArchiveRow[]).map(mapArchiveRow),
+      pagination: {
+        ...pagination,
+        totalCount: count ?? 0,
+        totalPages: count ? Math.ceil(count / pagination.pageSize) : 0,
+      },
+    };
+  } catch (error) {
+    console.error("[archive] Failed to read signal_archive from Supabase:", error);
+    return emptyResult(pagination);
   }
 }
