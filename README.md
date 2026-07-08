@@ -94,7 +94,8 @@ Six further features make GoalPulse deployable, not just demoable, all on free t
 - Agent vs Agent Arena (Momentum Follower vs Contrarian, tamper-evident SHA-256 ledger hash)
 - Insert-only permanent signal archive to Supabase, readable via a paginated/filterable read endpoint
 - Feed health monitoring (cycle health, live-match odds freshness, fixture coverage) separate from match-odds signals
-- 113 automated unit tests
+- Market Maker double-confirmation cross-check: genuinely independent band-breach test against each signal's own severity
+- 119 automated unit tests
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer
@@ -179,6 +180,7 @@ npm.cmd run test
 - GET /api/arena (Momentum Follower vs Contrarian scoreboards)
 - GET /api/archive (paginated, filterable read over the permanent signal archive)
 - GET /api/feed-health (cycle health, odds freshness, fixture coverage diagnostic)
+- GET /api/market-maker/confirmations (band-breach cross-check against each signal's own severity)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)

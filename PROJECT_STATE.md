@@ -214,6 +214,19 @@ drop exists, `"healthy"` otherwise. Backend-only, no dashboard panel. Spec:
 `docs/superpowers/specs/2026-07-08-feed-health-monitoring-design.md`, plan:
 `docs/superpowers/plans/2026-07-08-feed-health-monitoring.md`.
 
+**7. Market Maker double-confirmation cross-check** (`logic/marketConfirmation.ts`,
+`GET /api/market-maker/confirmations`) — found and fixed a real circularity
+problem during design: a naive cross-check between the Market Maker's
+spread and the signal engine's severity would agree by construction, since
+both pull from the same `fieldPressureScore`/`reliability` fields on the
+same snapshot. Instead computes what the Market Maker would have quoted
+using the snapshot from **before** the move, then checks whether the
+signal's actual post-move odds broke below that old quote's bid for the
+signal's side — genuine, non-circular corroboration. Applies to both 1X2
+and totals signals. Backend-only, no dashboard panel. Spec:
+`docs/superpowers/specs/2026-07-08-market-maker-confirmation-design.md`,
+plan: `docs/superpowers/plans/2026-07-08-market-maker-confirmation.md`.
+
 ## Bugs found and fixed
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
@@ -295,23 +308,25 @@ live endpoint behavior, don't assume a push is live.
 
 ## Testing
 
-**113 tests across 12 files**, all passing, `npm run test` from `apps/api/`:
+**119 tests across 13 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/councilDissent.test.ts`,
-`logic/feedHealth.test.ts`, `logic/marketMaker.test.ts`,
-`logic/paginationParams.test.ts`, `logic/scoresContextFreshness.test.ts`,
-`logic/signalEngine.test.ts`, `middleware/apiKeyAuth.test.ts`,
-`services/archive.test.ts`, `services/persistence.test.ts`, `store.test.ts`.
+`logic/feedHealth.test.ts`, `logic/marketConfirmation.test.ts`,
+`logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`,
+`logic/scoresContextFreshness.test.ts`, `logic/signalEngine.test.ts`,
+`middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`,
+`services/persistence.test.ts`, `store.test.ts`.
 Build: `npm run build` (`tsc`), currently clean. Convention: pure logic gets
 unit tests with plain objects/mocks; anything requiring a real
 TxLINE/Supabase connection is explicitly *not* automated (this environment
 has no real credentials for either) — verified instead by the user directly
 against production.
 
-**18 backend routes total**, all documented in `openapi.yaml` (validate with
+**19 backend routes total**, all documented in `openapi.yaml` (validate with
 `npx @redocly/cli lint openapi.yaml`): `/health`, `/api/matches`,
 `/api/signals`, `/api/stats`, `/api/pnl`, `/api/agent-runs`,
 `/api/odds-history`, `/api/recent-results`, `/api/market-maker`,
-`/api/arena`, `/api/archive`, `/api/feed-health`, `/api/replay/backtest`,
+`/api/arena`, `/api/archive`, `/api/feed-health`,
+`/api/market-maker/confirmations`, `/api/replay/backtest`,
 `/api/onchain/validate-stat`, `/api/live/odds-stream`,
 `/api/live/replay-stream`, `/api/docs`, `POST /api/agent/run-once`.
 
