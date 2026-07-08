@@ -420,7 +420,7 @@ live endpoint behavior, don't assume a push is live.
 
 ## Testing
 
-**161 tests across 17 files**, all passing, `npm run test` from `apps/api/`:
+**166 tests across 18 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/backtest.test.ts`,
 `logic/councilDissent.test.ts`, `logic/feedHealth.test.ts`,
 `logic/marketConfirmation.test.ts`, `logic/marketMaker.test.ts`,
@@ -428,7 +428,8 @@ live endpoint behavior, don't assume a push is live.
 `logic/signalCorrelation.test.ts`, `logic/signalEngine.test.ts`,
 `logic/signalPerformance.test.ts`, `logic/steamDetection.test.ts`,
 `middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`,
-`services/persistence.test.ts`, `store.test.ts`.
+`services/persistence.test.ts`, `services/txlineClient.test.ts`,
+`store.test.ts`.
 Build: `npm run build` (`tsc`), currently clean. Convention: pure logic gets
 unit tests with plain objects/mocks; anything requiring a real
 TxLINE/Supabase connection is explicitly *not* automated (this environment
@@ -466,9 +467,15 @@ against production.
 3. **`match_archive` table** (deliberately deferred): match-level permanent
    history, if ever needed beyond what's already captured inside each
    archived signal's `signal_data` blob.
-4. **Stale-finished-match repolling fix** (see "Known limitations" above) —
-   not urgent, but a real, identified gap worth closing before the July 19
-   final if there's time.
+4. ~~Stale-finished-match repolling fix~~ **Done (2026-07-08)** — a new
+   `filterOutConfirmedFinishedFixtures(fixtures, priorMatchesById)` in
+   `txlineClient.ts`, called in `fetchTxLineFeed()` before
+   `prioritizeLikelyLiveFixtures()` runs, excludes any fixture already
+   confirmed `finished` in the previous cycle's `store.matches` — no new
+   data-fetching needed, since `agent.ts` doesn't overwrite `store.matches`
+   until after `fetchTxLineFeed()` returns. Spec:
+   `docs/superpowers/specs/2026-07-08-stale-finished-match-repolling-fix-design.md`,
+   plan: `docs/superpowers/plans/2026-07-08-stale-finished-match-repolling-fix.md`.
 5. ~~Cosmetic: orphaned worktree directories~~ **Not actually present** —
    checked `.claude/worktrees/` directly (2026-07-08): only `agent-arena`
    exists, which is legitimately in active use by a different Claude Code
