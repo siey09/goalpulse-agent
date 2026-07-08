@@ -32,18 +32,16 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: Signal Performance dashboard panel (item 14) —
-implementation complete in worktree
-`.claude/worktrees/signal-performance-panel` (branch
-`worktree-signal-performance-panel`), both plan tasks done and committed,
-clean build. Item 10 (real-time push via txlineStream.ts) was assessed
-and recommended against — see spec doc. Awaiting user's review before
-merge + push + worktree cleanup. Signal Archive dashboard panel is
-separately still **not yet visually verified in a browser** (no browser
-automation tool was available this session) — recommend a quick visual
-check when convenient, alongside this new panel.
+🔄 In Progress: none — Signal Performance dashboard panel (item 14) merged
+and pushed to `main`. Item 10 (real-time push via `txlineStream.ts`) was
+assessed and recommended against — see
+`docs/superpowers/specs/2026-07-09-txlinestream-extension-assessment.md`.
+**Neither the Signal Archive nor Signal Performance panel has been
+visually verified in a browser yet** (no browser automation tool
+available this session) — recommend a quick visual check of both when
+convenient.
 
-📋 Next Steps: none further queued after this merges. Await direction.
+📋 Next Steps: none queued. Await further direction from the user.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -131,9 +129,10 @@ don't re-investigate, this is settled.
 
 **Frontend** (`apps/web/src/`, React/TypeScript/Vite/Tailwind): `App.tsx` plus
 `components/` — `SignalIntelligencePanel`, `MarketMakerPanel`, `ArenaPanel`,
-`ResultsSettlementPanel`, `SignalArchivePanel` (new), `VerifiedCaseStudiesPanel`,
-`WhatChangedPanel`. No test runner configured — every panel is verified
-manually against a running dev server, not via automated tests.
+`ResultsSettlementPanel`, `SignalArchivePanel`, `SignalPerformancePanel` (new),
+`VerifiedCaseStudiesPanel`, `WhatChangedPanel`. No test runner configured —
+every panel is verified manually against a running dev server, not via
+automated tests.
 
 **Docs conventions this session established** (follow these for any future
 work): `docs/superpowers/specs/YYYY-MM-DD-<feature>-design.md` (brainstormed,
