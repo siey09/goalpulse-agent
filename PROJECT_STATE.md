@@ -380,6 +380,22 @@ fully visible, not cherry-picked. Spec:
 `docs/superpowers/specs/2026-07-09-signal-performance-panel-design.md`,
 plan: `docs/superpowers/plans/2026-07-09-signal-performance-panel.md`.
 
+**15. Signal-performance match-diversity metrics**
+(`logic/signalPerformance.ts`'s `summarizeSignalTypePerformance`) —
+directly motivated by the "Open questions" finding below: investigating
+SHARP_MOVE's 33% accuracy found all three signal-type accuracy figures
+were 89-100% concentrated in a single match, with nothing in the API
+surfacing this. Adds `distinctMatchCount` and `largestMatchSharePct` to
+each `SignalTypePerformance` entry, computed from the same
+already-settled, already-grouped data. Totals sub-market matchIds
+(`<fixtureId>-totals-<line>`) collapse to their base fixture before
+counting, so correlated lines on one real match don't inflate the
+diversity count — the exact undercounting the manual investigation had to
+work around by hand. Backend-only, no dashboard change (per the user's
+standing instruction not to add UI without being asked). Spec:
+`docs/superpowers/specs/2026-07-09-signal-performance-match-diversity-design.md`,
+plan: `docs/superpowers/plans/2026-07-09-signal-performance-match-diversity.md`.
+
 ## Bugs found and fixed
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
@@ -494,9 +510,14 @@ large-compression/field-pressure-mismatch pattern holds up across
 genuinely independent matches, rather than one. If it does, that's when a
 severity/confidence-blending change would be justified — not before.
 
+**Follow-up shipped (item 15):** `GET /api/signal-performance` now reports
+`distinctMatchCount`/`largestMatchSharePct` per signal type, so this exact
+concentration check is visible from the API itself going forward — no
+need to manually cross-reference archive entries by hand again.
+
 ## Testing
 
-**174 tests across 18 files**, all passing, `npm run test` from `apps/api/`:
+**176 tests across 18 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/backtest.test.ts`,
 `logic/councilDissent.test.ts`, `logic/feedHealth.test.ts`,
 `logic/marketConfirmation.test.ts`, `logic/marketMaker.test.ts`,
