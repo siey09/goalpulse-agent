@@ -32,15 +32,18 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: none — Signal Archive dashboard panel merged and pushed to
-`main`. **Not yet visually verified in a browser** (no browser automation
-tool was available this session) — verified instead via clean build and
-direct API-shape testing against production. Recommend a quick visual
-check before treating it as fully confirmed.
+🔄 In Progress: Stale-finished-match repolling fix — implementation
+complete in worktree `.claude/worktrees/stale-match-repolling-fix`
+(branch `worktree-stale-match-repolling-fix`), both plan tasks done and
+committed, 166/166 tests passing, clean build. Awaiting user's review of
+the end-of-task check-in before merge to `main` + push + worktree
+cleanup. Signal Archive dashboard panel is separately still **not yet
+visually verified in a browser** (no browser automation tool was
+available this session) — recommend a quick visual check when convenient.
 
-📋 Next Steps: reassess remaining priorities (stale-finished-match
-repolling fix, orphaned worktree cleanup) against time left before
-July 19.
+📋 Next Steps: after this merges, every item explicitly flagged in "What
+still needs doing" is resolved except the deliberately-deferred
+`match_archive` table. Await further direction.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -417,7 +420,7 @@ live endpoint behavior, don't assume a push is live.
 
 ## Testing
 
-**161 tests across 17 files**, all passing, `npm run test` from `apps/api/`:
+**166 tests across 18 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/backtest.test.ts`,
 `logic/councilDissent.test.ts`, `logic/feedHealth.test.ts`,
 `logic/marketConfirmation.test.ts`, `logic/marketMaker.test.ts`,
@@ -425,7 +428,8 @@ live endpoint behavior, don't assume a push is live.
 `logic/signalCorrelation.test.ts`, `logic/signalEngine.test.ts`,
 `logic/signalPerformance.test.ts`, `logic/steamDetection.test.ts`,
 `middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`,
-`services/persistence.test.ts`, `store.test.ts`.
+`services/persistence.test.ts`, `services/txlineClient.test.ts`,
+`store.test.ts`.
 Build: `npm run build` (`tsc`), currently clean. Convention: pure logic gets
 unit tests with plain objects/mocks; anything requiring a real
 TxLINE/Supabase connection is explicitly *not* automated (this environment
@@ -463,9 +467,15 @@ against production.
 3. **`match_archive` table** (deliberately deferred): match-level permanent
    history, if ever needed beyond what's already captured inside each
    archived signal's `signal_data` blob.
-4. **Stale-finished-match repolling fix** (see "Known limitations" above) —
-   not urgent, but a real, identified gap worth closing before the July 19
-   final if there's time.
+4. ~~Stale-finished-match repolling fix~~ **Done (2026-07-08)** — a new
+   `filterOutConfirmedFinishedFixtures(fixtures, priorMatchesById)` in
+   `txlineClient.ts`, called in `fetchTxLineFeed()` before
+   `prioritizeLikelyLiveFixtures()` runs, excludes any fixture already
+   confirmed `finished` in the previous cycle's `store.matches` — no new
+   data-fetching needed, since `agent.ts` doesn't overwrite `store.matches`
+   until after `fetchTxLineFeed()` returns. Spec:
+   `docs/superpowers/specs/2026-07-08-stale-finished-match-repolling-fix-design.md`,
+   plan: `docs/superpowers/plans/2026-07-08-stale-finished-match-repolling-fix.md`.
 5. ~~Cosmetic: orphaned worktree directories~~ **Not actually present** —
    checked `.claude/worktrees/` directly (2026-07-08): only `agent-arena`
    exists, which is legitimately in active use by a different Claude Code
