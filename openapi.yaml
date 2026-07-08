@@ -1007,6 +1007,60 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /api/signal-correlation:
+    get:
+      summary: Cross-match signal correlation clusters
+      description: >
+        Groups the entire stored signal history via session-windowing (a
+        new group starts whenever the gap between two consecutive signals
+        exceeds 5 minutes), then reports only groups spanning 2 or more
+        distinct matches - a single match firing multiple signals in a row
+        is normal signal-engine behavior, not cross-match correlation. No
+        severity or signal-type filtering is applied to join a cluster;
+        each cluster reports a severity breakdown so significance can be
+        judged directly.
+      responses:
+        '200':
+          description: Currently detected cross-match signal clusters, plus a scan summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        matchIds:
+                          type: array
+                          items: { type: string }
+                        matchCount: { type: number }
+                        signalCount: { type: number }
+                        severityBreakdown:
+                          type: object
+                          properties:
+                            high: { type: number }
+                            medium: { type: number }
+                            low: { type: number }
+                          required: [high, medium, low]
+                        windowStart: { type: string, format: date-time }
+                        windowEnd: { type: string, format: date-time }
+                        spanMs: { type: number }
+                        signalIds:
+                          type: array
+                          items: { type: string }
+                      required: [matchIds, matchCount, signalCount, severityBreakdown, windowStart, windowEnd, spanMs, signalIds]
+                  summary:
+                    type: object
+                    properties:
+                      signalsScanned: { type: number }
+                      clustersDetected: { type: number }
+                    required: [signalsScanned, clustersDetected]
+                required: [data, summary]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /api/onchain/validate-stat:
     get:
       summary: Real on-chain Merkle proof validation (Solana mainnet)
