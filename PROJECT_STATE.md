@@ -52,7 +52,8 @@ README.md/TECHNICAL_DOCS.md/SUBMISSION_NOTES.md against current code
 (181 tests, 24 openapi-documented endpoints, added the missing
 `/api/signal-performance/by-confidence` to all three endpoint lists, and
 documented both the Vercel and Render deploy incidents in all three).
-`npm run build` clean in `apps/web`; not yet merged/pushed.
+`npm run build` clean in `apps/web`. Merged and pushed to `main`
+(`195d7b6`).
 
 📋 Next Steps: none queued beyond merging/pushing this close-out.
 `match_archive` table remains available if the user wants it, but was not
