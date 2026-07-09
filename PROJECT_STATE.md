@@ -96,12 +96,34 @@ green on merged `main`. Merged and pushed (`353688e`). Spec:
 `docs/superpowers/specs/2026-07-10-confidence-calibration-panel-design.md`,
 plan: `docs/superpowers/plans/2026-07-10-confidence-calibration-panel.md`.
 
-📋 Next Steps: user to verify the Confidence Calibration panel live in
-production (`https://goalpulse-agent.vercel.app`) before starting the
-next panel (Steam Move Detection, ranked #2). Separately, the
-`match_archive` table (see "What still needs doing" below) requires the
-user to run its `create table` statement in the Supabase SQL editor
-before it starts recording data, same as `signal_archive` did.
+✅ **Steam Move Detection dashboard panel shipped 2026-07-10** — second of
+the three prioritized dashboard-visibility panels. New
+`SteamMoveDetectionPanel.tsx` polls `GET /api/steam-moves` every 5s
+(matches the backend's own agent-cycle interval and `MarketMakerPanel`'s
+existing live-polling convention, unlike the two prior one-shot
+historical panels) and shows any currently-detected sustained
+same-direction odds move: match, home/away side, `firstOdds → lastOdds`
+compression %, tick count, and duration. Pure addition: only touched
+`App.tsx` (+3 lines: import + render, placed after `MarketMakerPanel`),
+no existing panel edited. Production currently shows the empty state
+(`"No steam move happening right now — scanning every 5s."`) as
+expected — 24 matches scanned, 0 active steam moves at verification
+time, a real and common condition given the tournament has narrowed to
+~4 remaining matches, not a bug. Verified in a local dev browser:
+confirmed 3 successful 200 polls over ~12s at the correct cadence, no
+console errors. 189 backend tests + backend build + frontend build all
+green on merged `main`. Merged and pushed (`e65d3f8`). Spec:
+`docs/superpowers/specs/2026-07-10-steam-move-detection-panel-design.md`,
+plan: `docs/superpowers/plans/2026-07-10-steam-move-detection-panel.md`.
+
+📋 Next Steps: user to verify the Steam Move Detection panel live in
+production (`https://goalpulse-agent.vercel.app`) before deciding
+whether to build the third, stretch-priority panel (Signal Correlation,
+ranked #3 — lowest of the three, build only if time remains before the
+July 19 deadline). Separately, the `match_archive` table (see "What
+still needs doing" below) requires the user to run its `create table`
+statement in the Supabase SQL editor before it starts recording data,
+same as `signal_archive` did.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
