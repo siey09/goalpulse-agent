@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { summarizeSignalTypePerformance } from "./signalPerformance";
+import {
+  summarizeConfidenceScorePerformance,
+  summarizeSignalTypePerformance,
+} from "./signalPerformance";
 import type { AgentSignal, ArchiveEntry } from "../types";
 
 function makeAgentSignal(overrides: Partial<AgentSignal> = {}): AgentSignal {
@@ -151,5 +154,77 @@ describe("summarizeSignalTypePerformance", () => {
 
     expect(result[0].distinctMatchCount).toBe(1);
     expect(result[0].largestMatchSharePct).toBe(100);
+  });
+});
+
+describe("summarizeConfidenceScorePerformance", () => {
+  it("returns an empty array for no entries", () => {
+    expect(summarizeConfidenceScorePerformance([])).toEqual([]);
+  });
+
+  it("excludes entries without a confidenceScore", () => {
+    const entries = [makeEntry({ signalId: "s0", resultStatus: "correct" })];
+
+    expect(summarizeConfidenceScorePerformance(entries)).toEqual([]);
+  });
+
+  it("computes accuracy for a single bucket with mixed outcomes", () => {
+    const entries = [
+      makeEntry({
+        signalId: "s0",
+        resultStatus: "correct",
+        signalData: makeAgentSignal({ confidenceScore: 30 }),
+      }),
+      makeEntry({
+        signalId: "s1",
+        resultStatus: "incorrect",
+        signalData: makeAgentSignal({ confidenceScore: 40 }),
+      }),
+    ];
+
+    const result = summarizeConfidenceScorePerformance(entries);
+
+    expect(result).toEqual([
+      { bucket: "25-50", settledCount: 2, correctCount: 1, incorrectCount: 1, accuracyPct: 50 },
+    ]);
+  });
+
+  it("returns multiple buckets in ascending order regardless of input order", () => {
+    const entries = [
+      makeEntry({
+        signalId: "s0",
+        resultStatus: "correct",
+        signalData: makeAgentSignal({ confidenceScore: 90 }),
+      }),
+      makeEntry({
+        signalId: "s1",
+        resultStatus: "correct",
+        signalData: makeAgentSignal({ confidenceScore: 10 }),
+      }),
+    ];
+
+    const result = summarizeConfidenceScorePerformance(entries);
+
+    expect(result.map((r) => r.bucket)).toEqual(["0-25", "75-100"]);
+  });
+
+  it("places boundary values in the correct adjacent bucket", () => {
+    const entries = [
+      makeEntry({ signalId: "s0", resultStatus: "correct", signalData: makeAgentSignal({ confidenceScore: 24.9 }) }),
+      makeEntry({ signalId: "s1", resultStatus: "correct", signalData: makeAgentSignal({ confidenceScore: 25.0 }) }),
+      makeEntry({ signalId: "s2", resultStatus: "correct", signalData: makeAgentSignal({ confidenceScore: 49.9 }) }),
+      makeEntry({ signalId: "s3", resultStatus: "correct", signalData: makeAgentSignal({ confidenceScore: 50.0 }) }),
+      makeEntry({ signalId: "s4", resultStatus: "correct", signalData: makeAgentSignal({ confidenceScore: 74.9 }) }),
+      makeEntry({ signalId: "s5", resultStatus: "correct", signalData: makeAgentSignal({ confidenceScore: 75.0 }) }),
+    ];
+
+    const result = summarizeConfidenceScorePerformance(entries);
+
+    expect(result.map((r) => [r.bucket, r.settledCount])).toEqual([
+      ["0-25", 1],
+      ["25-50", 2],
+      ["50-75", 2],
+      ["75-100", 1],
+    ]);
   });
 });
