@@ -153,15 +153,23 @@ build + frontend build all green on merged `main`. Merged and pushed
 `docs/superpowers/specs/2026-07-10-signal-correlation-panel-design.md`,
 plan: `docs/superpowers/plans/2026-07-10-signal-correlation-panel.md`.
 
-📋 Next Steps: user to verify the Signal Correlation panel live in
-production (`https://goalpulse-agent.vercel.app`) — this closes out the
-dashboard-visibility initiative (all 3 prioritized panels shipped).
-Deferred future option, not scheduled: fix the totals-line overcounting
-server-side in `signalCorrelation.ts` (matching the Signal Performance
-precedent) rather than the current frontend-only dedup. Separately, the
+✅ **Dashboard-visibility initiative closed out 2026-07-10** — user
+confirmed all three panels live in production: Signal Correlation shows
+a real, correctly-formatted 2-match cluster, no console errors, no
+regressions. Combined with the earlier live confirmations for Confidence
+Calibration and Steam Move Detection, all three prioritized panels are
+shipped, merged, and verified live.
+
+🔄 In Progress: none.
+
+📋 Next Steps: none queued from this initiative. Deferred future option,
+not scheduled: fix the totals-line overcounting server-side in
+`signalCorrelation.ts` (matching the Signal Performance precedent)
+rather than the current frontend-only dedup. Separately, the
 `match_archive` table (see "What still needs doing" below) requires the
 user to run its `create table` statement in the Supabase SQL editor
-before it starts recording data, same as `signal_archive` did.
+before it starts recording data, same as `signal_archive` did. Await
+direction.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
