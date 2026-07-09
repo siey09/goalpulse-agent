@@ -32,23 +32,16 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: Confidence-bucketed signal performance (item 16) —
-implementation complete in worktree
-`.claude/worktrees/confidence-bucketed-performance` (branch
-`worktree-confidence-bucketed-performance`), all 3 plan tasks done and
-committed, 181/181 tests passing, clean build, openapi valid. Directly
-motivated by the SHARP_MOVE investigation, checked and confirmed
-empty-today with the user before building (see item 16's full entry
-above). Awaiting user's review before merge + push + worktree cleanup.
+🔄 In Progress: none — Confidence-bucketed signal performance (item 16)
+merged and pushed to `main` (181 tests, 25 routes).
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
-are now confirmed live in production with real data. Auto-deploy on push
-to `main` is live going forward.
+are confirmed live in production with real data. Auto-deploy on push to
+`main` is live going forward.
 
-📋 Next Steps: none further queued after this merges. `match_archive`
-table remains available if the user wants it, but was not chosen this
-round. Await direction.
+📋 Next Steps: none queued. `match_archive` table remains available if
+the user wants it, but was not chosen this round. Await direction.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -121,9 +114,10 @@ signal engine → React dashboard.
   `oddsSnapshots` capped 800, `signals` capped 100, `agentRuns` capped 50);
   settlement logic (`evaluatePendingSignalsForFinishedMatches`) lives here
 - `logic/` — pure, independently-testable modules: `signalEngine.ts`,
-  `marketMaker.ts`, `arena.ts`, `scoresContextFreshness.ts`,
+  `marketMaker.ts`, `arena.ts`, `backtest.ts`, `scoresContextFreshness.ts`,
   `councilDissent.ts`, `feedHealth.ts`, `marketConfirmation.ts`,
-  `paginationParams.ts`, `steamDetection.ts`, `signalCorrelation.ts`
+  `paginationParams.ts`, `steamDetection.ts`, `signalCorrelation.ts`,
+  `signalPerformance.ts`
 - `services/` — external integrations: `txlineClient.ts` (the real TxLINE
   API client), `txlineStream.ts` (push-stream monitor), `onchainValidation.ts`
   (Solana), `alerts.ts` (Discord), `persistence.ts` (Supabase snapshot
