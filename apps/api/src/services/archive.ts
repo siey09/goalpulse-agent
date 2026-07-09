@@ -1,8 +1,9 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { config } from "../config";
-import type { AgentSignal, ArchiveEntry, ArchiveFilters, ArchivePagination, ArchiveQueryResult } from "../types";
+import type { AgentSignal, ArchiveEntry, ArchiveFilters, ArchivePagination, ArchiveQueryResult, Match } from "../types";
 
 const ARCHIVE_TABLE = "signal_archive";
+const MATCH_ARCHIVE_TABLE = "match_archive";
 
 export type ArchiveEvent = "created" | "settled";
 
@@ -47,6 +48,37 @@ export async function archiveSignal(
     });
   } catch (error) {
     console.error("[archive] Failed to archive signal to Supabase:", error);
+  }
+}
+
+/**
+ * Appends one permanent record of a match's state the first time it's
+ * observed as finished - separate from signal_archive, since a match with
+ * zero signals otherwise leaves no permanent trace once it ages out of the
+ * in-memory recentFinishedMatches cap. Fail-open, same contract as
+ * archiveSignal: no-ops if Supabase is not configured, logs but never
+ * throws on a delivery failure.
+ */
+export async function archiveMatch(match: Match): Promise<void> {
+  const client = getClient();
+
+  if (!client) {
+    return;
+  }
+
+  try {
+    await client.from(MATCH_ARCHIVE_TABLE).insert({
+      match_id: match.id,
+      competition: match.competition,
+      home_team: match.homeTeam,
+      away_team: match.awayTeam,
+      home_score: match.homeScore,
+      away_score: match.awayScore,
+      status: match.status,
+      match_data: { ...match },
+    });
+  } catch (error) {
+    console.error("[archive] Failed to archive match to Supabase:", error);
   }
 }
 

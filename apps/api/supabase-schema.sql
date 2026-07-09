@@ -24,3 +24,21 @@ create table if not exists signal_archive (
   signal_data jsonb not null,
   archived_at timestamptz not null default now()
 );
+
+-- Insert-only permanent archive: one row per match the first time it's
+-- observed as finished. Never upserted, updated, or deleted. A match can
+-- legitimately get a second row if the process restarts and rediscovers
+-- it as "finished" via a backfill route without having seen the live
+-- transition - this is accepted, not a bug (see match-archive design spec).
+create table if not exists match_archive (
+  id bigserial primary key,
+  match_id text not null,
+  competition text not null,
+  home_team text not null,
+  away_team text not null,
+  home_score integer not null,
+  away_score integer not null,
+  status text not null,
+  match_data jsonb not null,
+  archived_at timestamptz not null default now()
+);

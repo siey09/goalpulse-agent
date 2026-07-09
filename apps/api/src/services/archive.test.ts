@@ -31,8 +31,8 @@ vi.mock("@supabase/supabase-js", () => ({
 }));
 
 import { config } from "../config";
-import { archiveSignal, getArchivedSignals, isTotalsMatchId } from "./archive";
-import type { AgentSignal } from "../types";
+import { archiveMatch, archiveSignal, getArchivedSignals, isTotalsMatchId } from "./archive";
+import type { AgentSignal, Match } from "../types";
 
 function makeSignal(overrides: Partial<AgentSignal> = {}): AgentSignal {
   return {
@@ -50,6 +50,21 @@ function makeSignal(overrides: Partial<AgentSignal> = {}): AgentSignal {
     explanation: "test signal",
     createdAt: new Date().toISOString(),
     resultStatus: "pending",
+    ...overrides,
+  };
+}
+
+function makeMatch(overrides: Partial<Match> = {}): Match {
+  return {
+    id: "match-1",
+    competition: "World Cup",
+    homeTeam: "Team A",
+    awayTeam: "Team B",
+    homeScore: 2,
+    awayScore: 1,
+    minute: 90,
+    status: "finished",
+    lastUpdated: new Date().toISOString(),
     ...overrides,
   };
 }
@@ -221,5 +236,56 @@ describe("getArchivedSignals", () => {
       data: [],
       pagination: { page: 1, pageSize: 25, totalCount: 0, totalPages: 0 },
     });
+  });
+});
+
+describe("archiveMatch", () => {
+  beforeEach(() => {
+    config.supabaseUrl = "";
+    config.supabaseServiceKey = "";
+    insertMock.mockReset();
+  });
+
+  it("no-ops when Supabase is not configured", async () => {
+    await archiveMatch(makeMatch());
+
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("inserts the correct row shape when configured", async () => {
+    config.supabaseUrl = "https://example.supabase.co";
+    config.supabaseServiceKey = "test-key";
+    insertMock.mockResolvedValue({ error: null });
+
+    const match = makeMatch({
+      id: "18198205",
+      competition: "FIFA World Cup",
+      homeTeam: "France",
+      awayTeam: "Morocco",
+      homeScore: 2,
+      awayScore: 0,
+      status: "finished",
+    });
+
+    await archiveMatch(match);
+
+    expect(insertMock).toHaveBeenCalledWith({
+      match_id: "18198205",
+      competition: "FIFA World Cup",
+      home_team: "France",
+      away_team: "Morocco",
+      home_score: 2,
+      away_score: 0,
+      status: "finished",
+      match_data: match,
+    });
+  });
+
+  it("does not throw when the mocked insert rejects", async () => {
+    config.supabaseUrl = "https://example.supabase.co";
+    config.supabaseServiceKey = "test-key";
+    insertMock.mockRejectedValue(new Error("network error"));
+
+    await expect(archiveMatch(makeMatch())).resolves.toBeUndefined();
   });
 });
