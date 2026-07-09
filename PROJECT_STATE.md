@@ -32,14 +32,23 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: none — Signal-performance match-diversity metrics (item 15)
-merged and pushed to `main` (176 tests). **Neither the Signal Archive nor
-Signal Performance dashboard panel has been visually verified in a browser
-yet** (no browser automation tool available this session) — recommend a
-quick visual check of both when convenient.
+🔄 In Progress: Confidence-bucketed signal performance (item 16) —
+implementation complete in worktree
+`.claude/worktrees/confidence-bucketed-performance` (branch
+`worktree-confidence-bucketed-performance`), all 3 plan tasks done and
+committed, 181/181 tests passing, clean build, openapi valid. Directly
+motivated by the SHARP_MOVE investigation, checked and confirmed
+empty-today with the user before building (see item 16's full entry
+above). Awaiting user's review before merge + push + worktree cleanup.
 
-📋 Next Steps: none queued. `match_archive` table remains available if the
-user wants it, but was not chosen this round. Await further direction.
+**Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
+below) — both the Signal Archive and Signal Performance dashboard panels
+are now confirmed live in production with real data. Auto-deploy on push
+to `main` is live going forward.
+
+📋 Next Steps: none further queued after this merges. `match_archive`
+table remains available if the user wants it, but was not chosen this
+round. Await direction.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
