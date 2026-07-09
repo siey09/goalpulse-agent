@@ -55,9 +55,29 @@ documented both the Vercel and Render deploy incidents in all three).
 `npm run build` clean in `apps/web`. Merged and pushed to `main`
 (`195d7b6`).
 
-📋 Next Steps: none queued beyond merging/pushing this close-out.
-`match_archive` table remains available if the user wants it, but was not
-chosen this round. Await direction.
+✅ **`match_archive` table shipped 2026-07-10** — the last purely-deferred
+backlog item. Insert-only Supabase table permanently recording every
+match's final state the first time it's observed as `"finished"`,
+independent of whether the match ever produced a signal (closing the gap
+where a match with zero signals left no permanent trace once it aged out
+of the in-memory 20-cap `recentFinishedMatches` or the process
+restarted). `store.ts`'s `upsertRecentFinishedMatches` now returns the
+newly-finished matches on each call; a new `archiveMatch()` in
+`services/archive.ts` (same fail-open contract as `archiveSignal`) is
+wired into all three existing callers (the live agent cycle, plus both
+lazy-backfill routes). Write-only, same as `signal_archive` shipped
+initially — no new read endpoint, no dashboard panel, no wiring into
+Arena's backtest Contrarian exclusion (a plausible future beneficiary,
+not built this round). Built via subagent-driven-development in an
+isolated worktree, all three tasks reviewed clean, final whole-branch
+review clean (189 tests, 18 files). Spec:
+`docs/superpowers/specs/2026-07-10-match-archive-design.md`, plan:
+`docs/superpowers/plans/2026-07-10-match-archive.md`.
+
+📋 Next Steps: none queued. The `match_archive` table (see "What still
+needs doing" below) requires the user to run its `create table` statement
+in the Supabase SQL editor before it starts recording data, same as
+`signal_archive` did. Await direction.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -440,6 +460,27 @@ function, which has no natural order). Backend-only, no dashboard change.
 Spec: `docs/superpowers/specs/2026-07-09-confidence-bucketed-performance-design.md`,
 plan: `docs/superpowers/plans/2026-07-09-confidence-bucketed-performance.md`.
 
+**17. Match archive** (`services/archive.ts`'s `archiveMatch`, new
+`match_archive` Supabase table) — permanently records every match's
+final state the first time it's observed as `"finished"`, independent of
+whether it ever produced a signal. `signal_archive` doesn't cover this:
+its `signal_data` blob only contains a signal's own fields plus a
+scores-context snapshot, never a `Match` object, and only for matches
+that produced at least one signal. `store.ts`'s
+`upsertRecentFinishedMatches` now returns the matches newly transitioning
+to finished on each call (previously `void`); all three of its existing
+callers (the live agent cycle, `GET /api/recent-results`,
+`GET /api/replay/backtest`) fire `archiveMatch` for each. Insert-only,
+fail-open, same conventions as `signal_archive`. A match rediscovered as
+finished after a restart (via a backfill route, without the live cycle
+having seen the transition) can legitimately produce a second row for
+the same `match_id` — accepted by design, not a bug. Write-only for now,
+no read endpoint, no dashboard panel, no wiring into Arena's backtest
+Contrarian exclusion (item #12's known limitation — a plausible future
+beneficiary, not built this round). Spec:
+`docs/superpowers/specs/2026-07-10-match-archive-design.md`, plan:
+`docs/superpowers/plans/2026-07-10-match-archive.md`.
+
 ## Bugs found and fixed
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
@@ -638,7 +679,7 @@ need to manually cross-reference archive entries by hand again.
 
 ## Testing
 
-**181 tests across 18 files**, all passing, `npm run test` from `apps/api/`:
+**189 tests across 18 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/backtest.test.ts`,
 `logic/councilDissent.test.ts`, `logic/feedHealth.test.ts`,
 `logic/marketConfirmation.test.ts`, `logic/marketMaker.test.ts`,
@@ -683,9 +724,10 @@ against production.
    exists in `apps/web`). Spec:
    `docs/superpowers/specs/2026-07-08-signal-archive-panel-design.md`,
    plan: `docs/superpowers/plans/2026-07-08-signal-archive-panel.md`.
-3. **`match_archive` table** (deliberately deferred): match-level permanent
-   history, if ever needed beyond what's already captured inside each
-   archived signal's `signal_data` blob.
+3. ~~`match_archive` table~~ **Done (2026-07-10)** — see item #17 above.
+   The user still needs to run its `create table` statement (in
+   `apps/api/supabase-schema.sql`) in the Supabase SQL editor before it
+   starts recording data, same manual step `signal_archive` required.
 4. ~~Stale-finished-match repolling fix~~ **Done (2026-07-08)** — a new
    `filterOutConfirmedFinishedFixtures(fixtures, priorMatchesById)` in
    `txlineClient.ts`, called in `fetchTxLineFeed()` before
