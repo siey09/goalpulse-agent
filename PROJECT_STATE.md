@@ -116,14 +116,52 @@ green on merged `main`. Merged and pushed (`e65d3f8`). Spec:
 `docs/superpowers/specs/2026-07-10-steam-move-detection-panel-design.md`,
 plan: `docs/superpowers/plans/2026-07-10-steam-move-detection-panel.md`.
 
-📋 Next Steps: user to verify the Steam Move Detection panel live in
-production (`https://goalpulse-agent.vercel.app`) before deciding
-whether to build the third, stretch-priority panel (Signal Correlation,
-ranked #3 — lowest of the three, build only if time remains before the
-July 19 deadline). Separately, the `match_archive` table (see "What
-still needs doing" below) requires the user to run its `create table`
-statement in the Supabase SQL editor before it starts recording data,
-same as `signal_archive` did.
+✅ **Signal Correlation dashboard panel shipped 2026-07-10** — third and
+last of the three prioritized dashboard-visibility panels; the
+dashboard-visibility initiative (Confidence Calibration, Steam Move
+Detection, Signal Correlation — Feed Health Monitoring deliberately
+deprioritized as lowest judge wow-factor) is now complete. New
+`SignalCorrelationPanel.tsx` fetches
+`GET /api/signal-correlation/patterns` (one-shot, historical/aggregate,
+not polling — same convention as Confidence Calibration).
+
+**Data-quality finding made during this panel's brainstorm:** neither
+`/api/signal-correlation` nor `/api/signal-correlation/patterns` account
+for the totals-line overcounting bug already fixed elsewhere for Signal
+Performance (`baseMatchId` dedup, `signalPerformance.ts:20`) — a totals
+signal's `matchId` is `<fixtureId>-totals-<line>`, so one real match
+firing across several of its own totals lines was being reported as a
+multi-match "cluster." Verified against live data: 6 of 7 raw
+pattern-matched clusters were single-match artifacts, not genuine
+cross-match correlation. User chose the lower-risk fix (client-side
+dedup/filter in the new panel only, no backend endpoint change) over
+fixing `signalCorrelation.ts` server-side, given the July 19 deadline —
+the backend-correct version remains a deferred future option, same
+`baseMatchId` pattern already proven for Signal Performance.
+
+The panel dedupes each cluster's `matchIds` client-side and only renders
+clusters with 2+ genuinely distinct real matches — each surviving card
+shows the pattern (side · severity · market), the deduped match count,
+signal count, time span, and the real match IDs. Pure addition: only
+touched `App.tsx` (+3 lines, placed after `ConfidenceCalibrationPanel`),
+no existing panel or backend file edited. Dedup/filter logic verified
+twice against live data (a standalone script, and live in a dev
+browser as production data grew between checks — 1 genuine cluster,
+then 2, both times correctly identified). 189 backend tests + backend
+build + frontend build all green on merged `main`. Merged and pushed
+(`86f8615`). Spec:
+`docs/superpowers/specs/2026-07-10-signal-correlation-panel-design.md`,
+plan: `docs/superpowers/plans/2026-07-10-signal-correlation-panel.md`.
+
+📋 Next Steps: user to verify the Signal Correlation panel live in
+production (`https://goalpulse-agent.vercel.app`) — this closes out the
+dashboard-visibility initiative (all 3 prioritized panels shipped).
+Deferred future option, not scheduled: fix the totals-line overcounting
+server-side in `signalCorrelation.ts` (matching the Signal Performance
+precedent) rather than the current frontend-only dedup. Separately, the
+`match_archive` table (see "What still needs doing" below) requires the
+user to run its `create table` statement in the Supabase SQL editor
+before it starts recording data, same as `signal_archive` did.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
