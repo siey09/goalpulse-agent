@@ -1183,6 +1183,50 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /api/signal-performance/by-confidence:
+    get:
+      summary: Historical hit-rate bucketed by confidenceScore range
+      description: >
+        Stricter companion to GET /api/signal-performance: buckets settled
+        archived signals by confidenceScore range (0-25/25-50/50-75/75-100)
+        rather than signalType, testing whether the composite confidence
+        score is more predictive of outcomes than raw severity alone.
+        Entries without a confidenceScore are excluded entirely (as of
+        2026-07-09, this includes every currently-settled archived signal,
+        since all predate confidenceScore's introduction - the endpoint
+        will return an empty array until newer signals settle). Fail-open:
+        returns 200 with empty data if Supabase is unconfigured or
+        unreachable, inherited from the existing GET /api/archive
+        endpoint's own fail-open behavior.
+      responses:
+        '200':
+          description: Historical accuracy per confidence bucket, plus a scan summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        bucket: { type: string, enum: ['0-25', '25-50', '50-75', '75-100'] }
+                        settledCount: { type: number }
+                        correctCount: { type: number }
+                        incorrectCount: { type: number }
+                        accuracyPct: { type: number }
+                      required: [bucket, settledCount, correctCount, incorrectCount, accuracyPct]
+                  summary:
+                    type: object
+                    properties:
+                      settledSignalsScanned: { type: number }
+                      bucketsReported: { type: number }
+                    required: [settledSignalsScanned, bucketsReported]
+                required: [data, summary]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /api/arena/backtest:
     get:
       summary: Retroactive Arena backtest against the full archived signal history

@@ -32,14 +32,23 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: none — Signal-performance match-diversity metrics (item 15)
-merged and pushed to `main` (176 tests). **Neither the Signal Archive nor
-Signal Performance dashboard panel has been visually verified in a browser
-yet** (no browser automation tool available this session) — recommend a
-quick visual check of both when convenient.
+🔄 In Progress: Confidence-bucketed signal performance (item 16) —
+implementation complete in worktree
+`.claude/worktrees/confidence-bucketed-performance` (branch
+`worktree-confidence-bucketed-performance`), all 3 plan tasks done and
+committed, 181/181 tests passing, clean build, openapi valid. Directly
+motivated by the SHARP_MOVE investigation, checked and confirmed
+empty-today with the user before building (see item 16's full entry
+above). Awaiting user's review before merge + push + worktree cleanup.
 
-📋 Next Steps: none queued. `match_archive` table remains available if the
-user wants it, but was not chosen this round. Await further direction.
+**Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
+below) — both the Signal Archive and Signal Performance dashboard panels
+are now confirmed live in production with real data. Auto-deploy on push
+to `main` is live going forward.
+
+📋 Next Steps: none further queued after this merges. `match_archive`
+table remains available if the user wants it, but was not chosen this
+round. Await direction.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -394,6 +403,24 @@ standing instruction not to add UI without being asked). Spec:
 `docs/superpowers/specs/2026-07-09-signal-performance-match-diversity-design.md`,
 plan: `docs/superpowers/plans/2026-07-09-signal-performance-match-diversity.md`.
 
+**16. Confidence-bucketed signal performance**
+(`logic/signalPerformance.ts`'s `summarizeConfidenceScorePerformance`,
+`GET /api/signal-performance/by-confidence`) — tests whether
+`confidenceScore` (item #7, designed to be more informative than raw
+`severity`/`signalType` by blending in field pressure and freshness)
+actually predicts accuracy better. Buckets settled signals by
+`confidenceScore` range (`0-25`/`25-50`/`50-75`/`75-100`). **Checked
+before building and confirmed with the user: every currently-settled
+archived signal predates `confidenceScore`'s introduction, so this
+returns `[]` today by design** — accepted deliberately since it's cheap,
+well-tested, and will fill in naturally as the remaining tournament
+matches settle, without further work. Entries missing `confidenceScore`
+are excluded entirely; empty buckets are omitted, not shown as 0%/NaN;
+buckets are returned in ascending order (unlike the signalType sibling
+function, which has no natural order). Backend-only, no dashboard change.
+Spec: `docs/superpowers/specs/2026-07-09-confidence-bucketed-performance-design.md`,
+plan: `docs/superpowers/plans/2026-07-09-confidence-bucketed-performance.md`.
+
 ## Bugs found and fixed
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
@@ -554,7 +581,7 @@ need to manually cross-reference archive entries by hand again.
 
 ## Testing
 
-**176 tests across 18 files**, all passing, `npm run test` from `apps/api/`:
+**181 tests across 18 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/backtest.test.ts`,
 `logic/councilDissent.test.ts`, `logic/feedHealth.test.ts`,
 `logic/marketConfirmation.test.ts`, `logic/marketMaker.test.ts`,
@@ -570,14 +597,14 @@ TxLINE/Supabase connection is explicitly *not* automated (this environment
 has no real credentials for either) — verified instead by the user directly
 against production.
 
-**24 backend routes total**, all documented in `openapi.yaml` (validate with
+**25 backend routes total**, all documented in `openapi.yaml` (validate with
 `npx @redocly/cli lint openapi.yaml`): `/health`, `/api/matches`,
 `/api/signals`, `/api/stats`, `/api/pnl`, `/api/agent-runs`,
 `/api/odds-history`, `/api/recent-results`, `/api/market-maker`,
 `/api/arena`, `/api/arena/backtest`, `/api/archive`, `/api/feed-health`,
 `/api/market-maker/confirmations`, `/api/steam-moves`,
 `/api/signal-correlation`, `/api/signal-correlation/patterns`,
-`/api/signal-performance`,
+`/api/signal-performance`, `/api/signal-performance/by-confidence`,
 `/api/replay/backtest`, `/api/onchain/validate-stat`,
 `/api/live/odds-stream`, `/api/live/replay-stream`, `/api/docs`,
 `POST /api/agent/run-once`.
