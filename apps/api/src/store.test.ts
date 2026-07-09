@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { store, evaluatePendingSignalsForFinishedMatches } from "./store";
+import { store, evaluatePendingSignalsForFinishedMatches, upsertRecentFinishedMatches } from "./store";
 import type { AgentSignal, Match } from "./types";
 
 function makeMatch(overrides: Partial<Match> = {}): Match {
@@ -41,6 +41,54 @@ beforeEach(() => {
   store.oddsSnapshots = [];
   store.signals = [];
   store.agentRuns = [];
+});
+
+describe("upsertRecentFinishedMatches", () => {
+  it("returns a match not previously seen as finished", () => {
+    const match = makeMatch({ id: "match-1", status: "finished" });
+
+    const result = upsertRecentFinishedMatches([match]);
+
+    expect(result).toEqual([match]);
+  });
+
+  it("does not re-return a match already recorded as finished on a later call", () => {
+    const match = makeMatch({ id: "match-1", status: "finished" });
+    upsertRecentFinishedMatches([match]);
+
+    const result = upsertRecentFinishedMatches([match]);
+
+    expect(result).toEqual([]);
+  });
+
+  it("excludes a still-live match from the return value", () => {
+    const liveMatch = makeMatch({ id: "match-2", status: "live" });
+
+    const result = upsertRecentFinishedMatches([liveMatch]);
+
+    expect(result).toEqual([]);
+    expect(store.recentFinishedMatches).toEqual([]);
+  });
+
+  it("returns only the genuinely newly-finished matches from a mixed batch", () => {
+    const alreadyFinished = makeMatch({ id: "match-1", status: "finished" });
+    upsertRecentFinishedMatches([alreadyFinished]);
+
+    const stillLive = makeMatch({ id: "match-2", status: "live" });
+    const newlyFinished = makeMatch({ id: "match-3", status: "finished" });
+
+    const result = upsertRecentFinishedMatches([alreadyFinished, stillLive, newlyFinished]);
+
+    expect(result).toEqual([newlyFinished]);
+  });
+
+  it("still upserts the finished match into store.recentFinishedMatches as before", () => {
+    const match = makeMatch({ id: "match-1", status: "finished", homeScore: 2, awayScore: 1 });
+
+    upsertRecentFinishedMatches([match]);
+
+    expect(store.recentFinishedMatches).toEqual([match]);
+  });
 });
 
 describe("evaluatePendingSignalsForFinishedMatches — 1X2 market", () => {

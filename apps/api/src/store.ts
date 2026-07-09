@@ -47,8 +47,15 @@ export function signalAlreadyExists(signal: AgentSignal): boolean {
 }
 
 
-export function upsertRecentFinishedMatches(matches: Match[]) {
+export function upsertRecentFinishedMatches(matches: Match[]): Match[] {
   const finishedMatches = matches.filter((match) => match.status === "finished");
+
+  const previouslyFinishedIds = new Set(
+    store.recentFinishedMatches.map((match) => match.id)
+  );
+  const newlyFinishedMatches = finishedMatches.filter(
+    (match) => !previouslyFinishedIds.has(match.id)
+  );
 
   for (const match of finishedMatches) {
     const existingIndex = store.recentFinishedMatches.findIndex(
@@ -68,6 +75,8 @@ export function upsertRecentFinishedMatches(matches: Match[]) {
         new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
     )
     .slice(0, 20);
+
+  return newlyFinishedMatches;
 }
 export function evaluatePendingSignalsForFinishedMatches() {
   let evaluatedCount = 0;
