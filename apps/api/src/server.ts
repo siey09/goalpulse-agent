@@ -30,7 +30,10 @@ import {
   findSignalClusters,
   CORRELATION_WINDOW_MS,
 } from "./logic/signalCorrelation";
-import { summarizeSignalTypePerformance } from "./logic/signalPerformance";
+import {
+  summarizeConfidenceScorePerformance,
+  summarizeSignalTypePerformance,
+} from "./logic/signalPerformance";
 import { computeBacktestScoreboards } from "./logic/backtest";
 import { parseArchiveFilters, parsePageParam, parsePageSizeParam } from "./logic/paginationParams";
 import { getArchivedSignals } from "./services/archive";
@@ -531,6 +534,19 @@ app.get("/api/signal-performance", async (_req, res) => {
     summary: {
       settledSignalsScanned: result.data.length,
       signalTypesReported: performance.length,
+    },
+  });
+});
+
+app.get("/api/signal-performance/by-confidence", async (_req, res) => {
+  const result = await getArchivedSignals({ event: "settled" }, { page: 1, pageSize: 500 });
+  const performance = summarizeConfidenceScorePerformance(result.data);
+
+  res.json({
+    data: performance,
+    summary: {
+      settledSignalsScanned: result.data.length,
+      bucketsReported: performance.length,
     },
   });
 });
