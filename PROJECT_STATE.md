@@ -1,6 +1,6 @@
 # GoalPulse Agent — Project State
 
-**As of:** 2026-07-08. This document is a session-handoff brief — read this
+**As of:** 2026-07-10. This document is a session-handoff brief — read this
 first, before `README.md`/`TECHNICAL_DOCS.md`/`SUBMISSION_NOTES.md` (which are
 judge/submission-facing and slightly stale relative to this file as of this
 writing — they predate the three features this document adds in the
@@ -40,8 +40,23 @@ below) — both the Signal Archive and Signal Performance dashboard panels
 are confirmed live in production with real data. Auto-deploy on push to
 `main` is live going forward.
 
-📋 Next Steps: none queued. `match_archive` table remains available if
-the user wants it, but was not chosen this round. Await direction.
+**Render bandwidth-suspension incident fixed 2026-07-10** (see "Render
+bandwidth-suspension incident" below) — free-tier bandwidth cap, not a
+code bug; fixed by adding a card to the Render workspace. Service
+confirmed back to "Deployed" and healthy.
+
+✅ **2026-07-10 audit close-out:** fixed the ArenaPanel/Kelly Criterion
+frontend wiring gap (real judge-facing bug — third scoreboard was
+silently dropped, see "Bugs found and fixed" below) and synced
+README.md/TECHNICAL_DOCS.md/SUBMISSION_NOTES.md against current code
+(181 tests, 24 openapi-documented endpoints, added the missing
+`/api/signal-performance/by-confidence` to all three endpoint lists, and
+documented both the Vercel and Render deploy incidents in all three).
+`npm run build` clean in `apps/web`; not yet merged/pushed.
+
+📋 Next Steps: none queued beyond merging/pushing this close-out.
+`match_archive` table remains available if the user wants it, but was not
+chosen this round. Await direction.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
@@ -86,6 +101,11 @@ rotation window, before the tournament even ends.
   it had *no* Git connection at all and had been stuck on a manual
   `vercel deploy` CLI snapshot for the entire session; this is now
   resolved and confirmed working end-to-end.
+- **Render suspended the backend on 2026-07-10 for exceeding free-tier
+  bandwidth** (see "Render bandwidth-suspension incident" below) — fixed
+  by adding a card to the Render workspace; service confirmed back to
+  "Deployed" and `/health` responding normally. Watch the Render billing
+  page for the rest of the month if traffic patterns change.
 
 ### Environment variables (Render backend)
 
@@ -320,8 +340,12 @@ across all three agents (`settleStake` replacing `settleUnit`) so
 since their stake is always exactly 1. Found during design: negating a
 stake must be written as `0 - stakeUnits`, not `-stakeUnits`, so a
 legitimately-zero Kelly stake settles to `+0` not `-0`
-(`Object.is(-0, 0)` is `false`, which Vitest's `toBe()` uses). Backend-only,
-no dashboard panel. Spec: `docs/superpowers/specs/2026-07-08-arena-kelly-criterion-design.md`,
+(`Object.is(-0, 0)` is `false`, which Vitest's `toBe()` uses). Shipped
+backend-only, no dashboard panel; the frontend wiring gap this left (the
+API returned `kellyCriterion` but `ArenaPanel.tsx` never rendered it) was
+found and fixed 2026-07-10 — see "ArenaPanel Kelly Criterion wiring gap"
+under "Bugs found and fixed" below. Spec:
+`docs/superpowers/specs/2026-07-08-arena-kelly-criterion-design.md`,
 plan: `docs/superpowers/plans/2026-07-08-arena-kelly-criterion.md`.
 
 **12. Retroactive Arena backtesting against the archive**
@@ -501,6 +525,44 @@ this project specifically, a "the frontend doesn't show a merged feature"
 report needs the *hosting pipeline itself* checked, not just the code —
 Render's lag and Vercel's total disconnection turned out to be two
 completely different failure modes that looked similar from the outside.
+
+**Render bandwidth-suspension incident (2026-07-10, fixed — not a code
+bug).** The backend went fully unresponsive. Root cause confirmed via
+Render's usage dashboard: the Hobby workspace's free 5GB/month bandwidth
+allowance was exhausted (usage showed 6GB/5GB), and "Service-Initiated"
+traffic at 5.59GB — not HTTP responses to end users, which were only
+421MB — was the overwhelming majority of that usage. Render's documented
+behavior: exceeding free bandwidth with no payment method on file
+suspends *all* free services for the rest of the calendar month. Left
+unresolved, this would have kept the backend down until August 1, past
+the July 19 deadline. Fixed by adding a card to the Render workspace;
+overage is billed at $0.15/GB (trivially cheap at the current overage —
+about $0.15). Service confirmed back to "Deployed" status, and `/health`
+on the live endpoint responds `{"ok":true,"status":"running"}`.
+`liveStream.connected` was `false` immediately after the restart (an
+expected cold-boot state) and was confirmed to reconnect on its own
+shortly after. **Flag for the rest of the tournament:**
+"Service-Initiated" bandwidth (TxLINE's own push-stream/outbound traffic)
+is the dominant cost driver here, not user/judge traffic — if usage
+patterns change (more frequent polling, more push-stream volume), watch
+the Render billing page for the rest of the month to avoid a repeat
+before the 19th.
+
+**ArenaPanel Kelly Criterion wiring gap (2026-07-10, found and fixed —
+real user/judge-facing bug).** `GET /api/arena` has returned three agent
+scoreboards (`momentumFollower`, `contrarian`, `kellyCriterion`) since
+item #11 (Kelly Criterion) merged, but `ArenaPanel.tsx`'s response type
+only declared the first two and never rendered the third — Kelly
+Criterion's results were computed correctly server-side but silently
+dropped from the live dashboard the entire time. Fixed by adding
+`kellyCriterion`/`stakeUnits`/the `kelly_criterion` agent id to the
+frontend's local types, adding a third `ScoreboardCard` (violet accent),
+switching the grid to three columns, generalizing the leader-detection
+logic from a two-way ternary to an n-way max-with-uniqueness check across
+all three scoreboards, and updating the panel's heading/description to
+name all three agents. Verified with a clean `npm run build` in
+`apps/web`. Item #11 in the feature list above (previously "backend-only,
+no dashboard panel") is now dashboard-wired.
 
 ## Known limitations (documented, deliberately not fixed)
 

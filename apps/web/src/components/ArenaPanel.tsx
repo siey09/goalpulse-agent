@@ -4,20 +4,23 @@ import { useEffect, useState } from "react";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
 
+type ArenaAgentId = "momentum_follower" | "contrarian" | "kelly_criterion";
+
 type ArenaPosition = {
-  agentId: "momentum_follower" | "contrarian";
+  agentId: ArenaAgentId;
   signalId: string;
   matchId: string;
   match: string;
   side: "home" | "away";
   target: string;
   oddsTaken: number;
+  stakeUnits: number;
   resultStatus: "pending" | "correct" | "incorrect";
   profitUnits: number;
 };
 
 type ArenaScoreboard = {
-  agentId: "momentum_follower" | "contrarian";
+  agentId: ArenaAgentId;
   label: string;
   positions: ArenaPosition[];
   settledCount: number;
@@ -39,6 +42,7 @@ type ArenaProof = {
 type ArenaResponse = {
   momentumFollower: ArenaScoreboard;
   contrarian: ArenaScoreboard;
+  kellyCriterion: ArenaScoreboard;
   proof: ArenaProof;
 };
 
@@ -53,12 +57,14 @@ function ScoreboardCard({
 }: {
   scoreboard: ArenaScoreboard;
   isLeader: boolean;
-  accent: "sky" | "orange";
+  accent: "sky" | "orange" | "violet";
 }) {
   const accentClass =
     accent === "sky"
       ? "border-sky-400/20 bg-sky-400/10 text-sky-200"
-      : "border-orange-400/20 bg-orange-400/10 text-orange-200";
+      : accent === "orange"
+        ? "border-orange-400/20 bg-orange-400/10 text-orange-200"
+        : "border-violet-400/20 bg-violet-400/10 text-violet-200";
 
   return (
     <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
@@ -196,12 +202,13 @@ export function ArenaPanel() {
     }
   }
 
-  const leaderAgentId =
-    arena && arena.momentumFollower.netUnits !== arena.contrarian.netUnits
-      ? arena.momentumFollower.netUnits > arena.contrarian.netUnits
-        ? "momentum_follower"
-        : "contrarian"
-      : null;
+  const leaderAgentId = ((): ArenaAgentId | null => {
+    if (!arena) return null;
+    const scoreboards = [arena.momentumFollower, arena.contrarian, arena.kellyCriterion];
+    const maxNetUnits = Math.max(...scoreboards.map((s) => s.netUnits));
+    const leaders = scoreboards.filter((s) => s.netUnits === maxNetUnits);
+    return leaders.length === 1 ? leaders[0].agentId : null;
+  })();
 
   return (
     <section
@@ -215,14 +222,16 @@ export function ArenaPanel() {
             Agent vs Agent Arena
           </div>
           <h2 className="mt-2 text-2xl font-semibold text-white">
-            Momentum Follower vs Contrarian
+            Momentum Follower vs Contrarian vs Kelly Criterion
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-400">
-            Two agents, same live signal feed, opposite strategies. Contrarian
+            Three agents, same live signal feed, three strategies. Contrarian
             fades signals that fire without real field support - a live,
             causal check made at signal-creation time, never the final result.
-            Settlement is tamper-evident and on-chain-verified: no funds move,
-            no wagers are placed.
+            Kelly Criterion takes the same side as the signal but sizes its
+            stake by an edge derived from confidence score, instead of flat
+            staking. Settlement is tamper-evident and on-chain-verified: no
+            funds move, no wagers are placed.
           </p>
         </div>
       </div>
@@ -233,7 +242,7 @@ export function ArenaPanel() {
         </div>
       ) : arena ? (
         <>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-3">
             <ScoreboardCard
               scoreboard={arena.momentumFollower}
               isLeader={leaderAgentId === "momentum_follower"}
@@ -243,6 +252,11 @@ export function ArenaPanel() {
               scoreboard={arena.contrarian}
               isLeader={leaderAgentId === "contrarian"}
               accent="orange"
+            />
+            <ScoreboardCard
+              scoreboard={arena.kellyCriterion}
+              isLeader={leaderAgentId === "kelly_criterion"}
+              accent="violet"
             />
           </div>
 

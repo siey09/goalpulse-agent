@@ -143,9 +143,19 @@ The historical hit-rate data from `GET /api/signal-performance` (item 7) had zer
 
 **Bug 3 — Live fixture coverage could be silently dropped.** The live poll loop processes a capped batch of fixtures per cycle (14, for TxLINE rate/latency reasons) from `/api/fixtures/snapshot`, but the response was not sorted before slicing. With multiple concurrent World Cup matches, a currently in-play fixture could be pushed past the cap by unrelated future-scheduled fixtures, silently dropping live coverage with no error or warning. Fixed by prioritizing fixtures whose kickoff has already passed and are still within a plausible in-play window (kickoff to kickoff + 3 hours) ahead of everything else before slicing.
 
+**Bug 4 — ArenaPanel silently dropped the Kelly Criterion scoreboard (found and fixed 2026-07-10).** `GET /api/arena` had returned all three agent scoreboards (Momentum Follower, Contrarian, Kelly Criterion) since Kelly Criterion shipped, but the dashboard's `ArenaPanel.tsx` only declared the first two in its response type and never rendered the third — a user/judge-facing gap where a fully-working backend feature was invisible on the live site. Fixed by completing the frontend type (`kellyCriterion`, `stakeUnits`, the `kelly_criterion` agent id), adding the missing scoreboard card, and generalizing the leader-detection logic to compare all three agents instead of two.
+
+## Deployment Incidents Found and Fixed
+
+Beyond code bugs, two real production deployment incidents were investigated and resolved — both blocked judges from seeing merged, working features on the live site, with no code changes required.
+
+**Vercel deploy pipeline had no Git connection (2026-07-09).** Merged features (the Signal Archive and Signal Performance dashboard panels) were confirmed present in the `main` branch but absent from the live production frontend. Root cause, confirmed by diffing the deployed JS bundle against from-scratch builds of specific commits: the Vercel project had never been connected to GitHub — every prior deployment was a manual CLI snapshot — so pushes to `main` had nothing wired up to receive them; and once connected, the Root Directory setting needed to be pointed at `apps/web` for the build to find `vite`. Both fixed in the Vercel dashboard. Auto-deploy on push to `main` is now confirmed live going forward.
+
+**Render bandwidth suspension (2026-07-10).** The backend went fully unresponsive. Root cause: the free Hobby workspace's 5GB/month bandwidth allowance was exhausted — driven almost entirely by TxLINE's own outbound service traffic, not by end-user HTTP responses — and Render suspends all free services for the remainder of the calendar month once that happens with no payment method on file. Left unresolved, this would have kept the backend down until August 1, well past the July 19 deadline. Fixed by adding a card to the Render workspace (overage billed at a trivial $0.15/GB); service confirmed restored to "Deployed" and `/health` responding normally.
+
 ## Automated Test Coverage and Security Audit
 
-- **174 automated unit tests across 18 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian/Kelly Criterion position logic and variable-stake ROI math, the retroactive backtest orchestration against archived signals, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's session-windowing/cluster-filtering logic and its pattern-matched variant, the composite confidence score's weighting/renormalization, and the signal-type performance aggregation. Test files are excluded from the production TypeScript build output.
+- **181 automated unit tests across 18 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian/Kelly Criterion position logic and variable-stake ROI math, the retroactive backtest orchestration against archived signals, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's session-windowing/cluster-filtering logic and its pattern-matched variant, the composite confidence score's weighting/renormalization, and the signal-type performance aggregation. Test files are excluded from the production TypeScript build output.
 - **Git history security audit**: searched the full commit history for accidentally committed secrets (API tokens, wallet keys, webhook URLs) and confirmed none were ever committed. Only `.env.example` (a template with no real values) was ever tracked; `.env.local` and `.secrets/` are gitignored throughout.
 
 ## Production Readiness Features (Added After Core Verification)
@@ -168,7 +178,7 @@ External monitoring via UptimeRobot (free tier) pings `/health` every 5 minutes 
 
 ### 4. Interactive OpenAPI/Swagger Documentation
 
-A hand-written OpenAPI 3.0 spec (`openapi.yaml`, covering all 13 endpoints with full schema detail) is served live as an interactive Swagger UI at `GET /api/docs` — publicly accessible like every other GET route, so a judge or reviewer can browse and try real requests against the live API with zero setup. Documents the `X-API-Key` requirement and both rate limits precisely rather than leaving them implicit.
+A hand-written OpenAPI 3.0 spec (`openapi.yaml`, covering all 24 endpoints with full schema detail) is served live as an interactive Swagger UI at `GET /api/docs` — publicly accessible like every other GET route, so a judge or reviewer can browse and try real requests against the live API with zero setup. Documents the `X-API-Key` requirement and both rate limits precisely rather than leaving them implicit.
 
 ### 5. Supabase Persistence — Verified Surviving a Real Render Restart
 
@@ -248,7 +258,7 @@ GoalPulse uses:
 - Signal correlation: detects cross-match signal clusters within a short time window
 - Composite confidence score (0-100) on every signal, blending magnitude, field pressure, and freshness tightness
 - Historical hit-rate per signal type from the permanent archive, now visible on the dashboard's Signal Performance panel
-- 174 automated unit tests
+- 181 automated unit tests
 
 ## Outcome Audit Layer
 
@@ -286,6 +296,7 @@ The frontend is built with React, TypeScript, Vite, Tailwind CSS, and Recharts. 
 - GET /api/signal-correlation (cross-match signal cluster detection)
 - GET /api/signal-correlation/patterns (pattern-matched cross-match clusters)
 - GET /api/signal-performance (historical hit-rate per signal type)
+- GET /api/signal-performance/by-confidence (accuracy bucketed by composite confidence score)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events, live)

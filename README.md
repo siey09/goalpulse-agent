@@ -39,11 +39,12 @@ Six substantial features were added and verified live in production after the in
 
 Also added: 24 automated unit tests covering the deterministic signal and settlement logic (plus API key auth and Supabase persistence), and a full git-history security audit confirming no secrets were ever committed.
 
-## Latest Session (2026-07-07 to 2026-07-08)
+## Latest Session (2026-07-07 to 2026-07-10)
 
 1. **Agent vs Agent Arena** (`GET /api/arena`) — three synthetic trading agents run head-to-head on the same live 1X2 signal feed with genuinely different strategies: **Momentum Follower** takes every signal at face value; **Contrarian** fades signals below the same `fieldPressureScore < 22` "market-only move" threshold already shown in the Signal Intelligence Panel, taking the opposite side at the real quoted price from the original snapshot; **Kelly Criterion** takes the same side as the signal but sizes its stake via the Kelly formula, driven by the signal's confidence score. Settlement is tamper-evident (SHA-256 hash of all three ledgers).
 2. **Insert-only signal archive** — every signal is appended to a permanent Supabase table (`signal_archive`) at creation and again at settlement, immune to the in-memory store's caps and to the tournament's own live-rotation window. Readable via `GET /api/archive` (paginated, filterable by matchId/status/market/event) and browsable on the dashboard's "Full tournament archive" panel.
 3. **Scores-context freshness fix** (real bug, found and fixed) — a single TXODDS Scores context fetched per poll was being stamped onto every odds tick selected that poll, including ticks reached far back in history, which could mislabel `fieldPressureScore` with a stale context. Fixed with a 60-second freshness gate at both the snapshot layer (`txlineClient.ts`) and the signal layer's historical-context fallback (`signalEngine.ts`).
+4. **ArenaPanel Kelly Criterion wiring gap** (real bug, found and fixed 2026-07-10) — the backend's `GET /api/arena` had returned three agent scoreboards (Momentum Follower, Contrarian, Kelly Criterion) since Kelly Criterion shipped, but `ArenaPanel.tsx`'s response type only declared the first two, so Kelly Criterion's results were silently dropped from the dashboard. Fixed by completing the frontend type and adding the missing scoreboard card; all three now render.
 
 Also added this session: 63 more automated unit tests (87 total across 10 files, up from 24).
 
@@ -57,6 +58,13 @@ Six further features make GoalPulse deployable, not just demoable, all on free t
 4. **Interactive OpenAPI/Swagger documentation** at `GET /api/docs`, publicly browsable with zero setup.
 5. **Supabase periodic-snapshot persistence** — verified live: a manual Render restart showed the store correctly recovered older historical data from Supabase instead of resetting to empty.
 6. **Pinned, git-committed case studies** (`apps/web/src/data/pinnedCaseStudies.ts`) immune to backend restarts, plus an always-visible small-sample-size disclaimer next to the live accuracy number and P&L card.
+
+## Deployment Incidents (Found and Fixed)
+
+Beyond code bugs, two real production deployment incidents were found and resolved:
+
+- **Vercel deploy pipeline (2026-07-09)** — the Vercel project had no Git connection at all (every prior deploy was a manual CLI snapshot, so pushes to `main` never triggered a rebuild), and once connected, the first real git-triggered build failed because Root Directory wasn't set to `apps/web`. Both fixed directly in the Vercel dashboard; auto-deploy on push to `main` is now live and confirmed working end-to-end.
+- **Render bandwidth suspension (2026-07-10)** — the free-tier backend workspace exceeded its 5GB/month bandwidth allowance (dominated by TxLINE's own outbound service traffic, not HTTP responses to users), which Render suspends all free services for the rest of the calendar month for, with no payment method on file — this would have stayed down past the July 19 deadline if left unfixed. Fixed by adding a card to the Render workspace (overage billed at $0.15/GB, trivially cheap); service confirmed back to "Deployed" and healthy.
 
 ## Key Features
 
@@ -101,7 +109,7 @@ Six further features make GoalPulse deployable, not just demoable, all on free t
 - Historical hit-rate per signal type from the permanent archive, now visible on the dashboard's Signal Performance panel
 - Retroactive Arena backtest (Momentum Follower + Kelly Criterion) against the full archived signal history
 - Pattern-matched signal correlation: same side/severity/market repeating across matches
-- 174 automated unit tests
+- 181 automated unit tests
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer
@@ -192,6 +200,7 @@ npm.cmd run test
 - GET /api/signal-correlation (cross-match signal cluster detection)
 - GET /api/signal-correlation/patterns (pattern-matched cross-match clusters)
 - GET /api/signal-performance (historical hit-rate per signal type)
+- GET /api/signal-performance/by-confidence (accuracy bucketed by composite confidence score)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)
