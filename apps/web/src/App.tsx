@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { SignalIntelligencePanel } from "./components/SignalIntelligencePanel";
 import { MarketMakerPanel } from "./components/MarketMakerPanel";
+import { SteamMoveDetectionPanel } from "./components/SteamMoveDetectionPanel";
 import { ArenaPanel } from "./components/ArenaPanel";
 import { ResultsSettlementPanel } from "./components/ResultsSettlementPanel";
 import { VerifiedCaseStudiesPanel } from "./components/VerifiedCaseStudiesPanel";
@@ -2317,6 +2318,8 @@ function App() {
           </div>
 
           <MarketMakerPanel />
+
+          <SteamMoveDetectionPanel />
 
           <ArenaPanel />
 
