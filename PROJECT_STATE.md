@@ -74,10 +74,34 @@ review clean (189 tests, 18 files). Spec:
 `docs/superpowers/specs/2026-07-10-match-archive-design.md`, plan:
 `docs/superpowers/plans/2026-07-10-match-archive.md`.
 
-📋 Next Steps: none queued. The `match_archive` table (see "What still
-needs doing" below) requires the user to run its `create table` statement
-in the Supabase SQL editor before it starts recording data, same as
-`signal_archive` did. Await direction.
+✅ **Confidence Calibration dashboard panel shipped 2026-07-10** — first
+of three prioritized dashboard-visibility panels for backend features
+built earlier this session with no frontend surface (ranked ahead of
+Steam Move Detection and Signal Correlation; Feed Health Monitoring
+deprioritized as lowest judge wow-factor). New
+`ConfidenceCalibrationPanel.tsx` renders
+`GET /api/signal-performance/by-confidence` as ascending accuracy bars per
+confidence bucket — the "is our confidence score actually calibrated"
+story, reusing existing colors/bar patterns, zero new dependencies. Pure
+addition: only touched `App.tsx` (+3 lines: import + render), no existing
+panel edited. Note along the way: Signal Performance was already believed
+covered (it has a panel, `SignalPerformancePanel.tsx`), but that panel
+only renders `/api/signal-performance` (by signal type) — the
+`/api/signal-performance/by-confidence` endpoint and the `confidenceScore`
+field itself were still nowhere in the frontend before this panel.
+Verified in a local dev browser against live production data (correctly
+showed the empty state — production has no settled, confidence-scored
+signals yet). 189 backend tests + backend build + frontend build all
+green on merged `main`. Merged and pushed (`353688e`). Spec:
+`docs/superpowers/specs/2026-07-10-confidence-calibration-panel-design.md`,
+plan: `docs/superpowers/plans/2026-07-10-confidence-calibration-panel.md`.
+
+📋 Next Steps: user to verify the Confidence Calibration panel live in
+production (`https://goalpulse-agent.vercel.app`) before starting the
+next panel (Steam Move Detection, ranked #2). Separately, the
+`match_archive` table (see "What still needs doing" below) requires the
+user to run its `create table` statement in the Supabase SQL editor
+before it starts recording data, same as `signal_archive` did.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
 this machine across sessions — verify a PID's command line before
