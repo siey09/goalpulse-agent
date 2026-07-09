@@ -79,6 +79,11 @@ rotation window, before the tournament even ends.
   a nontrivial amount** — confirmed directly in production during this
   session (see "Deploy-lag incident" below). Don't assume a push is live
   within minutes; verify against real endpoint behavior if it matters.
+- **Vercel is now connected to GitHub and auto-deploys on push to `main`**
+  (fixed 2026-07-09 — see "Vercel deploy incident" below). Before this fix,
+  it had *no* Git connection at all and had been stuck on a manual
+  `vercel deploy` CLI snapshot for the entire session; this is now
+  resolved and confirmed working end-to-end.
 
 ### Environment variables (Render backend)
 
@@ -436,6 +441,45 @@ scanning the full current signal store: every one of ~99 signals spanning an
 recent signal showed correct gating. Render's deploy had simply lagged well
 behind the git push. Resolved itself; no code issue. Lesson: verify against
 live endpoint behavior, don't assume a push is live.
+
+**Vercel deploy incident (2026-07-09, fixed — not a code bug either, but a
+much bigger gap than Render's lag).** The Signal Archive and Signal
+Performance dashboard panels were confirmed correctly present in `App.tsx`
+on `main`, yet neither appeared on the live production frontend
+(https://goalpulse-agent.vercel.app). Investigated by fetching the actual
+deployed JS bundle and comparing it byte-for-byte against a from-scratch
+build of specific historical commits: the live bundle was an *exact* match
+for commit `d8f146f` — the commit immediately before the Signal Archive
+Panel was even merged, meaning production had been frozen at that point
+through every subsequent push (Signal Archive, Signal Performance, and
+everything in between).
+
+**Two stacked root causes, both confirmed and fixed directly in the Vercel
+dashboard (with user permission):**
+1. **The Vercel project had no Git connection at all.** Every prior
+   deployment (~20+) was a manual `vercel deploy` CLI run — zero commit
+   hashes or branch metadata on any of them. Pushes to `main` were never
+   going to trigger anything; there was nothing wired up to receive them.
+   Fixed by connecting the Vercel project to GitHub
+   (`siey09/goalpulse-agent`) via Project Settings → Git.
+2. **Once connected, the first real git-triggered build immediately
+   failed:** `sh: line 1: vite: command not found` (exit 127). Project
+   Settings → Build and Deployment → Root Directory was unset, defaulting
+   to the repo root — the build never `cd`'d into `apps/web`, where `vite`
+   (and the rest of the frontend's `node_modules`) actually lives. Fixed
+   by setting Root Directory to `apps/web`.
+
+After both fixes, commit `325900e` (an empty commit pushed specifically to
+give the newly-connected pipeline something to build) deployed
+successfully (Ready, 13s) and was verified live: both panels render
+correctly with real production data (Signal Archive: 102 archived,
+filters working; Signal Performance: WATCH 88% 46/52, SHARP_MOVE 33%
+9/27, MOMENTUM_SHIFT 87% 20/23). **Auto-deploy on push to `main` is now
+live going forward** — this class of gap should not recur. Lesson: for
+this project specifically, a "the frontend doesn't show a merged feature"
+report needs the *hosting pipeline itself* checked, not just the code —
+Render's lag and Vercel's total disconnection turned out to be two
+completely different failure modes that looked similar from the outside.
 
 ## Known limitations (documented, deliberately not fixed)
 
