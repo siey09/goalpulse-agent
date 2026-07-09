@@ -36,7 +36,7 @@ import {
 } from "./logic/signalPerformance";
 import { computeBacktestScoreboards } from "./logic/backtest";
 import { parseArchiveFilters, parsePageParam, parsePageSizeParam } from "./logic/paginationParams";
-import { getArchivedSignals } from "./services/archive";
+import { archiveMatch, getArchivedSignals } from "./services/archive";
 import { config } from "./config";
 import { requireApiKey } from "./middleware/apiKeyAuth";
 import { generalApiLimiter, runOnceLimiter } from "./middleware/rateLimiters";
@@ -122,7 +122,10 @@ app.get("/api/recent-results", async (_req, res) => {
   if (store.recentFinishedMatches.length === 0 || !hasRecentOddsHistory) {
     const recentFeed = await fetchRecentTxLineResults();
 
-    upsertRecentFinishedMatches(recentFeed.matches);
+    const newlyFinishedMatches = upsertRecentFinishedMatches(recentFeed.matches);
+    for (const match of newlyFinishedMatches) {
+      void archiveMatch(match);
+    }
 
     for (const snapshot of recentFeed.snapshots) {
       const alreadyExists = store.oddsSnapshots.some(
@@ -666,7 +669,10 @@ app.get("/api/replay/backtest", async (_req, res) => {
   if (store.recentFinishedMatches.length === 0 || !hasRecentOddsHistory) {
     const recentFeed = await fetchRecentTxLineResults();
 
-    upsertRecentFinishedMatches(recentFeed.matches);
+    const newlyFinishedMatches = upsertRecentFinishedMatches(recentFeed.matches);
+    for (const match of newlyFinishedMatches) {
+      void archiveMatch(match);
+    }
 
     for (const snapshot of recentFeed.snapshots) {
       const alreadyExists = store.oddsSnapshots.some(

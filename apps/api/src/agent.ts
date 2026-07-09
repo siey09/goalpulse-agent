@@ -3,7 +3,7 @@ import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { fetchSimulatedTxLineFeed } from "./services/mockTxLine";
 import { fetchTxLineFeed } from "./services/txlineClient";
 import { sendHighSeverityAlert } from "./services/alerts";
-import { archiveSignal } from "./services/archive";
+import { archiveMatch, archiveSignal } from "./services/archive";
 import {
   evaluatePendingSignalsForFinishedMatches,
   findPreviousSnapshot,
@@ -43,7 +43,10 @@ export async function processAgentCycle(): Promise<AgentRun> {
       : await fetchTxLineFeed();
 
     store.matches = feed.matches;
-    upsertRecentFinishedMatches(feed.matches);
+    const newlyFinishedMatches = upsertRecentFinishedMatches(feed.matches);
+    for (const match of newlyFinishedMatches) {
+      void archiveMatch(match);
+    }
 
     let signalsCreated = 0;
     let snapshotsCreated = 0;
