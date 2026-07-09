@@ -162,13 +162,12 @@ shipped, merged, and verified live.
 
 🔄 In Progress: none.
 
-📋 Next Steps: none queued from this initiative. Deferred future option,
-not scheduled: fix the totals-line overcounting server-side in
-`signalCorrelation.ts` (matching the Signal Performance precedent)
-rather than the current frontend-only dedup. Separately, the
-`match_archive` table (see "What still needs doing" below) requires the
-user to run its `create table` statement in the Supabase SQL editor
-before it starts recording data, same as `signal_archive` did. Await
+📋 Next Steps: none queued. Deferred future option, not scheduled: fix the
+totals-line overcounting server-side in `signalCorrelation.ts` (matching
+the Signal Performance precedent) rather than the current frontend-only
+dedup. `match_archive`'s Supabase setup is already complete (user ran the
+`create table` statement directly in the Supabase SQL editor, verified in
+the Table Editor — see item #3 in "What still needs doing" below). Await
 direction.
 
 **Environment notes:** stray leftover dev-server processes accumulate on
@@ -817,9 +816,13 @@ against production.
    `docs/superpowers/specs/2026-07-08-signal-archive-panel-design.md`,
    plan: `docs/superpowers/plans/2026-07-08-signal-archive-panel.md`.
 3. ~~`match_archive` table~~ **Done (2026-07-10)** — see item #17 above.
-   The user still needs to run its `create table` statement (in
-   `apps/api/supabase-schema.sql`) in the Supabase SQL editor before it
-   starts recording data, same manual step `signal_archive` required.
+   The user ran its `create table if not exists` statement (in
+   `apps/api/supabase-schema.sql`) directly in the Supabase SQL editor and
+   verified it in the Table Editor: `match_archive` appears alongside
+   `signal_archive` and `store_snapshots`. Completed right after the table
+   was designed, before the dashboard-visibility panels work started. Done
+   via the Supabase dashboard directly, not through code — won't show up
+   in git history, which is expected, not a gap.
 4. ~~Stale-finished-match repolling fix~~ **Done (2026-07-08)** — a new
    `filterOutConfirmedFinishedFixtures(fixtures, priorMatchesById)` in
    `txlineClient.ts`, called in `fetchTxLineFeed()` before
