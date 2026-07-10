@@ -32,11 +32,12 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: P1 Tier 3, P1-3 done, P1-2 next (see "RESUME POINT"
-further below for full detail). Tier 1, Tier 2, and P1-3 all
-reviewed/approved/pushed/verified live as of 2026-07-11, including a
-real pre-existing duplicate-data find during Tier 2 and a real
-production bug (false 5-match cluster) confirmed and fixed by P1-3.
+🔄 In Progress: P1 Tier 3, P1-2 implemented (see "RESUME POINT" further
+below for full detail) — 234 tests, awaiting user review before push.
+Tier 1, Tier 2, and P1-3 all reviewed/approved/pushed/verified live as
+of 2026-07-11. P1-2 was reframed after real data investigation: not a
+4/8/15% threshold problem, but a longshot-odds confidence penalty
+backed by a clean accuracy cliff in 294 real archived signals.
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
@@ -812,6 +813,58 @@ tier breakdown:
   verification time (the sliding correlation window had moved on from
   the earlier local check) — consistent with each other, confirmed not
   a bug. No console errors. **P1-3 approved, closed out.**
+
+  **✅ P1-2 implemented 2026-07-11, awaiting user review before push —
+  reframed after data investigation.** The original ask ("calibrate
+  the 4%/8%/15% severity thresholds") turned out not to be the real
+  problem: investigating 294 real settled `signal_archive` rows (via
+  `GET /api/archive`, no direct DB access) found accuracy correlates
+  almost perfectly with the underlying **decimal odds level**, not the
+  percentage-compression magnitude severity is based on — 1X2 accuracy
+  broke from 60% to 0% right at `oddsAfter=3`; totals broke from
+  62-63% to 25-27% at the identical odds level (just never reaching
+  1X2's extreme longshot range, max 18.4 vs 720). Manually inspecting
+  the raw rows confirmed the mechanism: most incorrect 1X2 signals
+  fired on the *already-losing* team deep in a match (e.g. Morocco
+  down 2-0), which essentially never wins outright from there.
+
+  User reviewed the finding directly and chose to build a real fix.
+  New `LONGSHOT_ODDS_THRESHOLD = 3` / `LONGSHOT_CONFIDENCE_FACTOR = 0.3`
+  in `logic/signalEngine.ts` — both real, data-derived values (0.3 is
+  the actual combined accuracy ratio across both markets, 17.8%/62.9%
+  ≈ 0.283, rounded), not invented. Applied as a multiplicative penalty
+  on `calculateConfidenceScore`'s existing 3-component composite
+  (magnitude/fieldPressure/freshness), computed exactly as before and
+  then reduced only when `oddsAfter >= 3` — every non-longshot
+  signal's score is byte-for-byte unchanged. `buildContextExplanation`
+  adds a matching transparency sentence, only when the penalty
+  applies. **Per explicit user request, the sample-size caveat (49
+  settled 1X2 signals, concentrated in 3 matches, ~4 tournament
+  matches left) is documented directly in the code comment above the
+  two constants, not just the spec** — anyone reading the code cold
+  sees immediately that these are provisional, not authoritative.
+
+  **Free second-order benefit, no code change:** Arena's
+  `calculateKellyStake(oddsAfter, confidenceScore)` already scales
+  stake down as confidence drops, so Kelly's stakes on longshot
+  signals shrink automatically now that they honestly report low
+  confidence — a real improvement to the Arena's worst-performing
+  exposure, achieved without touching `arena.ts`.
+
+  1 commit on `main` so far: `82ad41b` (implementation + tests).
+  Backend: 234 tests pass (up from 230 at P1-3 close), clean build.
+  Verified live against a running local dev server: a real longshot
+  signal (`oddsAfter: 9.15`) showed `confidenceScore` reduced to
+  `13.65` with the explanation caveat attached, exactly as designed —
+  5 of 7 currently-live local signals were longshots.
+
+  **Exact next action:** same gate as every prior item this session —
+  report diff/tests/build, user finds or waits for a real longshot
+  signal live in production to confirm `confidenceScore`/explanation,
+  then explicitly approves before push. This is the last item in the
+  user's chosen Tier 3 sequencing (P1-3 then P1-2) — P1-1/P1-7/P1-16
+  remain explicitly deferred, not scheduled without a fresh cost/benefit
+  discussion.
 
 - **SKIP unless time allows after everything above:** P1-4, P1-5, P1-8,
   P1-19 — lower urgency or already effectively covered by earlier
