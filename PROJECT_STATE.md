@@ -559,46 +559,62 @@ tier breakdown:
     push-stream monitor is "additive to, and independent from, the
     5-second polling loop that remains the source of truth for signal
     generation." Closed, no further action.
-  - P1-9 (GitHub Actions CI) — **investigated, design confirmed with
-    user, not yet implemented.** No `.github/workflows` exists yet.
-    Design: two parallel jobs, backend (`npm ci && npm run test && npm
-    run build` in `apps/api`) and frontend (`npm ci && npm run lint &&
-    npm run build` in `apps/web`) — matches what scripts each app
-    actually has (no `lint` script exists for the backend, no `test`
-    script exists for the frontend, confirmed not assumed). Node 24
-    (matches current dev environment), triggers on push/PR to `main`.
-  - P1-10 (pin dependency versions) — **investigated, design confirmed,
-    not yet implemented.** `apps/web/package.json` is already fully
-    pinned (no `"latest"` entries at all). Only `apps/api/package.json`
-    has 15 `"latest"` entries (8 deps + 7 devDeps). Exact currently-
-    installed versions already pulled from `node_modules` for every one
-    of them. Design: pin to caret-range (`^`) versions matching those
-    exact installed versions, to match the file's existing convention
-    (every other dependency in the file already uses `^`) rather than
-    switching to exact pins — locks out `latest`'s unpredictability
-    while still allowing patch updates.
-  - P1-11 (restrict CORS) — **investigated, design confirmed, not yet
-    implemented.** Currently `app.use(cors())` in `server.ts` — fully
-    open, any origin. Design: allowlist restricted to
-    `https://goalpulse-agent.vercel.app` (production) plus
+  - P1-9 (GitHub Actions CI) — **implemented.** New
+    `.github/workflows/ci.yml`: two parallel jobs, backend (`npm ci &&
+    npm run test && npm run build` in `apps/api`) and frontend (`npm ci
+    && npm run lint && npm run build` in `apps/web`) — matches what
+    scripts each app actually has (no `lint` script exists for the
+    backend, no `test` script exists for the frontend, confirmed not
+    assumed). Node 24 (matches current dev environment), triggers on
+    push/PR to `main`. Not yet validated end-to-end (that only happens
+    once pushed and GitHub actually runs it).
+  - P1-10 (pin dependency versions) — **implemented.**
+    `apps/web/package.json` was already fully pinned (no `"latest"`
+    entries at all) — untouched. `apps/api/package.json`'s 15
+    `"latest"` entries (8 deps + 7 devDeps) pinned to caret-range (`^`)
+    versions matching what was already installed, read directly from
+    `node_modules`, matching the file's existing convention. Confirmed
+    via the `package-lock.json` diff after `npm install` that this
+    changed zero actual resolved package versions — only the top-level
+    specifier strings.
+  - P1-11 (restrict CORS) — **implemented.** `server.ts`'s
+    `app.use(cors())` (previously fully open, any origin) now uses an
+    allowlist: `https://goalpulse-agent.vercel.app` (production),
     `http://localhost:5173` and `http://127.0.0.1:5173` (local dev).
+    Manually verified locally with `curl -H "Origin: ..."` against both
+    an allowed and a disallowed origin — behaves exactly as designed.
     Only affects browser JS reading cross-origin responses — direct
     navigation to `/health` or `/api/docs` is unaffected either way.
-  - P1-12 (add LICENSE file) — **confirmed with user, not yet
-    implemented.** No LICENSE file exists at the repo root. **User
-    confirmed: MIT license, copyright line "GoalPulse Agent
-    contributors."**
+  - P1-12 (add LICENSE file) — **implemented.** MIT license, copyright
+    "GoalPulse Agent contributors", added at repo root.
 
-  **Exact next action (about to happen, no further user input needed to
-  start):** write a spec + implementation plan for all of Tier 1 as one
-  batch (P1-9 CI workflow, P1-10 pin deps, P1-11 CORS allowlist, P1-12
-  MIT LICENSE — the two no-change items P1-13/P1-14 need no
-  implementation, just this documented verdict), implement, run
-  tests/build, report the diff back to the user for review — **do not
-  push, do not start Tier 2, until the user reviews Tier 1 and says so**
+  **Tier 1 status: fully implemented, tested, and committed locally —
+  NOT YET PUSHED, NOT YET REVIEWED BY THE USER.** 6 commits on `main`
+  (local only): `40cd88b` (spec), `6048e06` (plan), `647bba2` (LICENSE),
+  `185596c` (CI workflow), `0f28a4b` (dependency pins), `b1ebc87` (CORS
+  allowlist). Backend: 216 tests pass, clean build (both before and
+  after the dependency-pin reinstall — confirmed the lockfile diff only
+  touched the top-level version-specifier strings, zero actual resolved
+  package versions changed). Frontend: clean build (no changes to this
+  app in Tier 1 — `apps/web/package.json` was already fully pinned).
+  CORS allowlist manually verified locally: allowed origins
+  (`https://goalpulse-agent.vercel.app`, `http://localhost:5173`) return
+  the `Access-Control-Allow-Origin` header, a disallowed test origin
+  (`https://evil-example.com`) correctly returns no such header.
+
+  **Exact next action:** none pending from the implementer side — this
+  was done while the user was away, per their explicit "proceed to
+  implement Tier 1 as planned, I'll review when I'm back." **Waiting on
+  the user to review the diff and explicitly say to push** — per their
+  own instruction, do not push and do not start Tier 2 until they
+  review Tier 1 live and approve
   (explicit instruction: "report back with diff/tests/build results, I
   review and verify live, then move to Tier 2, then Tier 3 — don't jump
-  ahead").
+  ahead"). Once pushed, the new `.github/workflows/ci.yml` will run
+  automatically on that push — worth checking the Actions tab to
+  confirm it passes, as the first real end-to-end validation of the
+  workflow file itself (it cannot be validated locally the way
+  application code can).
 
 - **Tier 2 (moderate, additive, low regression risk) — NOT STARTED, do
   after Tier 1 is reviewed/approved/pushed/verified live:**
