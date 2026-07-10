@@ -32,9 +32,10 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: P1 Tier 2 (see "RESUME POINT" further below for full
-detail) — implemented 2026-07-11, 226 tests, awaiting user review before
-push. Tier 1 already reviewed/approved/pushed/verified live.
+🔄 In Progress: P1 Tier 3 starting (see "RESUME POINT" further below for
+full detail) — Tier 1 and Tier 2 both reviewed/approved/pushed/verified
+live as of 2026-07-11, including a real pre-existing duplicate-data find
+and cleanup during Tier 2's Supabase constraint rollout.
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
@@ -702,35 +703,50 @@ tier breakdown:
     tolerated side effect of the original design, and preventing it is
     a genuine improvement. **Requires two manual Supabase SQL
     statements before the dedup takes effect** (same manual-step
-    pattern as `match_archive`'s original setup) — not yet run:
-    ```sql
-    alter table signal_archive
-      add constraint signal_archive_signal_event_unique
-      unique (signal_id, event);
-    alter table match_archive
-      add constraint match_archive_match_id_unique
-      unique (match_id);
-    ```
-    Until the user runs these, the code behaves exactly like the
-    previous plain insert (safe, just not yet deduplicating).
+    pattern as `match_archive`'s original setup).
 
   8 commits on `main`: `11ba6f6` (spec), `05ed333` (plan), `0978146`
   (P1-6 logic), `036ecad` (P1-6 route), `e8db48c` (P1-6 frontend +
   defensive-null bugfix), `d2c1b3c` (P1-15 counters), `ef47f86` (P1-15
-  endpoint), `f4cd19f` (P1-18). Backend: 226 tests pass (up from 216 at
-  Tier 1 close), clean build throughout. Frontend: clean build, verified
-  live in a local dev browser with real TxLINE data, zero console
-  errors after the defensive-null fix.
+  endpoint), `f4cd19f` (P1-18), `905a80d` (docs). Backend: 226 tests
+  pass (up from 216 at Tier 1 close), clean build throughout. Frontend:
+  clean build, verified live in a local dev browser with real TxLINE
+  data, zero console errors after the defensive-null fix. Reviewed and
+  approved by the user, pushed to `main` 2026-07-11.
 
-  **Exact next action:** same gate as Tier 1 — report back with
-  diff/tests/build results, user reviews and verifies live, then
-  explicitly approves before push and before starting Tier 3. Also
-  flag the two Supabase SQL statements above for the user to run
-  whenever convenient (not blocking review/push — the code is safe
-  either way, just inert on the dedup front until they're run).
+  **✅ Tier 2 fully closed out 2026-07-11, including a real pre-existing
+  data-quality find during the Supabase constraint rollout.**
+  `match_archive_match_id_unique` added cleanly on the first try — zero
+  pre-existing duplicates. `signal_archive_signal_event_unique` hit a
+  real constraint violation on first attempt: the user found 8 genuine
+  duplicate rows across 6 `(signal_id, event)` groups (929 total rows,
+  921 distinct groups), **all `event: "created"`, zero `"settled"`
+  duplicates** — direct empirical confirmation that the restart-race
+  scenario P1-18 was designed to prevent had already happened in
+  production before this fix shipped. Investigated via the existing
+  `GET /api/archive` read endpoint (no direct DB credentials available
+  locally) since `match_archive` has no read endpoint to cross-check the
+  same way. Proposed and the user ran a `ROW_NUMBER()`-based dedup
+  (deterministic even on an exact-timestamp tie, unlike a plain
+  self-join `DELETE`) keeping the earliest `archived_at` per group —
+  verified row count went 929 → 921 as predicted, then the constraint
+  added successfully. Both constraints confirmed live in the database.
+
+  **Deployed code confirmed active against both constraints**, verified
+  without direct Render/Supabase access by checking that other
+  same-push, same-deploy-SHA changes (`GET /api/metrics`, the
+  `rejections` field on `GET /api/arena`) were live with real data —
+  since Render deploys the whole repo at one git SHA, this proves
+  `905a80d` (which includes `f4cd19f`, the `archive.ts` upsert change)
+  is what's running. Final live confirmation from the user:
+  `/api/metrics` showed `duplicatesDropped.signals: 1` (a real
+  duplicate genuinely caught by the fix since this deploy), the Arena
+  panel showed "82 SIGNALS NOT TRADED" with real reason text, no
+  console errors. **P1-18 and all of Tier 2 fully confirmed live,
+  approved, closed out.**
 
 - **Tier 3 (bigger engineering, evaluate cost/benefit before starting)
-  — NOT STARTED, do after Tier 2:**
+  — STARTING 2026-07-11, approved by user:**
   - P1-1: draw-side signals (home/draw/away, not just home/away).
   - P1-2: calibrate 4%/8%/15% thresholds using real archived samples —
     real data only, never invented numbers.
