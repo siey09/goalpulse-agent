@@ -32,10 +32,11 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: P1 Tier 3 starting (see "RESUME POINT" further below for
-full detail) — Tier 1 and Tier 2 both reviewed/approved/pushed/verified
-live as of 2026-07-11, including a real pre-existing duplicate-data find
-and cleanup during Tier 2's Supabase constraint rollout.
+🔄 In Progress: P1 Tier 3, P1-3 implemented (see "RESUME POINT" further
+below for full detail) — 230 tests, awaiting user review before push.
+Tier 1 and Tier 2 both reviewed/approved/pushed/verified live as of
+2026-07-11, including a real pre-existing duplicate-data find and
+cleanup during Tier 2's Supabase constraint rollout.
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
@@ -746,7 +747,16 @@ tier breakdown:
   approved, closed out.**
 
 - **Tier 3 (bigger engineering, evaluate cost/benefit before starting)
-  — STARTING 2026-07-11, approved by user:**
+  — STARTING 2026-07-11, approved by user. Sequenced by user choice
+  after an explicit cost/benefit pass given the July 19 deadline and
+  tournament narrowing to ~4 matches: P1-3 first (lowest risk,
+  already-scoped from an earlier session decision), then P1-2 (now
+  genuinely useful since `signal_archive` is clean post-dedup).
+  P1-1/P1-7/P1-16 deferred unless time remains after those two — P1-1
+  is a real architecture change with the tournament in its knockout
+  stage (draws largely moot), P1-7 overlaps heavily with the metrics
+  P1-15 just shipped, P1-16 is a real state-machine change to the core
+  agent loop flagged as the highest-risk item this close to deadline.**
   - P1-1: draw-side signals (home/draw/away, not just home/away).
   - P1-2: calibrate 4%/8%/15% thresholds using real archived samples —
     real data only, never invented numbers.
@@ -760,6 +770,45 @@ tier breakdown:
     state-machine addition, evaluate scope carefully before committing,
     flag to the user if it looks likely to risk regressing something
     already stable/demo-verified.
+
+  **✅ P1-3 implemented 2026-07-11, awaiting user review before push.**
+  `logic/signalCorrelation.ts`'s `findSignalClusters` and
+  `findPatternMatchedClusters` both now dedupe `matchIds`/`matchCount`
+  and the "2+ distinct matches" threshold by real fixture id
+  (`baseMatchId`, same implementation already proven in
+  `signalPerformance.ts`) instead of raw `signal.matchId` — a totals
+  signal's matchId carries a `-totals-<line>` suffix, so multiple lines
+  from the same real match no longer count as a false multi-match
+  cluster. In-place semantics change to `matchIds`/`matchCount` on both
+  `GET /api/signal-correlation` and `GET /api/signal-correlation/patterns`,
+  approved during brainstorming (no other consumer depended on the raw
+  form). Both client-side workarounds — `SignalCorrelationPanel.tsx`'s
+  `baseMatchId`/`distinctRealMatches`/`GenuineCluster` and `App.tsx`'s
+  analyst-chat handler's independent copy of the same pattern — deleted
+  entirely now that the backend owns deduping.
+
+  **Real-world confirmation the fix was needed, found during live
+  verification:** production's still-live pre-fix code currently shows
+  a `matchCount: 5` "cluster" for fixture `18218149` that is actually
+  a single real match across 5 different totals lines — the exact
+  false positive this fix eliminates. Verified the fix itself against
+  a local dev server with real accumulated signal data: the panel
+  showed a genuine 2-real-match cluster (`Match 18218149`,
+  `Match 18237038`, two distinct fixtures, no totals-suffix artifacts),
+  and the analyst-chat's "any signal correlation clusters?" answer
+  matched the panel exactly ("1 genuine cluster... 2 real matches").
+
+  4 commits on `main`: `758c209` (spec), `b2ac9b2` (plan), `31f944e`
+  (backend dedup fix, 4 new tests), `1858117` (frontend simplification).
+  Backend: 230 tests pass (up from 226 at Tier 2 close), clean build.
+  Frontend: clean build, verified live in a local dev browser, zero
+  console errors.
+
+  **Exact next action:** same gate as every prior tier/item this
+  session — report back with diff/tests/build results, user reviews
+  and verifies live (Signal Correlation panel and the chat answer both,
+  per their explicit request), then explicitly approves before push and
+  before starting P1-2.
 
 - **SKIP unless time allows after everything above:** P1-4, P1-5, P1-8,
   P1-19 — lower urgency or already effectively covered by earlier
