@@ -698,7 +698,7 @@ function App() {
       const trapSignals = replaySignals
         .filter(
           (signal) =>
-            signal.trapStatus === "CONFIRMED_TRAP" ||
+            signal.trapStatus === "OUTCOME_REJECTED_MOVE" ||
             signal.trapStatus === "POSSIBLE_TRAP"
         )
         .sort((a, b) => (b.trapScore ?? 0) - (a.trapScore ?? 0));
@@ -738,7 +738,7 @@ function App() {
           return "The Outcome Audit has not been run yet. Click Run audit to replay stored TxLINE odds snapshots and verify what happened.";
         }
 
-        return `Outcome Audit processed ${summary.signalsDetected ?? 0} signal(s), found ${summary.smartMoneyTraps ?? 0} smart money trap pattern(s), with ${summary.confirmedTraps ?? 0} confirmed and ${summary.possibleTraps ?? 0} possible.`;
+        return `Outcome Audit processed ${summary.signalsDetected ?? 0} signal(s), found ${summary.smartMoneyTraps ?? 0} smart money trap pattern(s), with ${summary.confirmedTraps ?? 0} rejected and ${summary.possibleTraps ?? 0} possible.`;
       }
 
       if (
@@ -3253,7 +3253,7 @@ function App() {
                         </p>
                       </div>
                       <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-red-100">
-                        {(replayBacktest.summary?.confirmedTraps ?? 0)} confirmed •{" "}
+                        {(replayBacktest.summary?.confirmedTraps ?? 0)} rejected •{" "}
                         {(replayBacktest.summary?.possibleTraps ?? 0)} possible
                       </span>
                     </div>
@@ -3267,7 +3267,7 @@ function App() {
                       {(replayBacktest.signals ?? [])
                         .filter(
                           (signal) =>
-                            signal.trapStatus === "CONFIRMED_TRAP" ||
+                            signal.trapStatus === "OUTCOME_REJECTED_MOVE" ||
                             signal.trapStatus === "POSSIBLE_TRAP"
                         )
                         .sort((a, b) => (b.trapScore ?? 0) - (a.trapScore ?? 0))
@@ -3652,8 +3652,8 @@ function App() {
                 </p>
                 <h3 className="mt-1 text-lg font-black text-white">
                   {selectedSignal.scoreRealityStatus === "REJECTED_BY_SCORE" &&
-                  selectedSignal.trapStatus === "CONFIRMED_TRAP"
-                    ? "False market move exposed"
+                  selectedSignal.trapStatus === "OUTCOME_REJECTED_MOVE"
+                    ? "Market move rejected by outcome"
                     : selectedSignal.scoreRealityStatus === "CONFIRMED_BY_SCORE"
                       ? "Market move validated"
                       : selectedSignal.trapStatus === "POSSIBLE_TRAP"
@@ -3701,8 +3701,8 @@ function App() {
                   <div className="rounded-xl bg-black/25 p-3">
                     <span className="font-semibold text-white">5. Final verdict:</span>{" "}
                     {selectedSignal.scoreRealityStatus === "REJECTED_BY_SCORE" &&
-                    selectedSignal.trapStatus === "CONFIRMED_TRAP"
-                      ? "False market move exposed"
+                    selectedSignal.trapStatus === "OUTCOME_REJECTED_MOVE"
+                      ? "Market move rejected by outcome"
                       : selectedSignal.scoreRealityStatus === "CONFIRMED_BY_SCORE"
                         ? "Market move validated"
                         : "Market move under review"}

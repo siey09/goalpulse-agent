@@ -55,7 +55,7 @@ export type PinnedCaseStudy = {
   momentumScore: number;
   explanation: string;
   resultStatus: "correct" | "incorrect";
-  trapStatus?: "CONFIRMED_TRAP";
+  trapStatus?: "OUTCOME_REJECTED_MOVE";
   trapScore?: number;
   reversalRisk?: "EXTREME_REVERSAL";
   evidence: PinnedCaseStudyEvidence;
@@ -166,7 +166,7 @@ export const PINNED_CASE_STUDIES: PinnedCaseStudy[] = [
     explanation:
       "Canada odds compressed by 55.13% from 780 to 350. The agent flags this as a high-severity sharp movement. The move is field-backed by a Goal event with high_danger pressure. Caution: the latest field event came from the away side, not the signal side. Match phase: 2nd Half. Scoreline: Canada 0 - 3 Morocco. Reliability check: No TXODDS reliability warning was found.",
     resultStatus: "incorrect",
-    trapStatus: "CONFIRMED_TRAP",
+    trapStatus: "OUTCOME_REJECTED_MOVE",
     trapScore: 100,
     reversalRisk: "EXTREME_REVERSAL",
     evidence: {
@@ -212,7 +212,7 @@ export const PINNED_CASE_STUDIES: PinnedCaseStudy[] = [
     explanation:
       "Canada odds compressed by 52.7% from 740 to 350. The agent flags this as a high-severity sharp movement. The move is field-backed by a Goal event with high_danger pressure. Caution: the latest field event came from the away side, not the signal side. Match phase: 2nd Half. Scoreline: Canada 0 - 3 Morocco. Reliability check: No TXODDS reliability warning was found.",
     resultStatus: "incorrect",
-    trapStatus: "CONFIRMED_TRAP",
+    trapStatus: "OUTCOME_REJECTED_MOVE",
     trapScore: 100,
     reversalRisk: "EXTREME_REVERSAL",
     evidence: {
