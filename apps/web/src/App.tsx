@@ -683,12 +683,9 @@ function App() {
     severity: string;
     market: string;
     matchIds: string[];
+    matchCount: number;
     signalCount: number;
   };
-
-  function baseMatchId(matchId: string): string {
-    return matchId.split("-totals-")[0];
-  }
 
   async function generateAnalystReply(question: string): Promise<string> {
     const normalizedQuestion = question.toLowerCase();
@@ -874,19 +871,15 @@ function App() {
         normalizedQuestion.includes("cross-match")
       ) {
         const payload = await request<unknown>("/api/signal-correlation/patterns");
-        const raw = asArray<PatternClusterReply>(payload, ["data"]);
-        const genuine = raw.filter(
-          (cluster) => new Set(cluster.matchIds.map(baseMatchId)).size >= 2
-        );
+        const clusters = asArray<PatternClusterReply>(payload, ["data"]);
 
-        if (genuine.length === 0) {
+        if (clusters.length === 0) {
           return "No genuine cross-match signal correlation clusters right now — Signal Correlation looks for the same pattern (side/severity/market) firing across 2+ distinct real matches.";
         }
 
-        const top = genuine[0];
-        const distinctRealMatchCount = new Set(top.matchIds.map(baseMatchId)).size;
+        const top = clusters[0];
 
-        return `Signal Correlation found ${genuine.length} genuine cluster(s) across multiple real matches. Top: ${top.side}/${top.severity}/${top.market}, ${top.signalCount} signals across ${distinctRealMatchCount} real matches.`;
+        return `Signal Correlation found ${clusters.length} genuine cluster(s) across multiple real matches. Top: ${top.side}/${top.severity}/${top.market}, ${top.signalCount} signals across ${top.matchCount} real matches.`;
       }
 
       if (

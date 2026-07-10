@@ -17,16 +17,6 @@ type PatternCluster = {
   signalIds: string[];
 };
 
-type GenuineCluster = PatternCluster & { realMatchIds: string[] };
-
-function baseMatchId(matchId: string): string {
-  return matchId.split("-totals-")[0];
-}
-
-function distinctRealMatches(matchIds: string[]): string[] {
-  return Array.from(new Set(matchIds.map(baseMatchId)));
-}
-
 function formatDuration(ms: number): string {
   const totalSeconds = Math.round(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
@@ -42,7 +32,7 @@ function severityClass(severity: PatternCluster["severity"]) {
 }
 
 export function SignalCorrelationPanel() {
-  const [clusters, setClusters] = useState<GenuineCluster[]>([]);
+  const [clusters, setClusters] = useState<PatternCluster[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -60,14 +50,7 @@ export function SignalCorrelationPanel() {
 
         const raw: PatternCluster[] = Array.isArray(payload.data) ? payload.data : [];
 
-        const genuine: GenuineCluster[] = raw
-          .map((cluster) => ({
-            ...cluster,
-            realMatchIds: distinctRealMatches(cluster.matchIds),
-          }))
-          .filter((cluster) => cluster.realMatchIds.length >= 2);
-
-        setClusters(genuine);
+        setClusters(raw);
         setIsLoading(false);
       } catch (error) {
         console.error("Failed to load signal correlation", error);
@@ -119,14 +102,14 @@ export function SignalCorrelationPanel() {
                   {cluster.side} · {cluster.severity} · {cluster.market}
                 </span>
                 <span className="text-sm font-semibold text-white">
-                  {cluster.realMatchIds.length} real matches
+                  {cluster.matchCount} real matches
                 </span>
               </div>
               <p className="text-xs text-stone-400">
                 {cluster.signalCount} signals over {formatDuration(cluster.spanMs)}
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {cluster.realMatchIds.map((id) => (
+                {cluster.matchIds.map((id) => (
                   <span
                     key={id}
                     className="rounded-full bg-white/5 px-2 py-1 text-[10px] text-stone-400"
