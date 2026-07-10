@@ -96,7 +96,14 @@ export async function loadSnapshot(): Promise<void> {
 
     store.matches = snapshot.matches ?? [];
     store.recentFinishedMatches = snapshot.recentFinishedMatches ?? [];
-    store.oddsSnapshots = snapshot.oddsSnapshots ?? [];
+    // Re-sort descending (newest first) on restore: a snapshot saved while
+    // the recent-results merge bug was live can have out-of-order createdAt
+    // values baked in permanently, which would otherwise corrupt every
+    // reader that assumes this order (agent.ts's unshift, and the
+    // .slice(0,100).reverse() pattern in the odds-stream/history routes).
+    store.oddsSnapshots = (snapshot.oddsSnapshots ?? []).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
     store.signals = snapshot.signals ?? [];
     store.agentRuns = snapshot.agentRuns ?? [];
 

@@ -67,6 +67,38 @@ describe("persistence", () => {
     expect(store.matches).toEqual([{ id: "match-1" }]);
   });
 
+  it("loadSnapshot restores oddsSnapshots sorted newest-first, self-healing any legacy out-of-order data", async () => {
+    config.supabaseUrl = "https://example.supabase.co";
+    config.supabaseServiceKey = "test-key";
+
+    // A persisted snapshot saved while the recent-results merge bug was live
+    // could have out-of-order createdAt values baked in permanently.
+    maybeSingleMock.mockResolvedValue({
+      data: {
+        data: {
+          matches: [],
+          recentFinishedMatches: [],
+          oddsSnapshots: [
+            { id: "a", createdAt: "2026-07-09T21:40:29.076Z" },
+            { id: "b", createdAt: "2026-07-09T21:40:34.507Z" },
+            { id: "c", createdAt: "2026-07-09T21:39:53.655Z" },
+            { id: "d", createdAt: "2026-07-09T21:34:12.689Z" },
+          ],
+          signals: [],
+          agentRuns: [],
+        },
+      },
+      error: null,
+    });
+
+    await loadSnapshot();
+
+    const timestamps = store.oddsSnapshots.map((s) => new Date(s.createdAt).getTime());
+    const sortedDescending = [...timestamps].sort((a, b) => b - a);
+
+    expect(timestamps).toEqual(sortedDescending);
+  });
+
   it("loadSnapshot does not throw when the mocked call rejects", async () => {
     config.supabaseUrl = "https://example.supabase.co";
     config.supabaseServiceKey = "test-key";
