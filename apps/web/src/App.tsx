@@ -671,7 +671,7 @@ function App() {
 
   type SteamMoveReply = {
     match: string;
-    side: "home" | "away";
+    side: "home" | "away" | "draw";
     tickCount: number;
     totalMovePct: number;
     firstOdds: number;

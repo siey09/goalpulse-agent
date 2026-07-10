@@ -8,7 +8,7 @@ type ArchiveEntry = {
   signalId: string;
   event: "created" | "settled";
   matchId: string;
-  side: "home" | "away";
+  side: "home" | "away" | "draw";
   signalType: string;
   severity: string;
   resultStatus: "pending" | "correct" | "incorrect";

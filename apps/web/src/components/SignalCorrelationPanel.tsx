@@ -5,7 +5,7 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
 
 type PatternCluster = {
-  side: "home" | "away";
+  side: "home" | "away" | "draw";
   severity: "HIGH" | "MEDIUM" | "LOW";
   market: "1x2" | "totals";
   matchIds: string[];

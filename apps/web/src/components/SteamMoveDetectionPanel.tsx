@@ -7,7 +7,7 @@ const API_BASE_URL =
 type SteamMove = {
   matchId: string;
   match: string;
-  side: "home" | "away";
+  side: "home" | "away" | "draw";
   tickCount: number;
   totalMovePct: number;
   windowMs: number;

@@ -11,7 +11,7 @@ type ArenaPosition = {
   signalId: string;
   matchId: string;
   match: string;
-  side: "home" | "away";
+  side: "home" | "away" | "draw";
   target: string;
   oddsTaken: number;
   stakeUnits: number;
@@ -36,7 +36,7 @@ type ArenaRejection = {
   agentId: ArenaAgentId;
   signalId: string;
   matchId: string;
-  reason: "totals_signal" | "not_market_only_move" | "no_original_snapshot";
+  reason: "totals_signal" | "not_market_only_move" | "no_original_snapshot" | "draw_signal";
   reasonText: string;
 };
 

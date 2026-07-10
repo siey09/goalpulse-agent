@@ -21,7 +21,7 @@ export interface AgentSignal {
   matchId: string;
   match: string;
   target: string;
-  side: "home" | "away";
+  side: "home" | "away" | "draw";
   signalType: "SHARP_MOVE" | "WATCH" | "MOMENTUM_SHIFT" | "NO_ACTION";
   severity: "HIGH" | "MEDIUM" | "LOW" | "NONE";
   oddsBefore: number;
