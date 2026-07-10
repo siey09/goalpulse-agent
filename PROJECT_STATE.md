@@ -526,13 +526,132 @@ API verification gives high confidence regardless. Spec:
 `docs/superpowers/specs/2026-07-11-outcome-rejected-move-rename-design.md`,
 plan: `docs/superpowers/plans/2026-07-11-outcome-rejected-move-rename.md`.
 
-🔄 In Progress: none.
+🔄 **In Progress — RESUME POINT (written 2026-07-11, mid-task, in case of
+session loss — this section should be self-sufficient for a fresh
+session to pick up without re-reading the rest of this file):**
 
-📋 Next Steps: none queued. All four "future ideas" candidates shipped
+**Full context:** an external technical review PDF proposed 6 "P0" items
+and a longer P1 list, 20 mandatory tests, and a 15-item Definition of
+Done checklist. The P0 phase is **fully done** — see the "External P0
+technical review triaged and closed out 2026-07-11" entry immediately
+above this one for the complete verdict on all 6 P0 items (2 confirmed
+false premise/not implemented, 2 confirmed already-addressed/no new
+code, 2 confirmed real and fixed/shipped/verified live). That phase is
+closed; nothing further needed there.
+
+**Current phase: working through the P1 list, sequenced by the user
+into 3 risk/speed tiers (not PDF order) — safest/fastest first.** Full
+tier breakdown:
+
+- **Tier 1 (fast, safe, no code-logic risk) — investigated and specced,
+  IMPLEMENTATION NOT YET STARTED:**
+  - P1-13 (Supabase doc language) — **confirmed already accurate,
+    no change needed.** Checked README.md/TECHNICAL_DOCS.md/
+    SUBMISSION_NOTES.md directly: every mention correctly frames it as
+    periodic-snapshot/restart-recovery, explicitly distinct from the
+    separate permanent `signal_archive` feature. TECHNICAL_DOCS.md even
+    has a section titled "Supabase Persistence (Periodic Snapshot
+    Recovery)." Closed, no further action.
+  - P1-14 (SSE doc language) — **confirmed already accurate, no change
+    needed.** Same three docs checked, plus the actual
+    `/api/live/odds-stream` implementation (confirmed genuine
+    `text/event-stream`, not polling). Every doc explicitly says the SSE
+    push-stream monitor is "additive to, and independent from, the
+    5-second polling loop that remains the source of truth for signal
+    generation." Closed, no further action.
+  - P1-9 (GitHub Actions CI) — **investigated, design confirmed with
+    user, not yet implemented.** No `.github/workflows` exists yet.
+    Design: two parallel jobs, backend (`npm ci && npm run test && npm
+    run build` in `apps/api`) and frontend (`npm ci && npm run lint &&
+    npm run build` in `apps/web`) — matches what scripts each app
+    actually has (no `lint` script exists for the backend, no `test`
+    script exists for the frontend, confirmed not assumed). Node 24
+    (matches current dev environment), triggers on push/PR to `main`.
+  - P1-10 (pin dependency versions) — **investigated, design confirmed,
+    not yet implemented.** `apps/web/package.json` is already fully
+    pinned (no `"latest"` entries at all). Only `apps/api/package.json`
+    has 15 `"latest"` entries (8 deps + 7 devDeps). Exact currently-
+    installed versions already pulled from `node_modules` for every one
+    of them. Design: pin to caret-range (`^`) versions matching those
+    exact installed versions, to match the file's existing convention
+    (every other dependency in the file already uses `^`) rather than
+    switching to exact pins — locks out `latest`'s unpredictability
+    while still allowing patch updates.
+  - P1-11 (restrict CORS) — **investigated, design confirmed, not yet
+    implemented.** Currently `app.use(cors())` in `server.ts` — fully
+    open, any origin. Design: allowlist restricted to
+    `https://goalpulse-agent.vercel.app` (production) plus
+    `http://localhost:5173` and `http://127.0.0.1:5173` (local dev).
+    Only affects browser JS reading cross-origin responses — direct
+    navigation to `/health` or `/api/docs` is unaffected either way.
+  - P1-12 (add LICENSE file) — **confirmed with user, not yet
+    implemented.** No LICENSE file exists at the repo root. **User
+    confirmed: MIT license, copyright line "GoalPulse Agent
+    contributors."**
+
+  **Exact next action (about to happen, no further user input needed to
+  start):** write a spec + implementation plan for all of Tier 1 as one
+  batch (P1-9 CI workflow, P1-10 pin deps, P1-11 CORS allowlist, P1-12
+  MIT LICENSE — the two no-change items P1-13/P1-14 need no
+  implementation, just this documented verdict), implement, run
+  tests/build, report the diff back to the user for review — **do not
+  push, do not start Tier 2, until the user reviews Tier 1 and says so**
+  (explicit instruction: "report back with diff/tests/build results, I
+  review and verify live, then move to Tier 2, then Tier 3 — don't jump
+  ahead").
+
+- **Tier 2 (moderate, additive, low regression risk) — NOT STARTED, do
+  after Tier 1 is reviewed/approved/pushed/verified live:**
+  - P1-6: expose rejection reasons (closes the one real P0-6 gap already
+    found — Contrarian's silent skip via `isMarketOnlyMove` — plus any
+    other implicit rejections found).
+  - P1-15: basic metrics (uptime, reconnect count, stale-feed duration,
+    decision latency, duplicate drops) — additive only, surface via
+    `/health` or a new endpoint.
+  - P1-17: bounded queues/retention limits for in-memory arrays — verify
+    current caps first (`store.ts` already has some, e.g. `oddsSnapshots`
+    capped 800/`signals` capped 100/`agentRuns` capped 50), only add
+    where genuinely missing.
+  - P1-18: idempotency keys for events/signals/positions/persistence
+    writes — investigate current duplicate-handling first, only add
+    where a real gap exists.
+
+- **Tier 3 (bigger engineering, evaluate cost/benefit before starting)
+  — NOT STARTED, do after Tier 2:**
+  - P1-1: draw-side signals (home/draw/away, not just home/away).
+  - P1-2: calibrate 4%/8%/15% thresholds using real archived samples —
+    real data only, never invented numbers.
+  - P1-3: move signal-correlation dedup to backend (currently
+    client-side by design, per an earlier deliberate 2026-07-10 tradeoff
+    this session — re-verify that decision still holds before changing
+    it, don't assume it's stale).
+  - P1-7: event-to-market reaction latency metrics.
+  - P1-16: graceful degraded states (INITIALIZING/SYNCING/STREAMING/
+    ANALYZING/DEGRADED/RECONNECTING/CIRCUIT_BREAKER/STOPPED) — a real
+    state-machine addition, evaluate scope carefully before committing,
+    flag to the user if it looks likely to risk regressing something
+    already stable/demo-verified.
+
+- **SKIP unless time allows after everything above:** P1-4, P1-5, P1-8,
+  P1-19 — lower urgency or already effectively covered by earlier
+  session decisions (LLM already kept out of core decisions; types
+  already distinguish per-bookmaker vs consensus where relevant given
+  the verified single-consensus-source finding from the P0 phase).
+
+**Still fully pending, not started at all:** the 20 mandatory tests from
+the PDF's Mandatory Test Plan (map each to either a real applicable test
+or mark not-applicable with reasoning — several test for a
+multi-bookmaker system already confirmed not to apply here) and the
+15-item Definition of Done checklist (PASS/FAIL/NOT-APPLICABLE with
+reasoning per item, update this file with final status once done). Both
+come after all three tiers, per the user's explicit ordering.
+
+📋 Next Steps: implement Tier 1 (see above), report back, wait for
+review before Tier 2. All four "future ideas" candidates shipped
 2026-07-10 (Historical Pattern Match, Verification Depth Score,
 Meta-agent, Skeptic Agent), the Guided Tour now covers all four as of
 2026-07-11, and the external P0 review is fully triaged and closed out
-as of 2026-07-11. No further backlog items pending — await direction.
+as of 2026-07-11 — none of that needs further action.
 See "Known limitations" below for the P1 list (CI/dependency
 pinning/CORS/LICENSE), deliberately deferred, not implemented. Deferred future option, not scheduled: fix the
 totals-line overcounting server-side in `signalCorrelation.ts` (matching
