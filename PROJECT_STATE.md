@@ -160,6 +160,17 @@ regressions. Combined with the earlier live confirmations for Confidence
 Calibration and Steam Move Detection, all three prioritized panels are
 shipped, merged, and verified live.
 
+✅ **Odds movement chart timestamp ordering bug fixed 2026-07-10** — user
+reported the live Spain vs Belgium chart's x-axis wasn't chronological
+(...07:47, 07:48, 07:47, 07:47...). Root cause: `GET /api/recent-results`
+re-sorted the shared `store.oddsSnapshots` array ascending, inverting the
+descending (newest-first) invariant every other reader depends on — see
+"Bugs found and fixed" below for full detail. Two commits, both verified
+against live production data (not just local): `mergeOddsSnapshots()` fix
+(`569bad6`), then a second instance found while verifying live —
+`persistence.ts`'s restore path baking in legacy corrupted order forever —
+fixed by re-sorting on restore (`95436aa`). 192 tests passing.
+
 🔄 In Progress: none.
 
 📋 Next Steps: none queued. Deferred future option, not scheduled: fix the
@@ -573,6 +584,33 @@ beneficiary, not built this round). Spec:
 `docs/superpowers/plans/2026-07-10-match-archive.md`.
 
 ## Bugs found and fixed
+
+**2026-07-10 — odds movement chart timestamps not chronological**, reported
+by user against the live Spain vs Belgium chart (x-axis showing
+...07:47, 07:48, 07:47, 07:47...). Root cause: `GET /api/recent-results`
+(`server.ts`) re-sorted the *entire* global `store.oddsSnapshots` array
+ascending after backfilling finished-match data — but every other reader
+(`agent.ts`'s `unshift()`, and the `.slice(0,100).reverse()` pattern in
+`/api/odds-stream`, `/api/odds-history`, `/api/live/replay-stream`) assumes
+that array stays globally descending (newest-first). Since the endpoint
+polls every 5s from the dashboard, it periodically flipped the shared order
+mid-flight. The ascending sort's result wasn't even used within that
+handler — dead code with a harmful side effect.
+
+Fixed via `mergeOddsSnapshots()` in `store.ts` (dedupe + sort descending,
+matching the invariant everywhere else), swapped in for the buggy inline
+block (`569bad6`).
+
+**Second instance found while verifying the fix live**: `persistence.ts`'s
+`loadSnapshot()` restored `store.oddsSnapshots` straight from Supabase with
+no re-sort. A snapshot saved while the above bug was live had out-of-order
+`createdAt` values baked in permanently, and got restored verbatim on every
+process restart — confirmed live in production immediately after the first
+fix's redeploy (France vs Morocco's history came back non-chronological).
+Fixed by re-sorting descending on restore, which self-heals any legacy
+corrupted data (`95436aa`). Both fixes verified against live production
+data (not just local/simulated), including re-checking the specific
+previously-corrupted match after the second redeploy.
 
 **Pre-existing** (full detail in `TECHNICAL_DOCS.md`'s "Known Issues Fixed"):
 undocumented `StatusId 100` not treated as finished; snapshot-ordering during
