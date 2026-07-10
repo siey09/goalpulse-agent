@@ -539,8 +539,10 @@ paths:
                   txlineBaseUrl: { type: string }
                   liveStream:
                     $ref: '#/components/schemas/LiveStreamState'
+                  liveOddsStream:
+                    $ref: '#/components/schemas/LiveStreamState'
                   timestamp: { type: string, format: date-time }
-                required: [ok, service, status, agentIntervalMs, useSimulatedFeed, txlineBaseUrl, liveStream, timestamp]
+                required: [ok, service, status, agentIntervalMs, useSimulatedFeed, txlineBaseUrl, liveStream, liveOddsStream, timestamp]
         '429':
           $ref: '#/components/responses/RateLimited'
 
