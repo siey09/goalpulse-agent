@@ -875,6 +875,80 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /api/archive/similar-signals:
+    get:
+      summary: Historical precedent for a signal, ranked by similarity
+      description: >
+        Given a target signal's own signalType/oddsChangePct/
+        fieldPressureScore (passed as query params, not looked up by id),
+        finds settled archive entries of the same signalType, ranked by
+        closeness on oddsChangePct and (when both sides have it)
+        fieldPressureScore. Excludes the target's own match (via
+        excludeMatchId, collapsing the "-totals-" suffix) and caps each
+        other match to its 2 closest entries so one repeatedly-firing
+        match can't dominate the comparison set. Returns the closest 5
+        overall. Computed fresh per request, no caching. Fail-open:
+        returns 200 with an empty result if Supabase is unconfigured or
+        signalType is missing/invalid, inherited from GET /api/archive's
+        own fail-open behavior.
+      parameters:
+        - name: signalType
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Hard filter. Missing or empty returns an empty result.
+        - name: oddsChangePct
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Ranking dimension. Invalid/missing values simply drop this term from the ranking distance.
+        - name: fieldPressureScore
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Ranking dimension, only applied when the candidate also has a fieldPressureScore. Invalid/missing values drop this term.
+        - name: excludeMatchId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: The target signal's own matchId, excluded from results (base fixture id, collapsing the totals-line suffix).
+      responses:
+        '200':
+          description: Ranked similar signals and an aggregate outcome summary, always 200 (fail-open).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      count: { type: number }
+                      correctCount: { type: number }
+                      incorrectCount: { type: number }
+                      accuracyPct: { type: number }
+                      signals:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            matchId: { type: string }
+                            signalType: { type: string }
+                            severity: { type: string }
+                            oddsChangePct: { type: number }
+                            fieldPressureScore: { type: number }
+                            resultStatus: { type: string, enum: [correct, incorrect] }
+                            archivedAt: { type: string, format: date-time }
+                          required: [matchId, signalType, severity, oddsChangePct, resultStatus, archivedAt]
+                    required: [count, correctCount, incorrectCount, accuracyPct, signals]
+                required: [data]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /api/feed-health:
     get:
       summary: TxLINE feed health and data-quality diagnostic

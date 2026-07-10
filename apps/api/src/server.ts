@@ -36,7 +36,13 @@ import {
   summarizeSignalTypePerformance,
 } from "./logic/signalPerformance";
 import { computeBacktestScoreboards } from "./logic/backtest";
-import { parseArchiveFilters, parsePageParam, parsePageSizeParam } from "./logic/paginationParams";
+import {
+  parseArchiveFilters,
+  parsePageParam,
+  parsePageSizeParam,
+  parseSimilarSignalsParams,
+} from "./logic/paginationParams";
+import { findSimilarSignals } from "./logic/historicalPatternMatch";
 import { archiveMatch, getArchivedSignals } from "./services/archive";
 import { config } from "./config";
 import { requireApiKey } from "./middleware/apiKeyAuth";
@@ -408,6 +414,14 @@ app.get("/api/archive", async (req, res) => {
   const result = await getArchivedSignals(filters, { page, pageSize });
 
   res.json(result);
+});
+
+app.get("/api/archive/similar-signals", async (req, res) => {
+  const params = parseSimilarSignalsParams(req.query as Record<string, unknown>);
+  const result = await getArchivedSignals({ event: "settled" }, { page: 1, pageSize: 500 });
+  const similar = findSimilarSignals(result.data, params);
+
+  res.json({ data: similar });
 });
 
 app.get("/api/feed-health", (_req, res) => {
