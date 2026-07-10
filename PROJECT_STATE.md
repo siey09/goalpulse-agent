@@ -342,6 +342,31 @@ mix them up live. All panel copy pulled directly from current component
 source, not guessed — verified via a research subagent before writing.
 Pushed (`a96085d`).
 
+✅ **Meta-agent recommendation shipped 2026-07-10** — third of the four
+"future ideas" candidates, now built; only Skeptic Agent remains
+unstarted. Fixed a real, pre-existing bug in `ArenaPanel.tsx` rather
+than adding a parallel feature: the existing "Leading" trophy badge
+picked a winner by raw `netUnits` with zero sample-size awareness — the
+same concentration-bias class already found and fixed twice this session
+(Signal Performance, Signal Correlation) — and wasn't even a fair
+comparison in the first place, since Kelly Criterion stakes variable
+amounts while the other two always stake flat 1 unit. New
+`getMetaAgentRecommendation()` ranks by ROI% instead (stake-size
+normalized), requires `settledCount >= 5` per agent and at least 2
+qualifying agents before declaring any leader, and hedges the language
+when the gap is under 10 percentage points — both calibrated against
+real live data checked during brainstorming. The trophy badge now reads
+from the exact same computation as the new callout, so the two can never
+disagree. Frontend-only (`ArenaPanel.tsx`), 1 commit, Inline Execution,
+no backend change (`GET /api/arena` already returned every field
+needed). Verified live in production: callout and trophy badge both
+named Kelly Criterion, phrasing matched the spec's calibration example
+verbatim ("a narrow lead over Momentum Follower... worth revisiting"),
+Contrarian's 0 settled positions correctly excluded from ranking, no
+console errors. Spec:
+`docs/superpowers/specs/2026-07-10-meta-agent-recommendation-design.md`,
+plan: `docs/superpowers/plans/2026-07-10-meta-agent-recommendation.md`.
+
 🔄 In Progress: none.
 
 📋 Next Steps: none queued. Deferred future option, not scheduled: fix the
@@ -1014,10 +1039,10 @@ entry above.
 ~~2. **Verification Depth Score**~~ **Shipped 2026-07-10** — see the
 entry above.
 
+~~3. **Meta-agent**~~ **Shipped 2026-07-10** — see the entry above.
+
 1. **Skeptic Agent** — a 4th Arena agent that audits/critiques the
    other agents' reliability rather than trading the feed itself.
-2. **Meta-agent** — recommends which existing strategy is performing
-   best under current match conditions.
 
 ## Testing
 
