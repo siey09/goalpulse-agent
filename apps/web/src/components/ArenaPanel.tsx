@@ -326,23 +326,25 @@ export function ArenaPanel() {
         </div>
       ) : arena ? (
         <>
-          <div className="mb-4 rounded-2xl border border-amber-400/15 bg-amber-400/5 p-4">
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
-              <Trophy className="h-4 w-4" />
-              Meta-agent recommendation
-            </div>
-            <p className="text-sm leading-6 text-stone-200">{recommendation.message}</p>
-          </div>
-
-          {skepticMessage && (
-            <div className="mb-4 rounded-2xl border border-rose-400/15 bg-rose-400/5 p-4">
-              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-300">
-                <ShieldQuestion className="h-4 w-4" />
-                Skeptic check
+          <div id="guide-meta-skeptic">
+            <div className="mb-4 rounded-2xl border border-amber-400/15 bg-amber-400/5 p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+                <Trophy className="h-4 w-4" />
+                Meta-agent recommendation
               </div>
-              <p className="text-sm leading-6 text-stone-200">{skepticMessage}</p>
+              <p className="text-sm leading-6 text-stone-200">{recommendation.message}</p>
             </div>
-          )}
+
+            {skepticMessage && (
+              <div className="mb-4 rounded-2xl border border-rose-400/15 bg-rose-400/5 p-4">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-300">
+                  <ShieldQuestion className="h-4 w-4" />
+                  Skeptic check
+                </div>
+                <p className="text-sm leading-6 text-stone-200">{skepticMessage}</p>
+              </div>
+            )}
+          </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
             <ScoreboardCard
