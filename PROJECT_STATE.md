@@ -218,6 +218,34 @@ correct 20-entry mapping. Verified by inspecting actual DOM state (ring
 class + `data-guide-active`) at each of the 4 previously-affected steps,
 not just screenshots, then confirmed live in production.
 
+✅ **Odds chart signal markers enriched 2026-07-10** — severity-coded
+`ReferenceDot` markers (HIGH rose/r7, MEDIUM amber/r5.5, LOW slate/r4,
+replacing the old side-based orange/green fill) plus richer hover
+tooltips showing `confidenceScore`, field pressure, and the existing
+reasoning text — all pure passthrough of fields already on `AgentSignal`,
+no new client-side computation (deliberately not
+`SignalIntelligencePanel.tsx`'s private `calculateConfidence()`
+heuristic, which stays untouched/unreferenced). Also fixed a real bug:
+`chartData` was hardcoded to `oddsHistory.slice(-18)`, so any point
+carrying a signal marker vanished (or got misattributed via a
+`fallbackPoint` approximation) once 18 newer SSE ticks arrived, even
+though the backend already sends up to 100 historical snapshots per
+tick. New `findNearestSnapshot` (real timestamp-proximity matching,
+replacing the old minute-precision `formatTime()` string comparison)
+lets `chartData` always include signal-matched snapshots plus a capped
+sample of recent non-signal ones; `chartSignalMarkers` matches against
+that guaranteed-correct set, so the old fallback hack is gone entirely.
+Considered and rejected an RSI-style secondary confidence/field-pressure
+strip below the chart — those values only exist at the sparse few
+x-positions a signal fired, unlike RSI's every-candle computation, so a
+continuous strip would be mostly empty. Frontend-only (`App.tsx`), 4
+commits, Inline Execution. Verified live in production: legend shows
+three severity swatches, tooltip shows Confidence/Field pressure/
+reasoning text correctly (including the "—" fallback when a field is
+absent), no console errors. Spec:
+`docs/superpowers/specs/2026-07-10-odds-chart-signal-markers-design.md`,
+plan: `docs/superpowers/plans/2026-07-10-odds-chart-signal-markers.md`.
+
 🔄 In Progress: none.
 
 📋 Next Steps: none queued. Deferred future option, not scheduled: fix the
