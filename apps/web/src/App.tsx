@@ -278,6 +278,12 @@ function findNearestSnapshot(
   return closest;
 }
 
+function severityMarkerStyle(severity?: string) {
+  if (severity === "HIGH") return { fill: "#f87171", radius: 7 };
+  if (severity === "MEDIUM") return { fill: "#fbbf24", radius: 5.5 };
+  return { fill: "#94a3b8", radius: 4 };
+}
+
 function getOdds(match?: Match) {
   return match?.market ?? match?.odds ?? {};
 }
@@ -2483,23 +2489,27 @@ function App() {
                           animationEasing="ease-out"
                           name="Away odds"
                         />
-                        {chartSignalMarkers.map((marker) => (
-                          <ReferenceDot
-                            key={marker.id}
-                            x={marker.x}
-                            y={marker.y}
-                            r={5}
-                            stroke="#fff7ed"
-                            strokeWidth={2}
-                            fill={marker.dataKey === "away" ? "#34d399" : "#fb923c"}
-                            label={{
-                              value: "Signal",
-                              position: "top",
-                              fill: "#fed7aa",
-                              fontSize: 10,
-                            }}
-                          />
-                        ))}
+                        {chartSignalMarkers.map((marker) => {
+                          const markerStyle = severityMarkerStyle(marker.severity);
+
+                          return (
+                            <ReferenceDot
+                              key={marker.id}
+                              x={marker.x}
+                              y={marker.y}
+                              r={markerStyle.radius}
+                              stroke="#fff7ed"
+                              strokeWidth={2}
+                              fill={markerStyle.fill}
+                              label={{
+                                value: "Signal",
+                                position: "top",
+                                fill: "#fed7aa",
+                                fontSize: 10,
+                              }}
+                            />
+                          );
+                        })}
 
                       </AreaChart>
                     </ResponsiveContainer>
@@ -2544,8 +2554,16 @@ function App() {
                         {selectedMatch?.awayTeam ?? "Away"} odds
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full border border-orange-100 bg-orange-400" />
-                        Signal detected here
+                        <span className="h-2 w-2 rounded-full border border-orange-100 bg-[#f87171]" />
+                        High severity
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full border border-orange-100 bg-[#fbbf24]" />
+                        Medium severity
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full border border-orange-100 bg-[#94a3b8]" />
+                        Low severity
                       </span>
                     </div>
                     <span className="text-stone-500">
