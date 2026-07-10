@@ -14,7 +14,9 @@ function compressionPct(previousOdds: number, currentOdds: number): number {
 }
 
 function oddsForSide(snapshot: OddsSnapshot, side: TeamSide): number {
-  return side === "home" ? snapshot.homeOdds : snapshot.awayOdds;
+  if (side === "home") return snapshot.homeOdds;
+  if (side === "draw") return snapshot.drawOdds;
+  return snapshot.awayOdds;
 }
 
 export interface SteamMove {
@@ -77,13 +79,13 @@ function findSteamForSide(sorted: OddsSnapshot[], side: TeamSide): SteamMove | n
  * distinct from the existing signal engine, which only ever compares the
  * single latest tick to the one immediately before it. Only the trailing
  * (most recent) run is considered - this answers "is a steam move
- * happening right now," not a historical scan. Checks home first, then
- * away; a match moving on both sides simultaneously is not expected given
- * how compression is calculated, so at most one SteamMove is returned per
- * call. matchId/match display fields are derived directly from the
- * snapshots themselves (matchLabel if present, otherwise homeTeam/awayTeam)
- * - no separate Match lookup needed, which sidesteps the totals-matchId
- * suffix problem entirely.
+ * happening right now," not a historical scan. Checks home, then draw,
+ * then away; a match moving on multiple sides simultaneously is not
+ * expected given how compression is calculated, so at most one SteamMove
+ * is returned per call. matchId/match display fields are derived directly
+ * from the snapshots themselves (matchLabel if present, otherwise
+ * homeTeam/awayTeam) - no separate Match lookup needed, which sidesteps
+ * the totals-matchId suffix problem entirely.
  */
 export function detectSteamMove(snapshots: OddsSnapshot[]): SteamMove | null {
   if (snapshots.length < MIN_CONSECUTIVE_MOVES + 1) return null;
@@ -92,5 +94,9 @@ export function detectSteamMove(snapshots: OddsSnapshot[]): SteamMove | null {
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
 
-  return findSteamForSide(sorted, "home") ?? findSteamForSide(sorted, "away");
+  return (
+    findSteamForSide(sorted, "home") ??
+    findSteamForSide(sorted, "draw") ??
+    findSteamForSide(sorted, "away")
+  );
 }

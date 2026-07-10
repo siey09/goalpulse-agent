@@ -88,6 +88,21 @@ describe("detectSteamMove", () => {
     expect(result?.tickCount).toBe(3);
   });
 
+  it("detects a steam move on the draw side when home and away are flat", () => {
+    const snapshots = [
+      makeSnapshot({ id: "s0", createdAt: iso(0), homeOdds: 2.0, awayOdds: 3.0, drawOdds: 3.25 }),
+      makeSnapshot({ id: "s1", createdAt: iso(60), homeOdds: 2.0, awayOdds: 3.0, drawOdds: 3.19 }),
+      makeSnapshot({ id: "s2", createdAt: iso(120), homeOdds: 2.0, awayOdds: 3.0, drawOdds: 3.09 }),
+      makeSnapshot({ id: "s3", createdAt: iso(180), homeOdds: 2.0, awayOdds: 3.0, drawOdds: 2.96 }),
+    ];
+
+    const result = detectSteamMove(snapshots);
+
+    expect(result).not.toBeNull();
+    expect(result?.side).toBe("draw");
+    expect(result?.tickCount).toBe(3);
+  });
+
   it("returns null when a qualifying streak's window exceeds 5 minutes", () => {
     const snapshots = [
       makeSnapshot({ id: "s0", createdAt: iso(0), homeOdds: 2.0, awayOdds: 3.0 }),
