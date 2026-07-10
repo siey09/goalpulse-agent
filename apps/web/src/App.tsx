@@ -101,6 +101,24 @@ type AgentSignal = {
   discordAlertStatus?: "sent" | "failed" | "not_configured";
 };
 
+type SimilarSignalEntry = {
+  matchId?: string;
+  signalType?: string;
+  severity?: string;
+  oddsChangePct?: number;
+  fieldPressureScore?: number;
+  resultStatus?: "correct" | "incorrect";
+  archivedAt?: string;
+};
+
+type SimilarSignalsResult = {
+  count: number;
+  correctCount: number;
+  incorrectCount: number;
+  accuracyPct: number;
+  signals: SimilarSignalEntry[];
+};
+
 type AgentRun = {
   id?: string;
   startedAt?: string;
@@ -465,6 +483,8 @@ function App() {
   const [streamProgressPercent, setStreamProgressPercent] = useState(0);
   const [selectedMatchId, setSelectedMatchId] = useState("");
   const [selectedSignal, setSelectedSignal] = useState<AgentSignal | null>(null);
+  const [similarSignals, setSimilarSignals] = useState<SimilarSignalsResult | null>(null);
+  const [isSimilarSignalsLoading, setIsSimilarSignalsLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [matchStatusFilter, setMatchStatusFilter] = useState<"all" | Match["status"]>("all");
@@ -1370,6 +1390,46 @@ function App() {
       setIsOddsStreamLive(false);
     };
   }, [selectedMatchId, isReplayStreamMode]);
+
+  useEffect(() => {
+    if (!selectedSignal) {
+      setSimilarSignals(null);
+      return;
+    }
+
+    let cancelled = false;
+    setIsSimilarSignalsLoading(true);
+
+    const params = new URLSearchParams();
+    params.set("signalType", getSignalType(selectedSignal));
+    if (typeof selectedSignal.oddsChangePct === "number") {
+      params.set("oddsChangePct", String(selectedSignal.oddsChangePct));
+    }
+    const fieldPressureScore = selectedSignal.evidence?.scoresContext?.fieldPressureScore;
+    if (typeof fieldPressureScore === "number") {
+      params.set("fieldPressureScore", String(fieldPressureScore));
+    }
+    if (selectedSignal.matchId) {
+      params.set("excludeMatchId", selectedSignal.matchId);
+    }
+
+    fetch(`${API_BASE_URL}/api/archive/similar-signals?${params.toString()}`)
+      .then((response) => response.json())
+      .then((payload: { data?: SimilarSignalsResult }) => {
+        if (cancelled) return;
+        setSimilarSignals(payload.data ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setSimilarSignals(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsSimilarSignalsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSignal]);
 
   function goToSection(sectionId: string) {
     setActiveSection(sectionId);
@@ -3781,6 +3841,56 @@ function App() {
                   </span>.
                 </li>
               </ol>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-sky-400/15 bg-sky-400/5 p-4">
+              <p className="text-[11px] text-sky-200/80">Historical precedent</p>
+              <h3 className="mt-1 text-sm font-semibold text-white">Similar past signals</h3>
+
+              {isSimilarSignalsLoading ? (
+                <p className="mt-3 text-xs text-stone-400">Checking historical precedent...</p>
+              ) : !similarSignals || similarSignals.count < 3 ? (
+                <p className="mt-3 text-xs text-stone-400">Not enough similar past signals yet.</p>
+              ) : (
+                <>
+                  <p className="mt-2 text-xs leading-5 text-stone-300">
+                    {similarSignals.correctCount} of {similarSignals.count} similar past signals
+                    resolved correct ({similarSignals.accuracyPct}%).
+                  </p>
+
+                  <div className="mt-3 space-y-2">
+                    {similarSignals.signals.map((entry, index) => (
+                      <div
+                        key={`${entry.matchId ?? "match"}-${index}`}
+                        className="flex items-center justify-between gap-3 rounded-xl bg-black/25 p-3 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-stone-100">
+                            Match {entry.matchId ?? "Unknown"}
+                          </p>
+                          <p className="mt-0.5 text-stone-500">
+                            {formatOddsChange(entry.oddsChangePct)} compression ·{" "}
+                            {entry.fieldPressureScore != null
+                              ? `${entry.fieldPressureScore} field pressure`
+                              : "no field pressure"}{" "}
+                            · {formatTime(entry.archivedAt)}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                            entry.resultStatus === "correct"
+                              ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                              : "border-red-400/30 bg-red-400/10 text-red-200"
+                          }`}
+                        >
+                          {(entry.resultStatus ?? "unknown").toUpperCase()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
