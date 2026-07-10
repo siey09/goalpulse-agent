@@ -320,6 +320,28 @@ to this feature; no action taken.
 Spec: `docs/superpowers/specs/2026-07-10-verification-depth-score-design.md`,
 plan: `docs/superpowers/plans/2026-07-10-verification-depth-score.md`.
 
+✅ **DEMO_CHECKLIST.md rewritten 2026-07-10 to match the app as built**
+— the pre-session checklist only covered Market Board, Odds Chart,
+Signal Intelligence, Field Pressure, Reliability, Results Settlement,
+Replay Mode, and the old 13-step tour; every feature built this session
+was missing from the actual demo script. Docs-only, no code risk.
+Added a **Recommended Live Path** (concrete spoken **Say:** lines for a
+4-6 min live run, not just "show panel X"): Opening Problem → app/health
+→ Guided Tour breadth pass (all 20 steps) → Agent vs Agent Arena deep
+dive → Historical Pattern Match + Verification Depth signal-detail deep
+dive → Signal Correlation deep dive (with an honest empty-state fallback
+line, since that panel is the most likely of the three to show sparse
+data live) → Compliance close. Full Checklist section renumbered 1-16
+with new sections for every session feature previously undocumented:
+Arena, Market Maker, Full Tournament Archive, Signal Performance,
+Confidence Calibration, Steam Move Detection, Signal Correlation, plus
+updated Odds Chart bullets for the severity-marker/tooltip work.
+Flagged that the app has two separate "Verify on Solana" buttons (Arena's
+own vs. the Outcome Audit Layer's per-signal one) so a presenter doesn't
+mix them up live. All panel copy pulled directly from current component
+source, not guessed — verified via a research subagent before writing.
+Pushed (`a96085d`).
+
 🔄 In Progress: none.
 
 📋 Next Steps: none queued. Deferred future option, not scheduled: fix the
