@@ -32,11 +32,11 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: P1 Tier 3, P1-3 implemented (see "RESUME POINT" further
-below for full detail) — 230 tests, awaiting user review before push.
-Tier 1 and Tier 2 both reviewed/approved/pushed/verified live as of
-2026-07-11, including a real pre-existing duplicate-data find and
-cleanup during Tier 2's Supabase constraint rollout.
+🔄 In Progress: P1 Tier 3, P1-3 done, P1-2 next (see "RESUME POINT"
+further below for full detail). Tier 1, Tier 2, and P1-3 all
+reviewed/approved/pushed/verified live as of 2026-07-11, including a
+real pre-existing duplicate-data find during Tier 2 and a real
+production bug (false 5-match cluster) confirmed and fixed by P1-3.
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
@@ -798,17 +798,20 @@ tier breakdown:
   and the analyst-chat's "any signal correlation clusters?" answer
   matched the panel exactly ("1 genuine cluster... 2 real matches").
 
-  4 commits on `main`: `758c209` (spec), `b2ac9b2` (plan), `31f944e`
-  (backend dedup fix, 4 new tests), `1858117` (frontend simplification).
-  Backend: 230 tests pass (up from 226 at Tier 2 close), clean build.
-  Frontend: clean build, verified live in a local dev browser, zero
-  console errors.
+  6 commits on `main`: `758c209` (spec), `b2ac9b2` (plan), `31f944e`
+  (backend dedup fix, 4 new tests), `1858117` (frontend simplification),
+  `04e9389`/`273a767` (docs). Backend: 230 tests pass (up from 226 at
+  Tier 2 close), clean build. Frontend: clean build. Reviewed and
+  approved by the user, pushed to `main` 2026-07-11.
 
-  **Exact next action:** same gate as every prior tier/item this
-  session — report back with diff/tests/build results, user reviews
-  and verifies live (Signal Correlation panel and the chat answer both,
-  per their explicit request), then explicitly approves before push and
-  before starting P1-2.
+  **✅ P1-3 fully closed out 2026-07-11, confirmed live in production**
+  (not just the local dev server check above): `GET /api/signal-correlation`
+  showed `matchCount: 2` for a genuine 2-real-match cluster, no
+  totals-suffix inflation. The Signal Correlation panel and the
+  analyst-chat answer both showed the honest empty state at
+  verification time (the sliding correlation window had moved on from
+  the earlier local check) — consistent with each other, confirmed not
+  a bug. No console errors. **P1-3 approved, closed out.**
 
 - **SKIP unless time allows after everything above:** P1-4, P1-5, P1-8,
   P1-19 — lower urgency or already effectively covered by earlier
