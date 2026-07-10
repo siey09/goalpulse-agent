@@ -987,6 +987,38 @@ function App() {
     return { fixtureId, sequence };
   }
 
+  function getVerificationDepth(
+    signal: AgentSignal | null,
+    verifyState: Record<string, { loading: boolean; data: OnChainVerifyData | null }>
+  ): { label: string; tone: "neutral" | "warn" | "danger" | "success" } | null {
+    const target = getOnchainVerifyTarget(signal);
+    if (!target) return null;
+
+    const key = `${target.fixtureId}-${target.sequence}`;
+    const entry = verifyState[key];
+
+    if (entry?.loading) {
+      return { label: "Checking on-chain...", tone: "neutral" };
+    }
+
+    if (!entry?.data) {
+      return { label: "Not yet verified", tone: "neutral" };
+    }
+
+    if (!entry.data.available) {
+      return {
+        label: `Verification unavailable — ${entry.data.reason ?? "unknown reason"}`,
+        tone: "warn",
+      };
+    }
+
+    if (!entry.data.isValid) {
+      return { label: "Verification FAILED", tone: "danger" };
+    }
+
+    return { label: "On-chain verified", tone: "success" };
+  }
+
   async function runOnchainVerify(signal: AgentSignal | null) {
     const target = getOnchainVerifyTarget(signal);
 
@@ -3304,6 +3336,27 @@ function App() {
 
                       return (
                         <>
+                          {(() => {
+                            const depth = getVerificationDepth(selectedSignal, onchainVerify);
+                            if (!depth) return null;
+
+                            const toneClass =
+                              depth.tone === "success"
+                                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                                : depth.tone === "danger"
+                                  ? "border-red-400/30 bg-red-400/10 text-red-200"
+                                  : depth.tone === "warn"
+                                    ? "border-orange-400/30 bg-orange-400/10 text-orange-200"
+                                    : "border-white/10 bg-white/5 text-stone-400";
+
+                            return (
+                              <span
+                                className={`mb-2 inline-block rounded-full border px-2.5 py-1 text-[10px] font-semibold ${toneClass}`}
+                              >
+                                {depth.label}
+                              </span>
+                            );
+                          })()}
                           <button
                             type="button"
                             onClick={() => runOnchainVerify(selectedSignal)}
