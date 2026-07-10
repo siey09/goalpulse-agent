@@ -7,6 +7,7 @@ import YAML from "yamljs";
 import { processAgentCycle } from "./agent";
 import { fetchRecentTxLineResults } from "./services/txlineClient";
 import { getLiveStreamState, startLiveStreamMonitor } from "./services/txlineStream";
+import { getLiveOddsStreamState, startLiveOddsStreamMonitor } from "./services/txlineOddsStream";
 import { validateStatOnChain } from "./services/onchainValidation";
 import { loadSnapshot, saveSnapshot } from "./services/persistence";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
@@ -65,6 +66,7 @@ app.get("/health", (_req, res) => {
     useSimulatedFeed: config.useSimulatedFeed,
     txlineBaseUrl: config.txlineApiBaseUrl,
     liveStream: getLiveStreamState(),
+    liveOddsStream: getLiveOddsStreamState(),
     timestamp: new Date().toISOString(),
   });
 });
@@ -1116,6 +1118,7 @@ app.listen(config.port, async () => {
   await runGuardedAgentCycle("startup");
 
   startLiveStreamMonitor();
+  startLiveOddsStreamMonitor();
 
   setInterval(() => {
     void runGuardedAgentCycle("scheduled");
