@@ -32,6 +32,14 @@ type ArenaScoreboard = {
   openPositions: number;
 };
 
+type ArenaRejection = {
+  agentId: ArenaAgentId;
+  signalId: string;
+  matchId: string;
+  reason: "totals_signal" | "not_market_only_move" | "no_original_snapshot";
+  reasonText: string;
+};
+
 type ArenaProof = {
   type: "sha256";
   hash: string;
@@ -43,6 +51,7 @@ type ArenaResponse = {
   momentumFollower: ArenaScoreboard;
   contrarian: ArenaScoreboard;
   kellyCriterion: ArenaScoreboard;
+  rejections: ArenaRejection[];
   proof: ArenaProof;
 };
 
@@ -141,13 +150,21 @@ function getSkepticCritique(
 
 function ScoreboardCard({
   scoreboard,
+  rejections,
   isLeader,
   accent,
 }: {
   scoreboard: ArenaScoreboard;
+  rejections: ArenaRejection[];
   isLeader: boolean;
   accent: "sky" | "orange" | "violet";
 }) {
+  // Defensive: rejections may be absent from an older backend response
+  // (e.g. during this project's documented Render deploy-lag window,
+  // where a newly-deployed frontend can briefly talk to a not-yet-updated
+  // backend) - never let a shape mismatch crash the whole panel.
+  const agentRejections = (rejections ?? []).filter((r) => r.agentId === scoreboard.agentId);
+  const distinctReasons = Array.from(new Set(agentRejections.map((r) => r.reasonText))).slice(0, 3);
   const accentClass =
     accent === "sky"
       ? "border-sky-400/20 bg-sky-400/10 text-sky-200"
@@ -222,6 +239,21 @@ function ScoreboardCard({
           <p className="text-[11px] text-stone-500">No positions yet.</p>
         )}
       </div>
+
+      {agentRejections.length > 0 && (
+        <div className="mt-3 border-t border-white/5 pt-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-stone-500">
+            {agentRejections.length} signal{agentRejections.length === 1 ? "" : "s"} not traded
+          </p>
+          <ul className="mt-1 space-y-0.5">
+            {distinctReasons.map((reasonText) => (
+              <li key={reasonText} className="text-[10px] text-stone-500">
+                {reasonText}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -349,16 +381,19 @@ export function ArenaPanel() {
           <div className="grid gap-4 lg:grid-cols-3">
             <ScoreboardCard
               scoreboard={arena.momentumFollower}
+              rejections={arena.rejections}
               isLeader={recommendation.agentId === "momentum_follower"}
               accent="sky"
             />
             <ScoreboardCard
               scoreboard={arena.contrarian}
+              rejections={arena.rejections}
               isLeader={recommendation.agentId === "contrarian"}
               accent="orange"
             />
             <ScoreboardCard
               scoreboard={arena.kellyCriterion}
+              rejections={arena.rejections}
               isLeader={recommendation.agentId === "kelly_criterion"}
               accent="violet"
             />
