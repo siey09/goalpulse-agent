@@ -59,6 +59,7 @@ export async function processAgentCycle(): Promise<AgentRun> {
 
     for (const snapshot of orderedSnapshots) {
       if (snapshotAlreadyExists(snapshot.id)) {
+        store.duplicatesDropped.snapshots += 1;
         continue;
       }
 
@@ -88,6 +89,8 @@ const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.cr
               signal.discordAlertStatus = status;
             });
         }
+      } else if (signal) {
+        store.duplicatesDropped.signals += 1;
       }
     }
 

@@ -6,12 +6,14 @@ export const store: {
   oddsSnapshots: OddsSnapshot[];
   signals: AgentSignal[];
   agentRuns: AgentRun[];
+  duplicatesDropped: { snapshots: number; signals: number };
 } = {
   matches: [],
   recentFinishedMatches: [],
   oddsSnapshots: [],
   signals: [],
   agentRuns: [],
+  duplicatesDropped: { snapshots: 0, signals: 0 },
 };
 
 export function snapshotAlreadyExists(snapshotId: string): boolean {

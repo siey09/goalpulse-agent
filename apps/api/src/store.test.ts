@@ -64,6 +64,13 @@ beforeEach(() => {
   store.oddsSnapshots = [];
   store.signals = [];
   store.agentRuns = [];
+  store.duplicatesDropped = { snapshots: 0, signals: 0 };
+});
+
+describe("store.duplicatesDropped", () => {
+  it("starts at zero for both counters", () => {
+    expect(store.duplicatesDropped).toEqual({ snapshots: 0, signals: 0 });
+  });
 });
 
 describe("upsertRecentFinishedMatches", () => {

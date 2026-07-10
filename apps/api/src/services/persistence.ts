@@ -13,6 +13,7 @@ type StoreSnapshot = {
   oddsSnapshots: OddsSnapshot[];
   signals: AgentSignal[];
   agentRuns: AgentRun[];
+  duplicatesDropped?: { snapshots: number; signals: number };
 };
 
 function getClient(): SupabaseClient | null {
@@ -43,6 +44,7 @@ export async function saveSnapshot(): Promise<void> {
       oddsSnapshots: store.oddsSnapshots,
       signals: store.signals,
       agentRuns: store.agentRuns,
+      duplicatesDropped: store.duplicatesDropped,
     };
 
     await client.from(SNAPSHOT_TABLE).upsert({
@@ -106,6 +108,7 @@ export async function loadSnapshot(): Promise<void> {
     );
     store.signals = snapshot.signals ?? [];
     store.agentRuns = snapshot.agentRuns ?? [];
+    store.duplicatesDropped = snapshot.duplicatesDropped ?? { snapshots: 0, signals: 0 };
 
     console.log(
       `[persistence] Restored store from Supabase snapshot (${store.matches.length} matches, ${store.signals.length} signals, ${store.oddsSnapshots.length} odds snapshots, ${store.agentRuns.length} agent runs).`

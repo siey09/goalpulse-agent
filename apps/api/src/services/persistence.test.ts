@@ -31,6 +31,7 @@ describe("persistence", () => {
     store.oddsSnapshots = [];
     store.signals = [];
     store.agentRuns = [];
+    store.duplicatesDropped = { snapshots: 0, signals: 0 };
   });
 
   it("saveSnapshot no-ops when Supabase is not configured", async () => {
@@ -43,6 +44,39 @@ describe("persistence", () => {
     await loadSnapshot();
 
     expect(maybeSingleMock).not.toHaveBeenCalled();
+  });
+
+  it("saveSnapshot includes duplicatesDropped in the upserted payload", async () => {
+    config.supabaseUrl = "https://example.supabase.co";
+    config.supabaseServiceKey = "test-key";
+    store.duplicatesDropped = { snapshots: 7, signals: 2 };
+
+    await saveSnapshot();
+
+    const upsertedRow = upsertMock.mock.calls[0][0] as { data: { duplicatesDropped: unknown } };
+    expect(upsertedRow.data.duplicatesDropped).toEqual({ snapshots: 7, signals: 2 });
+  });
+
+  it("loadSnapshot restores duplicatesDropped, defaulting to zero when absent from an older snapshot", async () => {
+    config.supabaseUrl = "https://example.supabase.co";
+    config.supabaseServiceKey = "test-key";
+
+    maybeSingleMock.mockResolvedValue({
+      data: {
+        data: {
+          matches: [],
+          recentFinishedMatches: [],
+          oddsSnapshots: [],
+          signals: [],
+          agentRuns: [],
+        },
+      },
+      error: null,
+    });
+
+    await loadSnapshot();
+
+    expect(store.duplicatesDropped).toEqual({ snapshots: 0, signals: 0 });
   });
 
   it("loadSnapshot populates store from a successful mocked load", async () => {
