@@ -1,6 +1,6 @@
 # GoalPulse Agent — Project State
 
-**As of:** 2026-07-10. This document is a session-handoff brief — read this
+**As of:** 2026-07-11. This document is a session-handoff brief — read this
 first, before `README.md`/`TECHNICAL_DOCS.md`/`SUBMISSION_NOTES.md` (which are
 judge/submission-facing and slightly stale relative to this file as of this
 writing — they predate the three features this document adds in the
@@ -397,12 +397,64 @@ console errors. Spec:
 `docs/superpowers/specs/2026-07-10-skeptic-agent-design.md`, plan:
 `docs/superpowers/plans/2026-07-10-skeptic-agent.md`.
 
+✅ **Guided Tour expanded to 22 steps 2026-07-11** — covers the four
+features shipped 2026-07-10 that predated the tour's last update
+(Historical Pattern Match, Verification Depth Score, Meta-agent
+recommendation, Skeptic Check), none of which were in the tour at all
+before this. New step 10 ("Meta-agent & Skeptic Check") covers both
+Arena self-audit features together, via a new `id="guide-meta-skeptic"`
+wrapper added around those two callouts in `ArenaPanel.tsx` for precise
+spotlighting. New step 16 ("Signal detail: precedent & verification")
+is deliberately instructional rather than auto-opened: Historical
+Pattern Match and Verification Depth Score both live inside the
+`selectedSignal` detail modal, which only renders after a real click and
+has no reliable "next signal" for the tour to select — every other tour
+step only ever scrolls-to-and-highlights static, always-rendered
+elements, so forcing the modal open would have been the tour's first
+architectural departure. The step instead highlights the "Latest
+signals" list (reusing the existing `id="agent"` target) and instructs
+the judge to click "View details" themselves.
+
+**Two independent step-indexed systems had to be updated in lockstep**
+— `guideTargets[step]` (the imperative highlight-lookup array) plus four
+separate hardcoded `judgeStep === N` React conditionals scattered in
+JSX, the exact "second highlight system" already documented as a past
+bug source (see "Bugs found and fixed" below, 2026-07-10 guided-tour
+entry). A full grep audit of every `judgeStep`/`guideTargets[`/
+`judgeDemoSteps[` occurrence was done before writing the spec, not just
+the ones anticipated going in — found and correctly shifted all four
+JSX literals (10→11, 11→12, 12→13, 13→14) plus a numeric retry-guard
+range (`nextStep >= 8 && nextStep <= 10` → `...<= 11`) that pre-fetches
+replay-backtest data ahead of the steps that need it.
+
+**One false alarm caught and correctly diagnosed during verification,
+not shipped as a fix:** rapid automated clicking through the tour
+during testing (sub-second between steps) caused one step to briefly
+show a stale highlight from an earlier step — traced to multiple
+staggered 700ms retry-guard timeouts firing out of order when clicked
+faster than they can settle. Confirmed via a slower, realistic-pace
+re-test (3+ seconds between clicks, matching real human reading/
+clicking speed) that this never reproduces at normal demo pace — a
+pre-existing characteristic of the retry-guard's timeout design (the
+same theoretical exposure existed in the original 3-step guarded range
+before this change), not a regression introduced here. Not fixed,
+since it's not reachable in real usage; noted for awareness only.
+
+Frontend/docs-only, 3 commits, Inline Execution, no backend changes.
+Verified live in production twice: once during implementation (full
+22-step walkthrough, every step checked not just the new ones) and once
+by the user independently post-deploy (clean single-step-at-a-time
+pace, all previously-tested steps 12-15 still correct after the shift,
+both new steps render correctly, tour completes cleanly). Spec:
+`docs/superpowers/specs/2026-07-10-guided-tour-expansion-design.md`,
+plan: `docs/superpowers/plans/2026-07-10-guided-tour-expansion.md`.
+
 🔄 In Progress: none.
 
 📋 Next Steps: none queued. All four "future ideas" candidates shipped
 2026-07-10 (Historical Pattern Match, Verification Depth Score,
-Meta-agent, Skeptic Agent). No further backlog items pending — await
-direction. Deferred future option, not scheduled: fix the
+Meta-agent, Skeptic Agent), and the Guided Tour now covers all four as
+of 2026-07-11. No further backlog items pending — await direction. Deferred future option, not scheduled: fix the
 totals-line overcounting server-side in `signalCorrelation.ts` (matching
 the Signal Performance precedent) rather than the current frontend-only
 dedup. `match_archive`'s Supabase setup is already complete (user ran the
