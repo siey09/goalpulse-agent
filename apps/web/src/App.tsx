@@ -77,6 +77,7 @@ type AgentSignal = {
   oddsChangePct?: number;
   momentumScore?: number;
   confidence?: number;
+  confidenceScore?: number;
   explanation?: string;
   reason?: string;
   createdAt?: string;
@@ -94,6 +95,7 @@ type AgentSignal = {
     fixtureId?: string;
     scoresContext?: {
       sequence?: number;
+      fieldPressureScore?: number;
     };
   };
   discordAlertStatus?: "sent" | "failed" | "not_configured";
