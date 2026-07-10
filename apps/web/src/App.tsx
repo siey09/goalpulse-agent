@@ -713,12 +713,19 @@ function App() {
     { id: "agent", text: "Latest signals" },
     { text: "Outcome verification" },
     { text: "Selected match" },
+    { text: "Live bid/ask quotes" },
+    { text: "Steam move detection" },
+    { text: "Momentum Follower vs Contrarian vs Kelly Criterion" },
     { text: "Agent timeline" },
     { id: "guide-backtest-card", text: "Outcome audit" },
     { id: "guide-event-correlation", text: "Evidence chain" },
     { id: "guide-oracle-council", text: "Signal review" },
     { id: "guide-proof-readiness", text: "Proof network" },
     { text: "Signal thresholds" },
+    { text: "Full tournament archive" },
+    { text: "Signal performance" },
+    { text: "Confidence calibration" },
+    { text: "Signal correlation" },
     { id: "compliance", text: "Analytics only" },
   ];
 
@@ -2680,153 +2687,160 @@ function App() {
             </div>
           </div>
 
-          <div
-            id="guide-backtest-card"
-            className={`rounded-[24px] border border-white/10 bg-[#15100c] p-4 transition-all ${
-              isJudgeMode && judgeStep === 10 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
-            }`}
-          >
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs text-stone-500">
-                  {replayBacktest?.mode === "real_txline_replay"
-                    ? "Real TxLINE replay"
-                    : "Stored replay"}
-                </p>
-                <h2 className="text-base font-semibold">Outcome audit mode</h2>
-              </div>
-              <button
-                onClick={runReplayBacktest}
-                disabled={isReplayRunning}
-                className="rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1.5 text-[11px] font-medium text-orange-200 transition hover:border-orange-300/40 hover:bg-orange-400/20 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isReplayRunning ? "Running..." : "Run audit"}
-              </button>
-            </div>
-
-            {pnl && (
-              <div className="mb-3 rounded-2xl border border-white/10 bg-black/25 p-3.5">
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
-                    Simulated P&amp;L — flat 1 unit per signal
+          <div className="rounded-[24px] border border-white/10 bg-[#15100c] p-4">
+            <div
+              id="guide-backtest-card"
+              className={`transition-all ${
+                isJudgeMode && judgeStep === 10 ? "relative z-[60] scale-[1.01] rounded-2xl ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+              }`}
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs text-stone-500">
+                    {replayBacktest?.mode === "real_txline_replay"
+                      ? "Real TxLINE replay"
+                      : "Stored replay"}
                   </p>
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${
-                      pnl.netUnits > 0
-                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-                        : pnl.netUnits < 0
-                          ? "border-red-400/30 bg-red-400/10 text-red-200"
-                          : "border-white/10 bg-white/5 text-stone-300"
-                    }`}
-                  >
-                    {pnl.netUnits > 0 ? "+" : ""}
-                    {pnl.netUnits.toFixed(2)}u · {pnl.roiPercent > 0 ? "+" : ""}
-                    {pnl.roiPercent}% ROI
-                  </span>
+                  <h2 className="text-base font-semibold">Outcome audit mode</h2>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-lg font-bold tabular-nums text-white">{pnl.settledBets}</p>
-                    <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Settled bets</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold tabular-nums text-white">{pnl.totalStaked}u</p>
-                    <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Total staked</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold tabular-nums text-amber-200">{pnl.openPositions}</p>
-                    <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Open positions</p>
-                  </div>
-                </div>
-                <p className="mt-2 text-[9px] leading-4 text-stone-500">{pnl.note}</p>
                 <button
-                  type="button"
-                  onClick={scrollToCaseStudies}
-                  className="mt-1 block text-left text-[9px] leading-4 text-stone-500 underline decoration-dotted hover:text-stone-300"
+                  onClick={runReplayBacktest}
+                  disabled={isReplayRunning}
+                  className="rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1.5 text-[11px] font-medium text-orange-200 transition hover:border-orange-300/40 hover:bg-orange-400/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Based on {pnl.settledBets} settled bet(s) — see verified case studies for permanently confirmed historical examples
+                  {isReplayRunning ? "Running..." : "Run audit"}
                 </button>
               </div>
-            )}
 
-            {replayBacktest ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-xl bg-black/20 p-2.5">
-                    <p className="text-[10px] text-stone-500">Snapshots</p>
-                    <p className="mt-1 text-sm font-semibold text-white">
-                      {replayBacktest.summary?.snapshotsProcessed ?? 0}
+              {pnl && (
+                <div className="mb-3 rounded-2xl border border-white/10 bg-black/25 p-3.5">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
+                      Simulated P&amp;L — flat 1 unit per signal
                     </p>
-                  </div>
-                  <div className="rounded-xl bg-black/20 p-2.5">
-                    <p className="text-[10px] text-stone-500">Signals</p>
-                    <p className="mt-1 text-sm font-semibold text-white">
-                      {replayBacktest.summary?.signalsDetected ?? 0}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-black/20 p-2.5">
-                    <p className="text-[10px] text-stone-500">Settled checks</p>
-                    <p className="mt-1 text-sm font-semibold text-emerald-200">
-                      {(replayBacktest.summary?.correctSignals ?? 0) +
-                        (replayBacktest.summary?.incorrectSignals ?? 0)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-red-400/20 bg-red-400/10 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-red-200/70">
-                        Smart Money Trap Detector
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-white">
-                        {replayBacktest.summary?.smartMoneyTraps ?? 0} trap pattern(s) detected
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-red-100">
-                      {(replayBacktest.summary?.confirmedTraps ?? 0)} confirmed •{" "}
-                      {(replayBacktest.summary?.possibleTraps ?? 0)} possible
+                    <span
+                      className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${
+                        pnl.netUnits > 0
+                          ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                          : pnl.netUnits < 0
+                            ? "border-red-400/30 bg-red-400/10 text-red-200"
+                            : "border-white/10 bg-white/5 text-stone-300"
+                      }`}
+                    >
+                      {pnl.netUnits > 0 ? "+" : ""}
+                      {pnl.netUnits.toFixed(2)}u · {pnl.roiPercent > 0 ? "+" : ""}
+                      {pnl.roiPercent}% ROI
                     </span>
                   </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-lg font-bold tabular-nums text-white">{pnl.settledBets}</p>
+                      <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Settled bets</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold tabular-nums text-white">{pnl.totalStaked}u</p>
+                      <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Total staked</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold tabular-nums text-amber-200">{pnl.openPositions}</p>
+                      <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Open positions</p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[9px] leading-4 text-stone-500">{pnl.note}</p>
+                  <button
+                    type="button"
+                    onClick={scrollToCaseStudies}
+                    className="mt-1 block text-left text-[9px] leading-4 text-stone-500 underline decoration-dotted hover:text-stone-300"
+                  >
+                    Based on {pnl.settledBets} settled bet(s) — see verified case studies for permanently confirmed historical examples
+                  </button>
+                </div>
+              )}
 
-                  <p className="mt-2 text-[11px] leading-5 text-stone-300">
-                    GoalPulse checks whether sharp odds movements were later rejected by the final result.
-                    This helps expose possible false market moves instead of treating every strong move as a good signal.
-                  </p>
+              {replayBacktest && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-xl bg-black/20 p-2.5">
+                      <p className="text-[10px] text-stone-500">Snapshots</p>
+                      <p className="mt-1 text-sm font-semibold text-white">
+                        {replayBacktest.summary?.snapshotsProcessed ?? 0}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-black/20 p-2.5">
+                      <p className="text-[10px] text-stone-500">Signals</p>
+                      <p className="mt-1 text-sm font-semibold text-white">
+                        {replayBacktest.summary?.signalsDetected ?? 0}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-black/20 p-2.5">
+                      <p className="text-[10px] text-stone-500">Settled checks</p>
+                      <p className="mt-1 text-sm font-semibold text-emerald-200">
+                        {(replayBacktest.summary?.correctSignals ?? 0) +
+                          (replayBacktest.summary?.incorrectSignals ?? 0)}
+                      </p>
+                    </div>
+                  </div>
 
-                  <div className="mt-3 space-y-2">
-                    {(replayBacktest.signals ?? [])
-                      .filter(
-                        (signal) =>
-                          signal.trapStatus === "CONFIRMED_TRAP" ||
-                          signal.trapStatus === "POSSIBLE_TRAP"
-                      )
-                      .sort((a, b) => (b.trapScore ?? 0) - (a.trapScore ?? 0))
-                      .slice(0, 5)
-                      .map((signal, index) => (
-                        <button
-                          key={`${signal.id ?? "trap"}-${index}`}
-                          onClick={() => setSelectedSignal(signal)}
-                          className="w-full rounded-lg bg-black/25 p-2 text-left transition hover:bg-red-400/10"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="truncate text-[11px] font-semibold text-white">
-                              #{index + 1} · {signal.match ?? signal.matchId ?? "Unknown match"} · {getSignalTarget(signal)}
+                  <div className="rounded-xl border border-red-400/20 bg-red-400/10 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-red-200/70">
+                          Smart Money Trap Detector
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-white">
+                          {replayBacktest.summary?.smartMoneyTraps ?? 0} trap pattern(s) detected
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-red-100">
+                        {(replayBacktest.summary?.confirmedTraps ?? 0)} confirmed •{" "}
+                        {(replayBacktest.summary?.possibleTraps ?? 0)} possible
+                      </span>
+                    </div>
+
+                    <p className="mt-2 text-[11px] leading-5 text-stone-300">
+                      GoalPulse checks whether sharp odds movements were later rejected by the final result.
+                      This helps expose possible false market moves instead of treating every strong move as a good signal.
+                    </p>
+
+                    <div className="mt-3 space-y-2">
+                      {(replayBacktest.signals ?? [])
+                        .filter(
+                          (signal) =>
+                            signal.trapStatus === "CONFIRMED_TRAP" ||
+                            signal.trapStatus === "POSSIBLE_TRAP"
+                        )
+                        .sort((a, b) => (b.trapScore ?? 0) - (a.trapScore ?? 0))
+                        .slice(0, 5)
+                        .map((signal, index) => (
+                          <button
+                            key={`${signal.id ?? "trap"}-${index}`}
+                            onClick={() => setSelectedSignal(signal)}
+                            className="w-full rounded-lg bg-black/25 p-2 text-left transition hover:bg-red-400/10"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="truncate text-[11px] font-semibold text-white">
+                                #{index + 1} · {signal.match ?? signal.matchId ?? "Unknown match"} · {getSignalTarget(signal)}
+                              </p>
+                              <span className="shrink-0 rounded-full bg-red-400/10 px-2 py-0.5 text-[10px] font-semibold text-red-100">
+                                Trap score {signal.trapScore ?? 0}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-[10px] font-semibold text-purple-200">
+                              {(signal.reversalRisk ?? "REVERSAL_SCAN").replaceAll("_", " ")}
                             </p>
-                            <span className="shrink-0 rounded-full bg-red-400/10 px-2 py-0.5 text-[10px] font-semibold text-red-100">
-                              Trap score {signal.trapScore ?? 0}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-[10px] font-semibold text-purple-200">
-                            {(signal.reversalRisk ?? "REVERSAL_SCAN").replaceAll("_", " ")}
-                          </p>
-                          <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-stone-400">
-                            {signal.trapReason ?? "Rejected market move flagged for review."}
-                          </p>
-                        </button>
-                      ))}
+                            <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-stone-400">
+                              {signal.trapReason ?? "Rejected market move flagged for review."}
+                            </p>
+                          </button>
+                        ))}
+                    </div>
                   </div>
                 </div>
+              )}
+            </div>
+
+            {replayBacktest ? (
+              <div className="mt-3 space-y-3">
                 <div
                   id="guide-proof-readiness"
                   className={`rounded-xl border border-emerald-400/15 bg-emerald-400/10 p-3 transition-all ${
