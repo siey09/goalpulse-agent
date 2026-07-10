@@ -48,6 +48,28 @@ function calculateMomentumScore(
 const MAGNITUDE_REFERENCE_PCT = 15;
 
 /**
+ * Both values are derived from real signal_archive data (2026-07-11
+ * investigation, 294 settled signals), not invented - but the sample
+ * is modest and CONCENTRATED: only 49 settled 1X2 signals total,
+ * spread across just 3 real matches, with one match's "team trailing
+ * late, never comes back" narrative dominating the incorrect bucket.
+ * With ~4 matches left before the July 19 deadline, there is limited
+ * remaining data to re-validate this against. Treat these as
+ * provisional, not authoritative - re-check against a larger sample
+ * if this project continues past the tournament.
+ *
+ * LONGSHOT_ODDS_THRESHOLD: accuracy breaks at the same decimal-odds
+ * level (3.0) independently in both markets - 1X2 60%->0% at the
+ * [1,3)/[3,6) boundary, totals 62-63%->25-27% at the same boundary.
+ * LONGSHOT_CONFIDENCE_FACTOR: the real combined accuracy ratio across
+ * both markets - 159 settled signals below the cliff were 62.9%
+ * accurate, 135 at/above it were 17.8% accurate (17.8/62.9 ~= 0.283,
+ * rounded to 0.3).
+ */
+const LONGSHOT_ODDS_THRESHOLD = 3;
+const LONGSHOT_CONFIDENCE_FACTOR = 0.3;
+
+/**
  * A composite confidence measure, separate from severity/momentumScore:
  * magnitude (weight 0.5, normalized against the existing 15% HIGH severity
  * threshold), field pressure (weight 0.3, normalized against
@@ -55,12 +77,16 @@ const MAGNITUDE_REFERENCE_PCT = 15;
  * (weight 0.2). Weights are renormalized among only the available
  * components when scoresContext is absent, so a signal with no field
  * context is scored on magnitude alone rather than penalized for missing
- * data it never had a chance to have.
+ * data it never had a chance to have. A longshot-odds penalty is applied
+ * after this base composite (see LONGSHOT_ODDS_THRESHOLD above) - kept as
+ * a separate multiplicative step, not a 4th weighted component, so the
+ * base composite's own math stays unchanged for every non-longshot signal.
  */
 export function calculateConfidenceScore(
   changePct: number,
   scoresContext: TxLineScoresContext | undefined,
-  freshnessTightness: number | null
+  freshnessTightness: number | null,
+  oddsAfter: number
 ): number {
   const magnitudeScore = clamp((changePct / MAGNITUDE_REFERENCE_PCT) * 100, 0, 100);
 
@@ -82,7 +108,11 @@ export function calculateConfidenceScore(
     0
   );
 
-  return round(weightedSum / totalWeight);
+  const baseScore = round(weightedSum / totalWeight);
+
+  return oddsAfter >= LONGSHOT_ODDS_THRESHOLD
+    ? round(baseScore * LONGSHOT_CONFIDENCE_FACTOR)
+    : baseScore;
 }
 
 function sideLabel(side?: TxLineScoresContext["actionTeam"]) {
@@ -95,10 +125,16 @@ function sideLabel(side?: TxLineScoresContext["actionTeam"]) {
 function buildContextExplanation(
   target: string,
   signalSide: TeamSide,
+  oddsAfter: number,
   scoresContext?: TxLineScoresContext
 ) {
+  const longshotSentence =
+    oddsAfter >= LONGSHOT_ODDS_THRESHOLD
+      ? ` Note: quoted at long-shot odds (${oddsAfter}) - confidence reduced accordingly, matching archived-data accuracy at this odds level.`
+      : "";
+
   if (!scoresContext) {
-    return " No matching TXODDS Scores event context was available, so this is treated as a market-only movement.";
+    return ` No matching TXODDS Scores event context was available, so this is treated as a market-only movement.${longshotSentence}`;
   }
 
   const action = scoresContext.actionLabel ?? scoresContext.latestAction ?? "field event";
@@ -129,7 +165,7 @@ function buildContextExplanation(
       ? ` Reliability warning: ${scoresContext.reliabilityReason ?? "TXODDS marked the event context as unreliable."}`
       : ` Reliability check: ${scoresContext.reliabilityReason ?? "No TXODDS reliability warning was found."}`;
 
-  return `${pressureSentence}${sideSentence}${status}${scoreline} ${reliabilitySentence}`;
+  return `${pressureSentence}${sideSentence}${status}${scoreline} ${reliabilitySentence}${longshotSentence}`;
 }
 function buildBaseExplanation(
   severity: Severity,
@@ -204,7 +240,7 @@ export function buildSignalFromSnapshots(
     scoresContext
   );
 
-  const confidenceScore = calculateConfidenceScore(bestChangePct, scoresContext, freshnessTightness);
+  const confidenceScore = calculateConfidenceScore(bestChangePct, scoresContext, freshnessTightness, oddsAfter);
 
   const signalType =
     severity === "HIGH"
@@ -219,7 +255,7 @@ export function buildSignalFromSnapshots(
     bestChangePct,
     oddsBefore,
     oddsAfter
-  )}${buildContextExplanation(target, side, scoresContext)}`;
+  )}${buildContextExplanation(target, side, oddsAfter, scoresContext)}`;
 
   const evidence = {
     ...(current.evidence ?? previous.evidence),

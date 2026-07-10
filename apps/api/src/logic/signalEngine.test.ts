@@ -167,6 +167,33 @@ describe("buildSignalFromSnapshots", () => {
     expect(signal).not.toBeNull();
     expect(signal?.confidenceScore).toBe(50);
   });
+
+  it("reduces confidenceScore and adds the longshot caveat when oddsAfter is a longshot", () => {
+    const previous = makeSnapshot({ homeOdds: 5.0, awayOdds: 2.0 });
+    // 5.0 -> 3.0 is a 40% compression (HIGH severity), and oddsAfter=3.0
+    // exactly meets the longshot cliff.
+    const current = makeSnapshot({ homeOdds: 3.0, awayOdds: 2.0 });
+
+    const signal = buildSignalFromSnapshots(current, previous);
+
+    expect(signal).not.toBeNull();
+    expect(signal?.oddsAfter).toBe(3);
+    // No scoresContext -> magnitude-only base score is clamped to 100
+    // (40% is beyond the 15% reference), then the 0.3 longshot factor
+    // applies: 100*0.3=30.
+    expect(signal?.confidenceScore).toBe(30);
+    expect(signal?.explanation).toContain("long-shot odds (3)");
+  });
+
+  it("does not add the longshot caveat when oddsAfter is below the cliff", () => {
+    const previous = makeSnapshot({ homeOdds: 2.0, awayOdds: 2.0 });
+    const current = makeSnapshot({ homeOdds: 1.5, awayOdds: 2.0 });
+
+    const signal = buildSignalFromSnapshots(current, previous);
+
+    expect(signal).not.toBeNull();
+    expect(signal?.explanation).not.toContain("long-shot odds");
+  });
 });
 
 describe("calculateConfidenceScore", () => {
@@ -174,19 +201,30 @@ describe("calculateConfidenceScore", () => {
     // 7.5% is half of the 15% magnitude reference, so magnitudeScore is 50;
     // with no scoresContext, weight renormalizes to the magnitude component
     // alone, so the result is exactly 50, not dragged down by two missing
-    // components.
-    expect(calculateConfidenceScore(7.5, undefined, null)).toBe(50);
+    // components. oddsAfter=1.5 is below the longshot cliff, so the base
+    // score is returned unpenalized.
+    expect(calculateConfidenceScore(7.5, undefined, null, 1.5)).toBe(50);
   });
 
   it("clamps the magnitude component at 100 for a move beyond the 15% reference", () => {
-    expect(calculateConfidenceScore(25, undefined, null)).toBe(100);
+    expect(calculateConfidenceScore(25, undefined, null, 1.5)).toBe(100);
   });
 
   it("blends all three components with their configured weights", () => {
     // magnitude=15% -> 100, fieldPressureScore=0 -> 0, freshnessTightness=0.
     // Expected: 100*0.5 + 0*0.3 + 0*0.2 = 50.
     const scoresContext = { fieldPressureScore: 0 };
-    expect(calculateConfidenceScore(15, scoresContext, 0)).toBe(50);
+    expect(calculateConfidenceScore(15, scoresContext, 0, 1.5)).toBe(50);
+  });
+
+  it("applies the longshot penalty when oddsAfter is at or above the 3.0 cliff", () => {
+    // Same inputs as the "clamps the magnitude component at 100..." case
+    // above (baseScore 100), but oddsAfter=3 meets the cliff: 100*0.3=30.
+    expect(calculateConfidenceScore(25, undefined, null, 3)).toBe(30);
+  });
+
+  it("does not apply the longshot penalty just under the 3.0 cliff", () => {
+    expect(calculateConfidenceScore(25, undefined, null, 2.99)).toBe(100);
   });
 });
 
