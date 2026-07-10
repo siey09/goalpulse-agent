@@ -194,6 +194,30 @@ true`, scores climbing 5→8 events and odds climbing 38→49 events over a
 `docs/superpowers/plans/2026-07-10-odds-stream-monitor.md`. 201 tests
 passing.
 
+✅ **Guided tour updated with 7 missing panel steps, plus a real highlight
+bug found and fixed 2026-07-10** — the judge-facing "Guide" tour
+(`judgeDemoSteps` in `App.tsx`) hadn't been touched since several major
+panels shipped this session: Market Maker, Steam Move Detection, Arena,
+Signal Archive, Signal Performance, Confidence Calibration, Signal
+Correlation. Added one step per panel (13 → 20 steps), inserted at
+sensible points (Market Maker/Steam Move/Arena near the other live
+panels; Archive/Performance/Confidence Calibration/Correlation grouped
+near the end as historical-proof panels), all steps renumbered.
+
+**Bug found during the same pass, live-verified twice (first check hit a
+race-condition false positive on a rapid click-through; a slower, careful
+re-check confirmed the fix):** there are two independent highlight
+systems in the tour — React inline conditionals on 4 specific elements,
+and a separate imperative system (`applyGuideSpotlight`, via
+`classList.add()`) driven by a `guideTargets[step]` array. The array
+still had its old 13-item mapping and was never updated when the 7 new
+steps were inserted, so at the new step 11 it looked up `guideTargets[10]`
+— still the old `"guide-proof-readiness"` entry — spotlighting the wrong
+element via a stale index. Fixed by updating `guideTargets` to the
+correct 20-entry mapping. Verified by inspecting actual DOM state (ring
+class + `data-guide-active`) at each of the 4 previously-affected steps,
+not just screenshots, then confirmed live in production.
+
 🔄 In Progress: none.
 
 📋 Next Steps: none queued. Deferred future option, not scheduled: fix the
