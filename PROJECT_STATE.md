@@ -32,8 +32,9 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: none — Confidence-bucketed signal performance (item 16)
-merged and pushed to `main` (181 tests, 25 routes).
+🔄 In Progress: P1 Tier 2 (see "RESUME POINT" further below for full
+detail) — implemented 2026-07-11, 226 tests, awaiting user review before
+push. Tier 1 already reviewed/approved/pushed/verified live.
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
@@ -615,22 +616,16 @@ tier breakdown:
   build throughout. Frontend: clean build (no changes to this app in
   Tier 1 — `apps/web/package.json` was already fully pinned).
 
-  **Exact next action:** none pending from the implementer side — this
-  was done while the user was away, per their explicit "proceed to
-  implement Tier 1 as planned, I'll review when I'm back." **Waiting on
-  the user to review the diff and explicitly say to push** — per their
-  own instruction, do not push and do not start Tier 2 until they
-  review Tier 1 live and approve
-  (explicit instruction: "report back with diff/tests/build results, I
-  review and verify live, then move to Tier 2, then Tier 3 — don't jump
-  ahead"). Once pushed, the new `.github/workflows/ci.yml` will run
-  automatically on that push — worth checking the Actions tab to
-  confirm it passes, as the first real end-to-end validation of the
-  workflow file itself (it cannot be validated locally the way
-  application code can).
+  **Tier 1 closed out 2026-07-11 — user independently verified live and
+  approved.** Confirmed: LICENSE visible in repo file listing, CI workflow
+  shows both backend and frontend jobs passing (green checkmarks,
+  28s/23s), CORS confirmed working via a real fetch from the actual
+  production frontend origin (200 OK). User specifically praised reading
+  the actual `cors` package source before making a safety claim on P1-11
+  rather than assuming. **Explicit go-ahead given to proceed to Tier 2.**
 
-- **Tier 2 (moderate, additive, low regression risk) — NOT STARTED, do
-  after Tier 1 is reviewed/approved/pushed/verified live:**
+- **Tier 2 (moderate, additive, low regression risk) — STARTING
+  2026-07-11, approved by user:**
   - P1-6: expose rejection reasons (closes the one real P0-6 gap already
     found — Contrarian's silent skip via `isMarketOnlyMove` — plus any
     other implicit rejections found).
@@ -644,6 +639,95 @@ tier breakdown:
   - P1-18: idempotency keys for events/signals/positions/persistence
     writes — investigate current duplicate-handling first, only add
     where a real gap exists.
+
+  **Tier 2 implemented 2026-07-11 — all four items done, awaiting user
+  review before push.** Investigated-first, code-only-where-needed, same
+  discipline as Tier 1:
+  - P1-6: shipped. New `getRejectionReason()` in `logic/arena.ts`
+    mirrors the exact null-cases already in the three `build*Position`
+    functions without changing their signatures — zero risk to their
+    existing tests. `computeArenaScoreboards` now also returns a
+    `rejections: ArenaRejection[]` array, exposed as a new top-level
+    field on `GET /api/arena`. Scope confirmed Arena-only with the user
+    (not the signal-generation-level silent drops in `signalEngine.ts`/
+    `signalAlreadyExists`, which remain untouched, out of scope).
+    `ArenaPanel.tsx` shows a "N signals not traded" line with reason
+    text per agent card. **Real bug found and fixed during live browser
+    verification:** `ScoreboardCard` crashed the whole panel if
+    `rejections` was ever undefined — a genuine risk given this
+    project's documented Render deploy-lag window (frontend deploying
+    before/after backend). Now defaults to `[]` defensively. Verified
+    live against a local dev server with real TxLINE data: all three
+    cards correctly show "4 signals not traded" / "Totals signal —
+    Arena only trades 1X2 markets," no console errors.
+  - P1-15: shipped. New `GET /api/metrics` endpoint (separate from
+    `/health`, matching the `/api/feed-health` precedent) — 
+    `uptimeSeconds`, `lastAgentCycle.decisionLatencyMs` (from the
+    already-stored `AgentRun` timestamps), `liveStream`/
+    `liveOddsStream.staleForMs`, and two new counters,
+    `store.duplicatesDropped.{snapshots,signals}`, incremented at the
+    two existing dedup branches in `agent.ts`. Persisted/restored
+    across restarts via the existing Supabase snapshot round-trip
+    (`persistence.ts`) so a Render restart doesn't silently reset them.
+    Verified live: `decisionLatencyMs` showed a real 8062ms TxLINE
+    fetch, `duplicatesDropped.snapshots` climbed to 86 against live
+    duplicate data, confirming both new counters and the endpoint work
+    end-to-end. `openapi.yaml` updated; `/api/docs` confirmed still
+    resolving.
+  - P1-17: investigated, **confirmed already fully covered, no code
+    change.** Every in-memory array is already capped (`oddsSnapshots`
+    800/`signals` 100/`agentRuns` 50 in `agent.ts`; `recentFinishedMatches`
+    20 in `store.ts`), and every newer logic module (`feedHealth`,
+    `signalCorrelation`, `historicalPatternMatch`, `signalPerformance`)
+    computes fresh from these capped arrays at request time with no
+    independent accumulating state. Same verdict pattern as P1-13/P1-14
+    in Tier 1.
+  - P1-18: shipped, **with an explicit behavior-change note flagged to
+    and confirmed by the user before implementation.** `archiveSignal`/
+    `archiveMatch` (`services/archive.ts`) switched from a plain
+    `.insert()` to `.upsert(..., { onConflict, ignoreDuplicates: true })`,
+    guarding against a real restart-timing race: a process crash within
+    the periodic-snapshot save window, followed by restart-recovery
+    from a slightly-stale snapshot, can re-detect an already-archived
+    match/signal as "new" and archive it again. `signal_archive`'s
+    constraint is `(signal_id, event)` — a signal still legitimately
+    gets two rows (created/settled), only a true re-archive of the same
+    event is blocked. **`match_archive`'s `(match_id)` constraint is a
+    deliberate change, not a bug fix** — the original 2026-07-10 design
+    (`docs/superpowers/specs/2026-07-10-match-archive-design.md`,
+    "Duplicate rows (accepted behavior)") explicitly accepted a second
+    row per match on restart-rediscovery as intentional, matching
+    `signal_archive`'s own insert-only-log precedent. This upsert
+    supersedes that decision — the duplicate was never the goal, just a
+    tolerated side effect of the original design, and preventing it is
+    a genuine improvement. **Requires two manual Supabase SQL
+    statements before the dedup takes effect** (same manual-step
+    pattern as `match_archive`'s original setup) — not yet run:
+    ```sql
+    alter table signal_archive
+      add constraint signal_archive_signal_event_unique
+      unique (signal_id, event);
+    alter table match_archive
+      add constraint match_archive_match_id_unique
+      unique (match_id);
+    ```
+    Until the user runs these, the code behaves exactly like the
+    previous plain insert (safe, just not yet deduplicating).
+
+  8 commits on `main`: `11ba6f6` (spec), `05ed333` (plan), `0978146`
+  (P1-6 logic), `036ecad` (P1-6 route), `e8db48c` (P1-6 frontend +
+  defensive-null bugfix), `d2c1b3c` (P1-15 counters), `ef47f86` (P1-15
+  endpoint), `f4cd19f` (P1-18). Backend: 226 tests pass (up from 216 at
+  Tier 1 close), clean build throughout. Frontend: clean build, verified
+  live in a local dev browser with real TxLINE data, zero console
+  errors after the defensive-null fix.
+
+  **Exact next action:** same gate as Tier 1 — report back with
+  diff/tests/build results, user reviews and verifies live, then
+  explicitly approves before push and before starting Tier 3. Also
+  flag the two Supabase SQL statements above for the user to run
+  whenever convenient (not blocking review/push — the code is safe
+  either way, just inert on the dedup front until they're run).
 
 - **Tier 3 (bigger engineering, evaluate cost/benefit before starting)
   — NOT STARTED, do after Tier 2:**
