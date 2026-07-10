@@ -493,31 +493,59 @@ function App() {
       detail: "GoalPulse separates field-backed moves from market-only moves using Field Pressure Index and TXODDS play-by-play events.",
     },
     {
-      title: "7. Autonomous agent timeline",
+      title: "7. In-Play Market Maker",
+      detail: "The Market Maker quotes a live bid/ask spread around TxLINE's de-margined fair odds, widening under field pressure or unreliable data and narrowing when conditions are calm.",
+    },
+    {
+      title: "8. Steam move detection",
+      detail: "Steam Move Detection scans every match every 5 seconds for sustained same-direction odds movement, flagging genuine momentum building before it becomes an obvious signal.",
+    },
+    {
+      title: "9. Agent vs Agent Arena",
+      detail: "Three strategies compete on the same live signal feed: Momentum Follower trusts the signal, Contrarian fades signals without real field support, and Kelly Criterion sizes its stake by confidence — settlement is on-chain-verified.",
+    },
+    {
+      title: "10. Autonomous agent timeline",
       detail: "The timeline explains the agent loop: ingest feed, capture snapshots, compare odds, attach scores context, score reliability, and store evidence.",
     },
     {
-      title: "8. Real TxLINE replay",
+      title: "11. Real TxLINE replay",
       detail: "Replay mode runs stored TxLINE snapshots through the same engine, making the demo repeatable even when live matches are quiet.",
     },
     {
-      title: "9. Evidence chain",
+      title: "12. Evidence chain",
       detail: "The evidence chain links odds endpoints, scores endpoints, message IDs, bookmakers, scoreline context, and proof labels for judge-verifiable review.",
     },
     {
-      title: "10. Signal review council",
+      title: "13. Signal review council",
       detail: "Multiple agent checks review movement strength, field context, reliability, reversion risk, and evidence quality before surfacing a signal.",
     },
     {
-      title: "11. Proof hash",
+      title: "14. Proof hash",
       detail: "The replay generates a SHA-256 proof hash so the audit trail can become tamper-evident and independently reviewable.",
     },
     {
-      title: "12. Transparent thresholds",
+      title: "15. Transparent thresholds",
       detail: "The engine uses explainable thresholds: watch, momentum shift, and sharp move. No black-box betting recommendation is required.",
     },
     {
-      title: "13. Compliance boundary",
+      title: "16. Full tournament archive",
+      detail: "The archive permanently records every settled signal — status, severity, and market — independent of the dashboard's in-memory caps, giving judges the complete, unfiltered track record.",
+    },
+    {
+      title: "17. Signal performance",
+      detail: "Signal Performance breaks accuracy down by signal type — sharp move, momentum shift, watch — showing correct-versus-settled counts so judges can see where the model's calls actually hold up.",
+    },
+    {
+      title: "18. Confidence calibration",
+      detail: "Confidence Calibration checks whether the model's own confidence score is honest: higher-confidence signals should settle correct more often, and this panel proves whether that pattern actually holds.",
+    },
+    {
+      title: "19. Signal correlation",
+      detail: "Signal Correlation finds clusters of the same pattern firing across multiple real matches — side, severity, and market aligned — evidence the model is detecting a real phenomenon, not noise.",
+    },
+    {
+      title: "20. Compliance boundary",
       detail: "GoalPulse is analytics-only: it explains sports market movement and evidence context. It does not place wagers, custody funds, or facilitate betting execution.",
     },
   ];
@@ -2655,7 +2683,7 @@ function App() {
           <div
             id="guide-backtest-card"
             className={`rounded-[24px] border border-white/10 bg-[#15100c] p-4 transition-all ${
-              isJudgeMode && judgeStep === 7 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+              isJudgeMode && judgeStep === 10 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
             }`}
           >
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -2802,7 +2830,7 @@ function App() {
                 <div
                   id="guide-proof-readiness"
                   className={`rounded-xl border border-emerald-400/15 bg-emerald-400/10 p-3 transition-all ${
-                    isJudgeMode && judgeStep === 10 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                    isJudgeMode && judgeStep === 13 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3 text-[11px]">
@@ -2900,7 +2928,7 @@ function App() {
                   <div
                     id="guide-event-correlation"
                     className={`rounded-xl border border-orange-400/15 bg-orange-400/10 p-3 transition-all ${
-                      isJudgeMode && judgeStep === 8 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                      isJudgeMode && judgeStep === 11 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
@@ -2939,7 +2967,7 @@ function App() {
                   <div
                     id="guide-oracle-council"
                     className={`rounded-xl border border-sky-400/15 bg-sky-400/10 p-3 transition-all ${
-                      isJudgeMode && judgeStep === 9 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                      isJudgeMode && judgeStep === 12 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
