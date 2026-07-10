@@ -124,6 +124,7 @@ export function buildContrarianPosition(
   originalSnapshot: OddsSnapshot | undefined
 ): ArenaPosition | null {
   if (isTotalsSignal(signal)) return null;
+  if (signal.side === "draw") return null;
   if (!isMarketOnlyMove(signal)) return null;
   if (!originalSnapshot) return null;
 
@@ -173,6 +174,16 @@ export function getRejectionReason(
   }
 
   if (agentId !== "contrarian") return null;
+
+  if (signal.side === "draw") {
+    return {
+      agentId,
+      signalId: signal.id,
+      matchId: signal.matchId,
+      reason: "draw_signal",
+      reasonText: "Draw signal — Contrarian has no principled opposite in a 3-outcome market.",
+    };
+  }
 
   if (!isMarketOnlyMove(signal)) {
     return {

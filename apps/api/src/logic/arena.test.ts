@@ -235,6 +235,18 @@ describe("buildContrarianPosition", () => {
 
     expect(position?.resultStatus).toBe("pending");
   });
+
+  it("returns null for a draw signal, even when it would otherwise be a tradeable market-only move", () => {
+    const signal = makeSignal({
+      side: "draw",
+      target: "Draw",
+      evidence: { source: "txline", scoresContext: { fieldPressureScore: 5 } },
+    });
+    const snapshot = makeSnapshot();
+    const match = makeMatch({ status: "finished" });
+
+    expect(buildContrarianPosition(signal, match, snapshot)).toBeNull();
+  });
 });
 
 describe("getRejectionReason", () => {
@@ -290,6 +302,20 @@ describe("getRejectionReason", () => {
     });
 
     expect(getRejectionReason("contrarian", signal, makeSnapshot())).toBeNull();
+  });
+
+  it("returns a draw_signal rejection for contrarian on a draw signal", () => {
+    const signal = makeSignal({ side: "draw", target: "Draw" });
+
+    const result = getRejectionReason("contrarian", signal, makeSnapshot());
+
+    expect(result?.reason).toBe("draw_signal");
+  });
+
+  it("returns null for momentum_follower on a draw signal (only contrarian rejects draws)", () => {
+    const signal = makeSignal({ side: "draw", target: "Draw" });
+
+    expect(getRejectionReason("momentum_follower", signal, undefined)).toBeNull();
   });
 });
 

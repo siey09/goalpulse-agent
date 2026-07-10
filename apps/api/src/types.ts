@@ -206,7 +206,8 @@ export interface ArenaScoreboard {
 export type RejectionReason =
   | "totals_signal"
   | "not_market_only_move"
-  | "no_original_snapshot";
+  | "no_original_snapshot"
+  | "draw_signal";
 
 export interface ArenaRejection {
   agentId: ArenaAgentId;
