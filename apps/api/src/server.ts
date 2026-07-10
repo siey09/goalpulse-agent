@@ -380,7 +380,7 @@ app.get("/api/arena", (_req, res) => {
     snapshotsById.set(snapshot.id, snapshot);
   }
 
-  const { momentumFollower, contrarian, kellyCriterion } = computeArenaScoreboards(
+  const { momentumFollower, contrarian, kellyCriterion, rejections } = computeArenaScoreboards(
     store.signals,
     matchesById,
     snapshotsById
@@ -417,6 +417,7 @@ app.get("/api/arena", (_req, res) => {
       momentumFollower,
       contrarian,
       kellyCriterion,
+      rejections,
       proof: {
         type: "sha256",
         hash: proofHash,
