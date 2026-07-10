@@ -5,6 +5,7 @@ import {
   buildMomentumFollowerPosition,
   calculateKellyStake,
   computeArenaScoreboards,
+  getRejectionReason,
   isMarketOnlyMove,
   isTotalsSignal,
 } from "./arena";
@@ -236,6 +237,62 @@ describe("buildContrarianPosition", () => {
   });
 });
 
+describe("getRejectionReason", () => {
+  it("returns a totals_signal rejection for any agent when the signal is a totals signal", () => {
+    const signal = makeSignal({ target: "Over 2.5" });
+
+    const result = getRejectionReason("momentum_follower", signal, undefined);
+
+    expect(result).toEqual({
+      agentId: "momentum_follower",
+      signalId: "signal-1",
+      matchId: "match-1",
+      reason: "totals_signal",
+      reasonText: "Totals signal — Arena only trades 1X2 markets.",
+    });
+  });
+
+  it("returns null for momentum_follower on a tradeable 1X2 signal", () => {
+    const signal = makeSignal();
+
+    expect(getRejectionReason("momentum_follower", signal, undefined)).toBeNull();
+  });
+
+  it("returns null for kelly_criterion on a tradeable 1X2 signal", () => {
+    const signal = makeSignal();
+
+    expect(getRejectionReason("kelly_criterion", signal, undefined)).toBeNull();
+  });
+
+  it("returns a not_market_only_move rejection for contrarian when fieldPressureScore is >= 22", () => {
+    const signal = makeSignal({
+      evidence: { source: "txline", scoresContext: { fieldPressureScore: 45 } },
+    });
+
+    const result = getRejectionReason("contrarian", signal, makeSnapshot());
+
+    expect(result?.reason).toBe("not_market_only_move");
+  });
+
+  it("returns a no_original_snapshot rejection for contrarian on a market-only move with no snapshot", () => {
+    const signal = makeSignal({
+      evidence: { source: "txline", scoresContext: { fieldPressureScore: 5 } },
+    });
+
+    const result = getRejectionReason("contrarian", signal, undefined);
+
+    expect(result?.reason).toBe("no_original_snapshot");
+  });
+
+  it("returns null for contrarian on a tradeable market-only move with a snapshot", () => {
+    const signal = makeSignal({
+      evidence: { source: "txline", scoresContext: { fieldPressureScore: 5 } },
+    });
+
+    expect(getRejectionReason("contrarian", signal, makeSnapshot())).toBeNull();
+  });
+});
+
 describe("computeArenaScoreboards", () => {
   it("aggregates net units, ROI, and win rate across multiple signals", () => {
     const matchesById = new Map([
@@ -295,6 +352,43 @@ describe("computeArenaScoreboards", () => {
     expect(kellyCriterion.settledCount).toBe(2);
     expect(kellyCriterion.netUnits).toBe(0);
     expect(kellyCriterion.roiPercent).toBe(0);
+  });
+
+  it("collects a rejection per agent that sat out a signal, with the correct reason", () => {
+    const matchesById = new Map([
+      ["match-1", makeMatch({ status: "finished", homeScore: 2, awayScore: 0 })],
+    ]);
+    const snapshot = makeSnapshot();
+    const snapshotsById = new Map([["snapshot-1", snapshot]]);
+
+    const signals: AgentSignal[] = [
+      makeSignal({
+        id: "signal-field-backed",
+        resultStatus: "correct",
+        oddsAfter: 2.0,
+        evidence: {
+          source: "txline",
+          currentSnapshotId: "snapshot-1",
+          scoresContext: { fieldPressureScore: 45 },
+        },
+      }),
+      makeSignal({ id: "signal-totals", target: "Over 2.5", resultStatus: "correct" }),
+    ];
+
+    const { rejections } = computeArenaScoreboards(signals, matchesById, snapshotsById);
+
+    const contrarianRejection = rejections.find(
+      (r) => r.agentId === "contrarian" && r.signalId === "signal-field-backed"
+    );
+    expect(contrarianRejection?.reason).toBe("not_market_only_move");
+
+    const totalsRejections = rejections.filter((r) => r.signalId === "signal-totals");
+    expect(totalsRejections).toHaveLength(3);
+    expect(totalsRejections.map((r) => r.agentId).sort()).toEqual([
+      "contrarian",
+      "kelly_criterion",
+      "momentum_follower",
+    ]);
   });
 
   it("computes Kelly's variable stakes correctly across multiple signals", () => {

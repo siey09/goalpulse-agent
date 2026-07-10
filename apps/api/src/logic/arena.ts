@@ -2,6 +2,7 @@ import {
   AgentSignal,
   ArenaAgentId,
   ArenaPosition,
+  ArenaRejection,
   ArenaScoreboard,
   Match,
   OddsSnapshot,
@@ -149,6 +150,54 @@ export function buildContrarianPosition(
 }
 
 /**
+ * Mirrors the exact null-cases already in buildMomentumFollowerPosition/
+ * buildContrarianPosition/buildKellyCriterionPosition above, so a caller
+ * building a scoreboard can explain every position-build miss without
+ * changing those three functions' existing signatures/tests. Scoped to
+ * Arena only (not signal-generation-level silent drops elsewhere) per
+ * explicit user confirmation during brainstorming.
+ */
+export function getRejectionReason(
+  agentId: ArenaAgentId,
+  signal: AgentSignal,
+  originalSnapshot: OddsSnapshot | undefined
+): ArenaRejection | null {
+  if (isTotalsSignal(signal)) {
+    return {
+      agentId,
+      signalId: signal.id,
+      matchId: signal.matchId,
+      reason: "totals_signal",
+      reasonText: "Totals signal — Arena only trades 1X2 markets.",
+    };
+  }
+
+  if (agentId !== "contrarian") return null;
+
+  if (!isMarketOnlyMove(signal)) {
+    return {
+      agentId,
+      signalId: signal.id,
+      matchId: signal.matchId,
+      reason: "not_market_only_move",
+      reasonText: "Field-backed move — Contrarian only fades market-only moves.",
+    };
+  }
+
+  if (!originalSnapshot) {
+    return {
+      agentId,
+      signalId: signal.id,
+      matchId: signal.matchId,
+      reason: "no_original_snapshot",
+      reasonText: "Original odds snapshot unavailable — cannot price the opposite side.",
+    };
+  }
+
+  return null;
+}
+
+/**
  * confidenceScore (0-100) is a quality measure, not a literal win
  * probability - using it as one directly would be a category error.
  * Instead it scales an assumed edge over the market's own implied
@@ -236,28 +285,47 @@ export function computeArenaScoreboards(
   momentumFollower: ArenaScoreboard;
   contrarian: ArenaScoreboard;
   kellyCriterion: ArenaScoreboard;
+  rejections: ArenaRejection[];
 } {
   const momentumPositions: ArenaPosition[] = [];
   const contrarianPositions: ArenaPosition[] = [];
   const kellyPositions: ArenaPosition[] = [];
+  const rejections: ArenaRejection[] = [];
 
   for (const signal of signals) {
-    const momentumPosition = buildMomentumFollowerPosition(signal);
-    if (momentumPosition) momentumPositions.push(momentumPosition);
-
     const match = matchesById.get(signal.matchId);
     const snapshotId = signal.evidence?.currentSnapshotId;
     const snapshot = snapshotId ? snapshotsById.get(snapshotId) : undefined;
+
+    const momentumPosition = buildMomentumFollowerPosition(signal);
+    if (momentumPosition) {
+      momentumPositions.push(momentumPosition);
+    } else {
+      const rejection = getRejectionReason("momentum_follower", signal, snapshot);
+      if (rejection) rejections.push(rejection);
+    }
+
     const contrarianPosition = buildContrarianPosition(signal, match, snapshot);
-    if (contrarianPosition) contrarianPositions.push(contrarianPosition);
+    if (contrarianPosition) {
+      contrarianPositions.push(contrarianPosition);
+    } else {
+      const rejection = getRejectionReason("contrarian", signal, snapshot);
+      if (rejection) rejections.push(rejection);
+    }
 
     const kellyPosition = buildKellyCriterionPosition(signal);
-    if (kellyPosition) kellyPositions.push(kellyPosition);
+    if (kellyPosition) {
+      kellyPositions.push(kellyPosition);
+    } else {
+      const rejection = getRejectionReason("kelly_criterion", signal, snapshot);
+      if (rejection) rejections.push(rejection);
+    }
   }
 
   return {
     momentumFollower: summarize("momentum_follower", "Momentum Follower", momentumPositions),
     contrarian: summarize("contrarian", "Contrarian", contrarianPositions),
     kellyCriterion: summarize("kelly_criterion", "Kelly Criterion", kellyPositions),
+    rejections,
   };
 }

@@ -203,6 +203,19 @@ export interface ArenaScoreboard {
   openPositions: number;
 }
 
+export type RejectionReason =
+  | "totals_signal"
+  | "not_market_only_move"
+  | "no_original_snapshot";
+
+export interface ArenaRejection {
+  agentId: ArenaAgentId;
+  signalId: string;
+  matchId: string;
+  reason: RejectionReason;
+  reasonText: string;
+}
+
 export interface ArenaProof {
   type: "sha256";
   hash: string;
