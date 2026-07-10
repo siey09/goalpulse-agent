@@ -277,7 +277,7 @@ components:
         - $ref: '#/components/schemas/AgentSignal'
         - type: object
           properties:
-            trapStatus: { type: string, enum: [WATCHING, VALIDATED_MOVE, CONFIRMED_TRAP, POSSIBLE_TRAP, LOW_TRAP_RISK] }
+            trapStatus: { type: string, enum: [WATCHING, VALIDATED_MOVE, OUTCOME_REJECTED_MOVE, POSSIBLE_TRAP, LOW_TRAP_RISK] }
             trapScore: { type: number }
             trapReason: { type: string }
             reversalRisk: { type: string, enum: [OVEREXTENDED_WATCH, NORMAL_WATCH, VALIDATED, EXTREME_REVERSAL, HIGH_REVERSAL, MODERATE_REVERSAL, LOW_REVERSAL] }

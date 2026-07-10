@@ -22,7 +22,7 @@ Odds movement alone can be noisy. GoalPulse adds an autonomous intelligence laye
 Running live against real TxLINE Service Level 12 data (2026-07-04): 90+ unattended agent cycles, real odds updates across 9 World Cup fixtures, and confirmed real-outcome accuracy tracking on closed signals. Two concrete case studies from live production data:
 
 - **Colombia vs Ghana** (validated move): SHARP_MOVE and MOMENTUM_SHIFT signals on Colombia, both confirmed `correct` after the match ended 1-0.
-- **Canada vs Morocco** (confirmed trap): a 55.13% and a 52.7% odds compression on Canada were both rejected by the final result (Canada lost 0-3), and the Outcome Audit layer correctly classified both as `CONFIRMED_TRAP` with `EXTREME_REVERSAL` risk, backed by a real SHA-256 proof hash.
+- **Canada vs Morocco** (outcome-rejected move): a 55.13% and a 52.7% odds compression on Canada were both rejected by the final result (Canada lost 0-3), and the Outcome Audit layer correctly classified both as `OUTCOME_REJECTED_MOVE` with `EXTREME_REVERSAL` risk, backed by a real SHA-256 proof hash.
 
 See SUBMISSION_NOTES.md for the full write-up, including three real bugs found and fixed during live verification: an undocumented TxLINE `StatusId: 100` for finished matches, a snapshot-ordering issue during historical backfill, and a fixture-coverage gap that could silently drop live matches.
 
