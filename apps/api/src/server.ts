@@ -59,7 +59,13 @@ const app = express();
 // "Prerequisite fix", for the Phase 1/Phase 2 history of this value.
 app.set("trust proxy", 2);
 
-app.use(cors());
+const ALLOWED_CORS_ORIGINS = [
+  "https://goalpulse-agent.vercel.app",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+];
+
+app.use(cors({ origin: ALLOWED_CORS_ORIGINS }));
 app.use(express.json());
 app.use(generalApiLimiter);
 
