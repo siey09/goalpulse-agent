@@ -561,47 +561,55 @@ function App() {
       detail: "Three strategies compete on the same live signal feed: Momentum Follower trusts the signal, Contrarian fades signals without real field support, and Kelly Criterion sizes its stake by confidence — settlement is on-chain-verified.",
     },
     {
-      title: "10. Autonomous agent timeline",
+      title: "10. Meta-agent & Skeptic Check",
+      detail: "The Arena doesn't just race three strategies — it audits its own leaderboard. A Meta-agent recommendation ranks strategies fairly by ROI, not raw units, and only names a leader once there's enough settled data. A Skeptic Check then questions that lead directly: if it's concentrated in one real match, it says so plainly instead of implying more confidence than the data supports.",
+    },
+    {
+      title: "11. Autonomous agent timeline",
       detail: "The timeline explains the agent loop: ingest feed, capture snapshots, compare odds, attach scores context, score reliability, and store evidence.",
     },
     {
-      title: "11. Real TxLINE replay",
+      title: "12. Real TxLINE replay",
       detail: "Replay mode runs stored TxLINE snapshots through the same engine, making the demo repeatable even when live matches are quiet.",
     },
     {
-      title: "12. Evidence chain",
+      title: "13. Evidence chain",
       detail: "The evidence chain links odds endpoints, scores endpoints, message IDs, bookmakers, scoreline context, and proof labels for judge-verifiable review.",
     },
     {
-      title: "13. Signal review council",
+      title: "14. Signal review council",
       detail: "Multiple agent checks review movement strength, field context, reliability, reversion risk, and evidence quality before surfacing a signal.",
     },
     {
-      title: "14. Proof hash",
+      title: "15. Proof hash",
       detail: "The replay generates a SHA-256 proof hash so the audit trail can become tamper-evident and independently reviewable.",
     },
     {
-      title: "15. Transparent thresholds",
+      title: "16. Signal detail: precedent & verification",
+      detail: "Click \"View details\" on any signal card to open its full evidence trail yourself. Scroll down and you'll find two more things: \"Similar past signals\" searches the permanent archive for precedent of the same signal type and shows honestly how those resolved, and a Verification Depth badge shows whether that specific signal's underlying data has actually been checked on Solana mainnet — never a percentage, always a plain, honest status.",
+    },
+    {
+      title: "17. Transparent thresholds",
       detail: "The engine uses explainable thresholds: watch, momentum shift, and sharp move. No black-box betting recommendation is required.",
     },
     {
-      title: "16. Full tournament archive",
+      title: "18. Full tournament archive",
       detail: "The archive permanently records every settled signal — status, severity, and market — independent of the dashboard's in-memory caps, giving judges the complete, unfiltered track record.",
     },
     {
-      title: "17. Signal performance",
+      title: "19. Signal performance",
       detail: "Signal Performance breaks accuracy down by signal type — sharp move, momentum shift, watch — showing correct-versus-settled counts so judges can see where the model's calls actually hold up.",
     },
     {
-      title: "18. Confidence calibration",
+      title: "20. Confidence calibration",
       detail: "Confidence Calibration checks whether the model's own confidence score is honest: higher-confidence signals should settle correct more often, and this panel proves whether that pattern actually holds.",
     },
     {
-      title: "19. Signal correlation",
+      title: "21. Signal correlation",
       detail: "Signal Correlation finds clusters of the same pattern firing across multiple real matches — side, severity, and market aligned — evidence the model is detecting a real phenomenon, not noise.",
     },
     {
-      title: "20. Compliance boundary",
+      title: "22. Compliance boundary",
       detail: "GoalPulse is analytics-only: it explains sports market movement and evidence context. It does not place wagers, custody funds, or facilitate betting execution.",
     },
   ];
@@ -1065,11 +1073,13 @@ function App() {
     { text: "Live bid/ask quotes" },
     { text: "Steam move detection" },
     { text: "Momentum Follower vs Contrarian vs Kelly Criterion" },
+    { id: "guide-meta-skeptic", text: "Meta-agent recommendation" },
     { text: "Agent timeline" },
     { id: "guide-backtest-card", text: "Outcome audit" },
     { id: "guide-event-correlation", text: "Evidence chain" },
     { id: "guide-oracle-council", text: "Signal review" },
     { id: "guide-proof-readiness", text: "Proof network" },
+    { id: "agent", text: "Latest signals" },
     { text: "Signal thresholds" },
     { text: "Full tournament archive" },
     { text: "Signal performance" },
@@ -1228,7 +1238,7 @@ function App() {
       window.setTimeout(() => focusGuideTarget(nextStep), 700);
     }
 
-    if (nextStep >= 8 && nextStep <= 10 && !replayBacktest) {
+    if (nextStep >= 8 && nextStep <= 11 && !replayBacktest) {
       void runReplayBacktest();
       window.setTimeout(() => focusGuideTarget(nextStep), 700);
     }
@@ -3142,7 +3152,7 @@ function App() {
             <div
               id="guide-backtest-card"
               className={`transition-all ${
-                isJudgeMode && judgeStep === 10 ? "relative z-[60] scale-[1.01] rounded-2xl ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                isJudgeMode && judgeStep === 11 ? "relative z-[60] scale-[1.01] rounded-2xl ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
               }`}
             >
               <div className="mb-3 flex items-center justify-between gap-3">
@@ -3295,7 +3305,7 @@ function App() {
                 <div
                   id="guide-proof-readiness"
                   className={`rounded-xl border border-emerald-400/15 bg-emerald-400/10 p-3 transition-all ${
-                    isJudgeMode && judgeStep === 13 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                    isJudgeMode && judgeStep === 14 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3 text-[11px]">
@@ -3427,7 +3437,7 @@ function App() {
                   <div
                     id="guide-event-correlation"
                     className={`rounded-xl border border-orange-400/15 bg-orange-400/10 p-3 transition-all ${
-                      isJudgeMode && judgeStep === 11 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                      isJudgeMode && judgeStep === 12 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
@@ -3466,7 +3476,7 @@ function App() {
                   <div
                     id="guide-oracle-council"
                     className={`rounded-xl border border-sky-400/15 bg-sky-400/10 p-3 transition-all ${
-                      isJudgeMode && judgeStep === 12 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                      isJudgeMode && judgeStep === 13 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
