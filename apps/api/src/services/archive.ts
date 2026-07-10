@@ -21,7 +21,12 @@ function getClient(): SupabaseClient | null {
  * separate from and never touching the existing single-row store_snapshots
  * table. Fail-open: no-ops if Supabase is not configured, and a delivery
  * failure is logged but never thrown - archiving must never break the agent
- * cycle that calls it.
+ * cycle that calls it. Uses upsert/ignoreDuplicates (not a plain insert) so
+ * a restart-timing duplicate (see P1-18 in
+ * docs/superpowers/specs/2026-07-11-p1-tier2-design.md) is silently
+ * absorbed rather than logged as a spurious error. Requires the matching
+ * unique constraint on (signal_id, event) to exist in Supabase; behaves
+ * like a plain insert (no dedup) until that constraint is added.
  */
 export async function archiveSignal(
   signal: AgentSignal,
@@ -34,18 +39,21 @@ export async function archiveSignal(
   }
 
   try {
-    await client.from(ARCHIVE_TABLE).insert({
-      signal_id: signal.id,
-      event,
-      match_id: signal.matchId,
-      side: signal.side,
-      signal_type: signal.signalType,
-      severity: signal.severity,
-      result_status: signal.resultStatus,
-      momentum_score: signal.momentumScore,
-      odds_change_pct: signal.oddsChangePct,
-      signal_data: { ...signal },
-    });
+    await client.from(ARCHIVE_TABLE).upsert(
+      {
+        signal_id: signal.id,
+        event,
+        match_id: signal.matchId,
+        side: signal.side,
+        signal_type: signal.signalType,
+        severity: signal.severity,
+        result_status: signal.resultStatus,
+        momentum_score: signal.momentumScore,
+        odds_change_pct: signal.oddsChangePct,
+        signal_data: { ...signal },
+      },
+      { onConflict: "signal_id,event", ignoreDuplicates: true }
+    );
   } catch (error) {
     console.error("[archive] Failed to archive signal to Supabase:", error);
   }
@@ -57,7 +65,14 @@ export async function archiveSignal(
  * zero signals otherwise leaves no permanent trace once it ages out of the
  * in-memory recentFinishedMatches cap. Fail-open, same contract as
  * archiveSignal: no-ops if Supabase is not configured, logs but never
- * throws on a delivery failure.
+ * throws on a delivery failure. Uses upsert/ignoreDuplicates (not a plain
+ * insert) so a restart-timing duplicate is silently absorbed instead of
+ * creating a second row - a deliberate change from this table's original
+ * 2026-07-10 design, which accepted duplicate rows as expected behavior
+ * (see P1-18 in docs/superpowers/specs/2026-07-11-p1-tier2-design.md).
+ * Requires the matching unique constraint on (match_id) to exist in
+ * Supabase; behaves like a plain insert (no dedup) until that constraint
+ * is added.
  */
 export async function archiveMatch(match: Match): Promise<void> {
   const client = getClient();
@@ -67,16 +82,19 @@ export async function archiveMatch(match: Match): Promise<void> {
   }
 
   try {
-    await client.from(MATCH_ARCHIVE_TABLE).insert({
-      match_id: match.id,
-      competition: match.competition,
-      home_team: match.homeTeam,
-      away_team: match.awayTeam,
-      home_score: match.homeScore,
-      away_score: match.awayScore,
-      status: match.status,
-      match_data: { ...match },
-    });
+    await client.from(MATCH_ARCHIVE_TABLE).upsert(
+      {
+        match_id: match.id,
+        competition: match.competition,
+        home_team: match.homeTeam,
+        away_team: match.awayTeam,
+        home_score: match.homeScore,
+        away_score: match.awayScore,
+        status: match.status,
+        match_data: { ...match },
+      },
+      { onConflict: "match_id", ignoreDuplicates: true }
+    );
   } catch (error) {
     console.error("[archive] Failed to archive match to Supabase:", error);
   }
