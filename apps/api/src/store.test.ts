@@ -163,6 +163,24 @@ describe("evaluatePendingSignalsForFinishedMatches — 1X2 market", () => {
     expect(store.signals[0].resultStatus).toBe("correct");
   });
 
+  it("marks a draw-side signal correct when the match ends level", () => {
+    store.matches = [makeMatch({ homeScore: 1, awayScore: 1 })];
+    store.signals = [makeSignal({ side: "draw", target: "Draw" })];
+
+    evaluatePendingSignalsForFinishedMatches();
+
+    expect(store.signals[0].resultStatus).toBe("correct");
+  });
+
+  it("marks a draw-side signal incorrect when the match has a winner", () => {
+    store.matches = [makeMatch({ homeScore: 2, awayScore: 1 })];
+    store.signals = [makeSignal({ side: "draw", target: "Draw" })];
+
+    evaluatePendingSignalsForFinishedMatches();
+
+    expect(store.signals[0].resultStatus).toBe("incorrect");
+  });
+
   it("marks a home-side signal incorrect when the away team wins", () => {
     store.matches = [makeMatch({ homeScore: 0, awayScore: 2 })];
     store.signals = [makeSignal({ side: "home", target: "Team A" })];

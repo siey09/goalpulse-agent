@@ -134,8 +134,11 @@ export function evaluatePendingSignalsForFinishedMatches() {
     } else {
       const homeWon = match.homeScore > match.awayScore;
       const awayWon = match.awayScore > match.homeScore;
+      const isDraw = match.homeScore === match.awayScore;
       signalWon =
-        (signal.side === "home" && homeWon) || (signal.side === "away" && awayWon);
+        (signal.side === "home" && homeWon) ||
+        (signal.side === "away" && awayWon) ||
+        (signal.side === "draw" && isDraw);
     }
 
     signal.resultStatus = signalWon ? "correct" : "incorrect";
