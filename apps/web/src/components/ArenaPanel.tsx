@@ -1,4 +1,4 @@
-import { ShieldCheck, Swords, Trophy } from "lucide-react";
+import { ShieldCheck, ShieldQuestion, Swords, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const API_BASE_URL =
@@ -97,6 +97,46 @@ function getMetaAgentRecommendation(arena: ArenaResponse | null): MetaAgentRecom
     agentId: leader.agentId,
     message: `${leader.label} currently leads on ROI at ${formatRoi(leader.roiPercent)} over ${leader.settledCount} settled positions — ${marginText}. It ${STRATEGY_MECHANISM[leader.agentId]}.`,
   };
+}
+
+const CONCENTRATION_WARNING_THRESHOLD_PCT = 50;
+
+function baseMatchId(matchId: string): string {
+  return matchId.split("-totals-")[0];
+}
+
+function getSkepticCritique(
+  recommendation: MetaAgentRecommendation,
+  arena: ArenaResponse | null
+): string | null {
+  if (!recommendation.agentId || !arena) return null;
+
+  const leaderScoreboard =
+    recommendation.agentId === "momentum_follower"
+      ? arena.momentumFollower
+      : recommendation.agentId === "contrarian"
+        ? arena.contrarian
+        : arena.kellyCriterion;
+
+  const settled = leaderScoreboard.positions.filter((p) => p.resultStatus !== "pending");
+  if (settled.length === 0) return null;
+
+  const matchCounts = new Map<string, number>();
+  for (const position of settled) {
+    const base = baseMatchId(position.matchId);
+    matchCounts.set(base, (matchCounts.get(base) ?? 0) + 1);
+  }
+
+  const distinctMatchCount = matchCounts.size;
+  const largestMatchCount = Math.max(...matchCounts.values());
+  const largestMatchSharePct = Math.round((largestMatchCount / settled.length) * 100);
+  const matchWord = distinctMatchCount === 1 ? "match" : "matches";
+
+  if (largestMatchSharePct >= CONCENTRATION_WARNING_THRESHOLD_PCT) {
+    return `Skeptic check: ${leaderScoreboard.label}'s lead is concentrated — ${largestMatchSharePct}% of its ${settled.length} settled positions come from a single real match (${distinctMatchCount} distinct ${matchWord} total). Treat the lead as provisional until it settles across more matches.`;
+  }
+
+  return `Skeptic check: ${leaderScoreboard.label}'s lead is diversified across ${distinctMatchCount} distinct real matches (largest single match is ${largestMatchSharePct}% of its ${settled.length} settled positions) — not an artifact of one match's outcome.`;
 }
 
 function ScoreboardCard({
@@ -252,6 +292,7 @@ export function ArenaPanel() {
   }
 
   const recommendation = getMetaAgentRecommendation(arena);
+  const skepticMessage = getSkepticCritique(recommendation, arena);
 
   return (
     <section
@@ -292,6 +333,16 @@ export function ArenaPanel() {
             </div>
             <p className="text-sm leading-6 text-stone-200">{recommendation.message}</p>
           </div>
+
+          {skepticMessage && (
+            <div className="mb-4 rounded-2xl border border-rose-400/15 bg-rose-400/5 p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-300">
+                <ShieldQuestion className="h-4 w-4" />
+                Skeptic check
+              </div>
+              <p className="text-sm leading-6 text-stone-200">{skepticMessage}</p>
+            </div>
+          )}
 
           <div className="grid gap-4 lg:grid-cols-3">
             <ScoreboardCard
