@@ -1,4 +1,4 @@
-﻿export type TeamSide = "home" | "away";
+﻿export type TeamSide = "home" | "away" | "draw";
 export type SignalType = "SHARP_MOVE" | "WATCH" | "MOMENTUM_SHIFT" | "NO_ACTION";
 export type Severity = "HIGH" | "MEDIUM" | "LOW" | "NONE";
 

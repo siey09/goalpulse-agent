@@ -129,7 +129,7 @@ export function findSignalClusters(
 }
 
 export interface PatternCluster {
-  side: "home" | "away";
+  side: "home" | "away" | "draw";
   severity: Severity;
   market: "1x2" | "totals";
   matchIds: string[];

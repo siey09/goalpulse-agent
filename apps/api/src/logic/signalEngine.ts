@@ -201,8 +201,20 @@ export function buildSignalFromSnapshots(
     current.awayOdds
   );
 
-  const side: TeamSide = homeCompression >= awayCompression ? "home" : "away";
-  const bestChangePct = side === "home" ? homeCompression : awayCompression;
+  const drawCompression = calculateCompressionPct(
+    previous.drawOdds,
+    current.drawOdds
+  );
+
+  const side: TeamSide =
+    homeCompression >= drawCompression && homeCompression >= awayCompression
+      ? "home"
+      : drawCompression >= awayCompression
+        ? "draw"
+        : "away";
+
+  const bestChangePct =
+    side === "home" ? homeCompression : side === "draw" ? drawCompression : awayCompression;
 
   const severity = getSeverity(bestChangePct);
 
@@ -212,9 +224,9 @@ export function buildSignalFromSnapshots(
     previous.homeScore !== current.homeScore ||
     previous.awayScore !== current.awayScore;
 
-  const target = side === "home" ? current.homeTeam : current.awayTeam;
-  const oddsBefore = side === "home" ? previous.homeOdds : previous.awayOdds;
-  const oddsAfter = side === "home" ? current.homeOdds : current.awayOdds;
+  const target = side === "home" ? current.homeTeam : side === "draw" ? "Draw" : current.awayTeam;
+  const oddsBefore = side === "home" ? previous.homeOdds : side === "draw" ? previous.drawOdds : previous.awayOdds;
+  const oddsAfter = side === "home" ? current.homeOdds : side === "draw" ? current.drawOdds : current.awayOdds;
   const scoresContext =
     current.evidence?.scoresContext ??
     (isScoresContextFresh(

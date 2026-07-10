@@ -58,6 +58,34 @@ describe("buildSignalFromSnapshots", () => {
     expect(signal?.signalType).toBe("MOMENTUM_SHIFT");
   });
 
+  it("selects the draw side when drawOdds compresses more than home or away", () => {
+    const previous = makeSnapshot({ homeOdds: 2.0, awayOdds: 2.0, drawOdds: 3.0 });
+    // draw: 3.0 -> 2.4 is 20% compression, larger than any home/away move
+    // (both unchanged here at 0%).
+    const current = makeSnapshot({ homeOdds: 2.0, awayOdds: 2.0, drawOdds: 2.4 });
+
+    const signal = buildSignalFromSnapshots(current, previous);
+
+    expect(signal).not.toBeNull();
+    expect(signal?.side).toBe("draw");
+    expect(signal?.target).toBe("Draw");
+    expect(signal?.oddsBefore).toBe(3.0);
+    expect(signal?.oddsAfter).toBe(2.4);
+    expect(signal?.oddsChangePct).toBe(20);
+  });
+
+  it("still selects home/away over draw when they compress more", () => {
+    const previous = makeSnapshot({ homeOdds: 2.0, awayOdds: 2.0, drawOdds: 3.0 });
+    // home: 2.0 -> 1.5 is 25% compression, larger than draw's 10%
+    // (3.0 -> 2.7).
+    const current = makeSnapshot({ homeOdds: 1.5, awayOdds: 2.0, drawOdds: 2.7 });
+
+    const signal = buildSignalFromSnapshots(current, previous);
+
+    expect(signal).not.toBeNull();
+    expect(signal?.side).toBe("home");
+  });
+
   it("classifies a 15%+ move as a HIGH severity SHARP_MOVE signal", () => {
     const previous = makeSnapshot({ homeOdds: 2.0, awayOdds: 2.0 });
     // 2.0 -> 1.5 is a 25% compression.
