@@ -735,6 +735,30 @@ name all three agents. Verified with a clean `npm run build` in
 `apps/web`. Item #11 in the feature list above (previously "backend-only,
 no dashboard panel") is now dashboard-wired.
 
+**Investigated 2026-07-10 — TxLINE scores-stream gzip compression already
+active, no code change needed.** User proposed adding `Accept-Encoding: gzip`
++ manual `gunzipSync()` decompression to `txlineStream.ts` per TxLINE's
+Streaming Data docs (claimed 70-80% bandwidth reduction), motivated by the
+Render bandwidth-suspension incident above. Verified empirically before
+writing any code: (1) Node's native `fetch()` already sends
+`Accept-Encoding: gzip, deflate` by default on every request, confirmed with
+a local test server using `txlineStream.ts`'s exact custom-headers shape;
+(2) `fetch()` already auto-decompresses gzip/deflate transparently, even
+when reading via the streaming `getReader()` API — confirmed locally;
+(3) checked the **live** TxLINE endpoint directly:
+`/api/scores/stream` already responds with `content-encoding: deflate` by
+default, and `content-encoding: gzip` when explicitly requested — compression
+has been active in production this whole time, with zero code changes.
+Manually adding `gunzipSync()` on top of this would have **broken the
+stream** (gunzipping already-decompressed text). Measured the real
+wire-bytes reduction directly against the live endpoint (raw `https`
+request, comparing `identity` vs `gzip` `Accept-Encoding` over a 45s
+window): 33% reduction, likely an underestimate since traffic was sparse
+keepalive-only during the test window (gzip's ~18-byte per-frame overhead
+eats into savings on tiny frames); real event payloads during live match
+action should show savings closer to TxLINE's claimed 70-80%. **No action
+needed — do not re-investigate.**
+
 ## Known limitations (documented, deliberately not fixed)
 
 - ~~Stale-finished-match repolling~~ **Fixed 2026-07-09** — see
