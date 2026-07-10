@@ -449,12 +449,92 @@ both new steps render correctly, tour completes cleanly). Spec:
 `docs/superpowers/specs/2026-07-10-guided-tour-expansion-design.md`,
 plan: `docs/superpowers/plans/2026-07-10-guided-tour-expansion.md`.
 
+✅ **External P0 technical review triaged and closed out 2026-07-11.** A
+review document proposed 6 "P0" fixes; each was independently
+investigated against actual code and live data before any change was
+made, per this session's established process.
+
+**Confirmed false premise, not implemented:** P0-1/P0-2 (canonical
+multi-bookmaker market key, de-vigged multi-bookmaker consensus).
+Independently re-verified with a fresh 300-row sample across three live
+endpoints (`/api/odds-history`, `/api/signals`, `/api/archive`) —
+`evidence.bookmaker` is a single constant value
+(`TXLineStablePriceDemargined`) on every row, and `txlineClient.ts` only
+ever does a straight `bookmaker: odds.Bookmaker` passthrough with zero
+aggregation logic anywhere. Building canonical-key/consensus
+infrastructure would solve a problem the real data doesn't have —
+consistent with the already-settled 2026-07-08 finding that TxLINE's
+feed is single-source Stable Price consensus, not raw multi-bookmaker
+data.
+
+**Confirmed already addressed, no new code:** P0-3 (historical replay
+temporal leakage). Traced the exact `/api/replay/backtest` code path:
+signal detection only ever compares a tick to its immediately preceding
+one in a chronologically-sorted list, the existing
+`scoresContextFreshness.ts` gate applies uniformly to snapshots
+regardless of live-vs-replay origin, final-score-dependent settlement
+runs strictly after detection and never feeds back into severity/
+confidence, and `signalEngine.ts` has zero `Date.now()`/`Math.random()`
+calls — replay is provably deterministic.
+
+**Confirmed nuanced, no structural gap:** P0-6 (autonomous paper-position
+lifecycle). Contrarian already has a genuine causal rejection check
+before opening a position (`buildContrarianPosition` returns `null` when
+`!isMarketOnlyMove(signal)`); Kelly Criterion has an implicit soft-reject
+via near-zero stake at low confidence; Momentum Follower intentionally
+has none (that's its "take every signal" identity). The one real gap —
+no visible "rejected because X" trace anywhere when a strategy silently
+skips a signal — is a minor transparency nice-to-have, not worth new
+state-machine code this close to the deadline (user's explicit call).
+
+**Confirmed real, fixed:** P0-4 (`CONFIRMED_TRAP` asserted a certainty
+of manipulation/trap that a signal simply losing at settlement doesn't
+prove) and P0-5 (`ArenaPanel.tsx`'s "Tamper-evident settlement" section
+conflated a purely local SHA-256 ledger hash with a genuinely separate
+real on-chain Merkle proof — a different UI surface than the one
+Verification Depth Score already fixed). Bundled together: same "say
+only what's true" correction category, both mechanical, low-risk.
+`CONFIRMED_TRAP` renamed to `OUTCOME_REJECTED_MOVE` across 3 live files
+(`server.ts`, `App.tsx`, `pinnedCaseStudies.ts`) plus 4 judge-facing
+reference docs (`openapi.yaml`, `README.md`, `TECHNICAL_DOCS.md`,
+`SUBMISSION_NOTES.md`) — historical spec/plan docs and
+`pinned-case-studies-raw.json` deliberately left untouched (frozen
+point-in-time records). Scope grew slightly beyond the raw enum value
+during implementation prep, confirmed with the user first: two UI
+headlines asserting the same false certainty ("False market move
+exposed" → "Market move rejected by outcome") and two "N confirmed"
+badge/reply display words → "N rejected" (the underlying JSON field name
+`confirmedTraps` stays unchanged — API-contract stability, not
+requested). `arena.proof.note` split into two honest, separate claims
+(local hash vs. the real on-chain check, which covers different data
+than the hash itself).
+
+3 commits, backend 216 tests + clean build, frontend clean build,
+openapi valid. Verified live in production twice (implementation +
+independently by the user): `/health` clean, the new split proof-note
+wording confirmed live verbatim, live `/api/replay/backtest` data
+confirmed `trapStatus` values are `["OUTCOME_REJECTED_MOVE",
+"LOW_TRAP_RISK", "WATCHING"]` with zero `CONFIRMED_TRAP` remaining
+anywhere in production. One honest verification gap on both passes:
+neither the implementer nor the user could navigate to the specific
+settled signal's detail modal to visually confirm the new headline text
+live, due to a pre-existing, unrelated data-shape quirk (the trap-signal
+list array renders empty in this session's live data despite the
+summary count being non-zero) — code-level consistency (exact same
+field/comparison pattern as the badge, which *is* proven live) plus full
+API verification gives high confidence regardless. Spec:
+`docs/superpowers/specs/2026-07-11-outcome-rejected-move-rename-design.md`,
+plan: `docs/superpowers/plans/2026-07-11-outcome-rejected-move-rename.md`.
+
 🔄 In Progress: none.
 
 📋 Next Steps: none queued. All four "future ideas" candidates shipped
 2026-07-10 (Historical Pattern Match, Verification Depth Score,
-Meta-agent, Skeptic Agent), and the Guided Tour now covers all four as
-of 2026-07-11. No further backlog items pending — await direction. Deferred future option, not scheduled: fix the
+Meta-agent, Skeptic Agent), the Guided Tour now covers all four as of
+2026-07-11, and the external P0 review is fully triaged and closed out
+as of 2026-07-11. No further backlog items pending — await direction.
+See "Known limitations" below for the P1 list (CI/dependency
+pinning/CORS/LICENSE), deliberately deferred, not implemented. Deferred future option, not scheduled: fix the
 totals-line overcounting server-side in `signalCorrelation.ts` (matching
 the Signal Performance precedent) rather than the current frontend-only
 dedup. `match_archive`'s Supabase setup is already complete (user ran the
@@ -1059,6 +1139,14 @@ needed — do not re-investigate.**
   hardening if this area is touched again; not urgent.
 - **Exact 60,000ms freshness boundary is untested** (only 59s/61s either
   side are tested). Low-risk, noted twice by reviewers, never acted on.
+- **P1 items from the 2026-07-11 external technical review, deliberately
+  deferred, not implemented:** no CI workflow (tests/build run manually
+  each session, not on push/PR), dependencies aren't pinned to exact
+  versions (several `package.json` entries use `latest`), CORS is not
+  restricted to specific origins, no `LICENSE` file at the repo root.
+  All reasonable, none deadline-critical with ~8 days left before
+  July 19 — revisit only if there's spare time after everything else is
+  stable, not before.
 
 ## Open questions (investigated 2026-07-09, revisit later — do not re-investigate from scratch)
 
