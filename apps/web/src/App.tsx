@@ -252,6 +252,32 @@ function formatTime(value?: string) {
   });
 }
 
+function findNearestSnapshot(
+  history: OddsSnapshot[],
+  targetTimestamp?: string
+): OddsSnapshot | undefined {
+  if (!targetTimestamp || history.length === 0) return undefined;
+
+  const targetMs = new Date(targetTimestamp).getTime();
+  if (Number.isNaN(targetMs)) return undefined;
+
+  let closest: OddsSnapshot | undefined;
+  let closestDelta = Infinity;
+
+  for (const snapshot of history) {
+    const snapshotMs = new Date(snapshot.timestamp ?? "").getTime();
+    if (Number.isNaN(snapshotMs)) continue;
+
+    const delta = Math.abs(snapshotMs - targetMs);
+    if (delta < closestDelta) {
+      closestDelta = delta;
+      closest = snapshot;
+    }
+  }
+
+  return closest;
+}
+
 function getOdds(match?: Match) {
   return match?.market ?? match?.odds ?? {};
 }
@@ -1454,60 +1480,89 @@ function App() {
     );
   }, [signals, searchTerm]);
 
-  const chartData = useMemo(
-    () =>
-      oddsHistory.slice(-18).map((snapshot, index) => {
-        const odds = snapshot.market ?? snapshot;
-        const snapshotNumber = index + 1;
-        const hasTimestamp = Boolean(snapshot.timestamp);
+  const chartData = useMemo(() => {
+    const MAX_NON_SIGNAL_CHART_POINTS = 18;
 
-        return {
-          name: hasTimestamp ? formatTime(snapshot.timestamp) : `S${snapshotNumber}`,
-          snapshotLabel: `TxLINE snapshot ${snapshotNumber}`,
-          timelineLabel: hasTimestamp
-            ? `Captured at ${formatTime(snapshot.timestamp)}`
-            : `Replay snapshot ${snapshotNumber}`,
-          rawTimestamp: snapshot.timestamp ?? "",
-          home: odds.homeOdds,
-          draw: odds.drawOdds,
-          away: odds.awayOdds,
-        };
-      }),
-    [oddsHistory]
-  );
+    const relatedSignals = selectedMatch
+      ? signals.filter((signal) => signal.matchId === selectedMatch.id).slice(0, 3)
+      : [];
+
+    const mustKeepIds = new Set<string>();
+    for (const signal of relatedSignals) {
+      const nearest = findNearestSnapshot(oddsHistory, signal.createdAt);
+      if (nearest?.id) mustKeepIds.add(nearest.id);
+    }
+
+    const mustKeepSnapshots = oddsHistory.filter(
+      (snapshot) => snapshot.id && mustKeepIds.has(snapshot.id)
+    );
+    const nonSignalSnapshots = oddsHistory.filter(
+      (snapshot) => !snapshot.id || !mustKeepIds.has(snapshot.id)
+    );
+    const recentNonSignal = nonSignalSnapshots.slice(-MAX_NON_SIGNAL_CHART_POINTS);
+
+    const merged = [...mustKeepSnapshots, ...recentNonSignal].sort((a, b) => {
+      const aMs = new Date(a.timestamp ?? "").getTime();
+      const bMs = new Date(b.timestamp ?? "").getTime();
+      return aMs - bMs;
+    });
+
+    return merged.map((snapshot, index) => {
+      const odds = snapshot.market ?? snapshot;
+      const snapshotNumber = index + 1;
+      const hasTimestamp = Boolean(snapshot.timestamp);
+
+      return {
+        name: hasTimestamp ? formatTime(snapshot.timestamp) : `S${snapshotNumber}`,
+        snapshotLabel: `TxLINE snapshot ${snapshotNumber}`,
+        timelineLabel: hasTimestamp
+          ? `Captured at ${formatTime(snapshot.timestamp)}`
+          : `Replay snapshot ${snapshotNumber}`,
+        rawTimestamp: snapshot.timestamp ?? "",
+        home: odds.homeOdds,
+        draw: odds.drawOdds,
+        away: odds.awayOdds,
+      };
+    });
+  }, [oddsHistory, selectedMatch, signals]);
   const chartSignalMarkers = useMemo(() => {
     if (!selectedMatch || chartData.length === 0) return [];
 
     const relatedSignals = signals.filter((signal) => signal.matchId === selectedMatch.id);
 
-    return relatedSignals.slice(0, 3).map((signal, index) => {
+    return relatedSignals.slice(0, 3).flatMap((signal, index) => {
       const side = (signal.side ?? "").toLowerCase();
       const dataKey = side === "away" ? "away" : "home";
-      const fallbackPoint = chartData[Math.max(chartData.length - 1 - index * 3, 0)];
 
-      const nearestPoint =
-        chartData.find((point) => {
-          if (!point.rawTimestamp || !signal.createdAt) return false;
+      const nearestSnapshot = findNearestSnapshot(oddsHistory, signal.createdAt);
+      const nearestPoint = nearestSnapshot
+        ? chartData.find((point) => point.rawTimestamp === (nearestSnapshot.timestamp ?? ""))
+        : undefined;
 
-          return formatTime(point.rawTimestamp) === formatTime(signal.createdAt);
-        }) ?? fallbackPoint;
+      if (!nearestPoint) return [];
 
-      return {
-        id: signal.id ?? `${signal.matchId}-${index}`,
-        x: nearestPoint.name,
-        y: Number(signal.oddsAfter ?? nearestPoint[dataKey]),
-        dataKey,
-        label: signalTypeLabel(getSignalType(signal)),
-        target: getSignalTarget(signal),
-        oddsBefore: signal.oddsBefore,
-        oddsAfter: signal.oddsAfter,
-        oddsChangePct: signal.oddsChangePct,
-        trapStatus: signal.trapStatus,
-        reversalRisk: signal.reversalRisk,
-        scoreRealityStatus: signal.scoreRealityStatus,
-      };
+      return [
+        {
+          id: signal.id ?? `${signal.matchId}-${index}`,
+          x: nearestPoint.name,
+          y: Number(signal.oddsAfter ?? nearestPoint[dataKey]),
+          dataKey,
+          label: signalTypeLabel(getSignalType(signal)),
+          target: getSignalTarget(signal),
+          severity: signal.severity,
+          confidenceScore: signal.confidenceScore,
+          fieldPressureScore: signal.evidence?.scoresContext?.fieldPressureScore,
+          explanation: signal.explanation,
+          oddsBefore: signal.oddsBefore,
+          oddsAfter: signal.oddsAfter,
+          oddsChangePct: signal.oddsChangePct,
+          trapStatus: signal.trapStatus,
+          reversalRisk: signal.reversalRisk,
+          scoreRealityStatus: signal.scoreRealityStatus,
+        },
+      ];
     });
-  }, [selectedMatch, chartData, signals]);
+  }, [selectedMatch, chartData, signals, oddsHistory]);
   const chartReadout = useMemo(() => {
     const latestPoint = chartData[chartData.length - 1];
     const firstPoint = chartData[0];
