@@ -99,6 +99,40 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.get("/api/metrics", (_req, res) => {
+  const lastRun = store.agentRuns[0];
+  const liveStream = getLiveStreamState();
+  const liveOddsStream = getLiveOddsStreamState();
+
+  const staleForMs = (state: { lastEventAt: string | null }) =>
+    state.lastEventAt ? Date.now() - new Date(state.lastEventAt).getTime() : null;
+
+  res.json({
+    data: {
+      uptimeSeconds: Math.round(process.uptime()),
+      lastAgentCycle: lastRun
+        ? {
+            startedAt: lastRun.startedAt,
+            finishedAt: lastRun.finishedAt,
+            decisionLatencyMs:
+              new Date(lastRun.finishedAt).getTime() - new Date(lastRun.startedAt).getTime(),
+          }
+        : null,
+      liveStream: {
+        connected: liveStream.connected,
+        staleForMs: staleForMs(liveStream),
+        totalReconnects: liveStream.totalReconnects,
+      },
+      liveOddsStream: {
+        connected: liveOddsStream.connected,
+        staleForMs: staleForMs(liveOddsStream),
+        totalReconnects: liveOddsStream.totalReconnects,
+      },
+      duplicatesDropped: store.duplicatesDropped,
+    },
+  });
+});
+
 const openApiDocument = YAML.load(
   path.join(__dirname, "..", "..", "..", "openapi.yaml")
 );

@@ -546,6 +546,59 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /api/metrics:
+    get:
+      summary: Basic operational metrics
+      description: >
+        Process uptime, last agent cycle's decision latency, live-stream
+        staleness, and cumulative duplicate-drop counters. Separate from
+        /health (which stays fast/stable for external uptime monitors) -
+        this is operational detail, not a liveness probe.
+      responses:
+        '200':
+          description: Current metrics snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      uptimeSeconds: { type: number }
+                      lastAgentCycle:
+                        type: object
+                        nullable: true
+                        properties:
+                          startedAt: { type: string, format: date-time }
+                          finishedAt: { type: string, format: date-time }
+                          decisionLatencyMs: { type: number }
+                        required: [startedAt, finishedAt, decisionLatencyMs]
+                      liveStream:
+                        type: object
+                        properties:
+                          connected: { type: boolean }
+                          staleForMs: { type: number, nullable: true }
+                          totalReconnects: { type: number }
+                        required: [connected, staleForMs, totalReconnects]
+                      liveOddsStream:
+                        type: object
+                        properties:
+                          connected: { type: boolean }
+                          staleForMs: { type: number, nullable: true }
+                          totalReconnects: { type: number }
+                        required: [connected, staleForMs, totalReconnects]
+                      duplicatesDropped:
+                        type: object
+                        properties:
+                          snapshots: { type: number }
+                          signals: { type: number }
+                        required: [snapshots, signals]
+                    required: [uptimeSeconds, lastAgentCycle, liveStream, liveOddsStream, duplicatesDropped]
+                required: [data]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /api/matches:
     get:
       summary: Current live/scheduled matches
