@@ -50,6 +50,55 @@ function formatUnits(value: number) {
   return `${value > 0 ? "+" : ""}${value.toFixed(2)}u`;
 }
 
+const MIN_SETTLED_FOR_RANKING = 5;
+const NARROW_MARGIN_THRESHOLD_PCT = 10;
+
+const STRATEGY_MECHANISM: Record<ArenaAgentId, string> = {
+  momentum_follower: "takes every signal at face value",
+  contrarian: "fades signals that fire without real field support",
+  kelly_criterion: "sizes stakes by the model's own confidence score instead of betting flat",
+};
+
+type MetaAgentRecommendation = {
+  agentId: ArenaAgentId | null;
+  message: string;
+};
+
+function formatRoi(value: number) {
+  return `${value > 0 ? "+" : ""}${value}%`;
+}
+
+function getMetaAgentRecommendation(arena: ArenaResponse | null): MetaAgentRecommendation {
+  if (!arena) {
+    return { agentId: null, message: "Waiting for arena data." };
+  }
+
+  const scoreboards = [arena.momentumFollower, arena.contrarian, arena.kellyCriterion];
+  const qualifying = scoreboards.filter((s) => s.settledCount >= MIN_SETTLED_FOR_RANKING);
+
+  if (qualifying.length < 2) {
+    return {
+      agentId: null,
+      message: "Not enough settled positions yet to recommend a leading strategy.",
+    };
+  }
+
+  const sorted = [...qualifying].sort((a, b) => b.roiPercent - a.roiPercent);
+  const leader = sorted[0];
+  const runnerUp = sorted[1];
+  const margin = leader.roiPercent - runnerUp.roiPercent;
+  const isNarrow = margin < NARROW_MARGIN_THRESHOLD_PCT;
+
+  const marginText = isNarrow
+    ? `a narrow lead over ${runnerUp.label} (${formatRoi(runnerUp.roiPercent)}) — worth revisiting as more signals settle`
+    : `a clear lead over ${runnerUp.label} (${formatRoi(runnerUp.roiPercent)})`;
+
+  return {
+    agentId: leader.agentId,
+    message: `${leader.label} currently leads on ROI at ${formatRoi(leader.roiPercent)} over ${leader.settledCount} settled positions — ${marginText}. It ${STRATEGY_MECHANISM[leader.agentId]}.`,
+  };
+}
+
 function ScoreboardCard({
   scoreboard,
   isLeader,
@@ -202,13 +251,7 @@ export function ArenaPanel() {
     }
   }
 
-  const leaderAgentId = ((): ArenaAgentId | null => {
-    if (!arena) return null;
-    const scoreboards = [arena.momentumFollower, arena.contrarian, arena.kellyCriterion];
-    const maxNetUnits = Math.max(...scoreboards.map((s) => s.netUnits));
-    const leaders = scoreboards.filter((s) => s.netUnits === maxNetUnits);
-    return leaders.length === 1 ? leaders[0].agentId : null;
-  })();
+  const recommendation = getMetaAgentRecommendation(arena);
 
   return (
     <section
@@ -242,20 +285,28 @@ export function ArenaPanel() {
         </div>
       ) : arena ? (
         <>
+          <div className="mb-4 rounded-2xl border border-amber-400/15 bg-amber-400/5 p-4">
+            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+              <Trophy className="h-4 w-4" />
+              Meta-agent recommendation
+            </div>
+            <p className="text-sm leading-6 text-stone-200">{recommendation.message}</p>
+          </div>
+
           <div className="grid gap-4 lg:grid-cols-3">
             <ScoreboardCard
               scoreboard={arena.momentumFollower}
-              isLeader={leaderAgentId === "momentum_follower"}
+              isLeader={recommendation.agentId === "momentum_follower"}
               accent="sky"
             />
             <ScoreboardCard
               scoreboard={arena.contrarian}
-              isLeader={leaderAgentId === "contrarian"}
+              isLeader={recommendation.agentId === "contrarian"}
               accent="orange"
             />
             <ScoreboardCard
               scoreboard={arena.kellyCriterion}
-              isLeader={leaderAgentId === "kelly_criterion"}
+              isLeader={recommendation.agentId === "kelly_criterion"}
               accent="violet"
             />
           </div>
