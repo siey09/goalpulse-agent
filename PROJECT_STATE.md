@@ -246,6 +246,38 @@ absent), no console errors. Spec:
 `docs/superpowers/specs/2026-07-10-odds-chart-signal-markers-design.md`,
 plan: `docs/superpowers/plans/2026-07-10-odds-chart-signal-markers.md`.
 
+✅ **Historical Pattern Match shipped 2026-07-10** — first of the four
+"future ideas" candidates recorded earlier this session, now built. New
+`logic/historicalPatternMatch.ts`'s `findSimilarSignals()`: hard filter
+on `signalType` (a pure deterministic function of `severity`, so treating
+them as two separate similarity axes would double-count the same fact),
+ranked by distance on `oddsChangePct` and (only when both sides have it)
+`evidence.scoresContext.fieldPressureScore`. Excludes the target signal's
+own match via `baseMatchId` and caps each *other* match to its 2 closest
+entries — the same match-concentration bug class already found and fixed
+twice this session (Signal Performance's `distinctMatchCount`, Signal
+Correlation's client-side dedup) — before it could recur here. New
+`GET /api/archive/similar-signals` (query params carry the target
+signal's own fields directly, no id lookup), computed fresh per request
+like every other archive-backed endpoint, no caching layer. Surfaces as a
+new "Similar past signals" section in the existing `selectedSignal`
+detail modal (not `SignalIntelligencePanel`, which only ever shows one
+computed "best" signal system-wide) — shows `"Not enough similar past
+signals yet."` below 3 results, matching `ConfidenceCalibrationPanel`'s
+existing small-sample phrasing convention above that.
+
+7 commits (3 backend logic/tests, 1 route+OpenAPI, 1 frontend). Backend:
+216 tests (up from 189 — added `historicalPatternMatch.test.ts` and 6
+cases to `paginationParams.test.ts`), clean build. Frontend: clean build.
+Verified live in production: opened a HIGH SHARP_MOVE signal's detail
+modal, "Similar past signals" section rendered 5 ranked results, the
+match-cap held (`18202783` appeared exactly twice, its totals-suffix
+siblings once each), accuracy shown honestly (1/5 correct, 20%) —
+consistent with the SHARP_MOVE concentration/accuracy issue already
+documented under "Open questions" below, not a new bug. Spec:
+`docs/superpowers/specs/2026-07-10-historical-pattern-match-design.md`,
+plan: `docs/superpowers/plans/2026-07-10-historical-pattern-match.md`.
+
 🔄 In Progress: none.
 
 📋 Next Steps: none queued. Deferred future option, not scheduled: fix the
@@ -912,39 +944,40 @@ pursued this session. No design work done, nothing scoped — recorded
 only so they aren't lost. Revisit if there's time after the current
 backlog, weighed against the July 19 deadline.
 
-1. **Historical Pattern Match** — find similar past signal patterns in
-   `match_archive`/`signal_archive` and show how they resolved, as
-   context for a live signal.
-2. **Verification Depth Score** — an ongoing per-signal score for how
+~~1. **Historical Pattern Match**~~ **Shipped 2026-07-10** — see the
+entry above.
+
+1. **Verification Depth Score** — an ongoing per-signal score for how
    much of its claims are on-chain-verified versus claimed-only.
-3. **Skeptic Agent** — a 4th Arena agent that audits/critiques the
+2. **Skeptic Agent** — a 4th Arena agent that audits/critiques the
    other agents' reliability rather than trading the feed itself.
-4. **Meta-agent** — recommends which existing strategy is performing
+3. **Meta-agent** — recommends which existing strategy is performing
    best under current match conditions.
 
 ## Testing
 
-**189 tests across 18 files**, all passing, `npm run test` from `apps/api/`:
+**216 tests across 20 files**, all passing, `npm run test` from `apps/api/`:
 `agent.test.ts`, `logic/arena.test.ts`, `logic/backtest.test.ts`,
 `logic/councilDissent.test.ts`, `logic/feedHealth.test.ts`,
-`logic/marketConfirmation.test.ts`, `logic/marketMaker.test.ts`,
-`logic/paginationParams.test.ts`, `logic/scoresContextFreshness.test.ts`,
-`logic/signalCorrelation.test.ts`, `logic/signalEngine.test.ts`,
-`logic/signalPerformance.test.ts`, `logic/steamDetection.test.ts`,
-`middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`,
-`services/persistence.test.ts`, `services/txlineClient.test.ts`,
-`store.test.ts`.
+`logic/historicalPatternMatch.test.ts`, `logic/marketConfirmation.test.ts`,
+`logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`,
+`logic/scoresContextFreshness.test.ts`, `logic/signalCorrelation.test.ts`,
+`logic/signalEngine.test.ts`, `logic/signalPerformance.test.ts`,
+`logic/steamDetection.test.ts`, `middleware/apiKeyAuth.test.ts`,
+`services/archive.test.ts`, `services/persistence.test.ts`,
+`services/txlineClient.test.ts`, `store.test.ts`.
 Build: `npm run build` (`tsc`), currently clean. Convention: pure logic gets
 unit tests with plain objects/mocks; anything requiring a real
 TxLINE/Supabase connection is explicitly *not* automated (this environment
 has no real credentials for either) — verified instead by the user directly
 against production.
 
-**25 backend routes total**, all documented in `openapi.yaml` (validate with
+**26 backend routes total**, all documented in `openapi.yaml` (validate with
 `npx @redocly/cli lint openapi.yaml`): `/health`, `/api/matches`,
 `/api/signals`, `/api/stats`, `/api/pnl`, `/api/agent-runs`,
 `/api/odds-history`, `/api/recent-results`, `/api/market-maker`,
-`/api/arena`, `/api/arena/backtest`, `/api/archive`, `/api/feed-health`,
+`/api/arena`, `/api/arena/backtest`, `/api/archive`,
+`/api/archive/similar-signals`, `/api/feed-health`,
 `/api/market-maker/confirmations`, `/api/steam-moves`,
 `/api/signal-correlation`, `/api/signal-correlation/patterns`,
 `/api/signal-performance`, `/api/signal-performance/by-confidence`,
