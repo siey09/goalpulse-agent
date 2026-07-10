@@ -400,7 +400,7 @@ app.get("/api/arena", (_req, res) => {
         hash: proofHash,
         verifiableStat,
         note:
-          "Tamper-evident SHA-256 hash of all three agents' full position ledgers, plus a real on-chain Merkle proof (via GET /api/onchain/validate-stat) confirming the underlying TxLINE data this tournament is based on is genuinely anchored on Solana mainnet. This does not mean funds move or a smart contract executes - GoalPulse is analytics only and does not place wagers, custody funds, execute trades, or facilitate betting execution.",
+          "SHA-256 hash of all three agents' full position ledgers - computed locally, tamper-evident only if compared against another copy, never itself posted to Solana. The separate 'Verify underlying data' check below runs a real Solana mainnet Merkle proof confirming the underlying TxLINE stat is genuinely anchored on-chain - that check covers the source data, not this specific ledger hash. This does not mean funds move or a smart contract executes - GoalPulse is analytics only and does not place wagers, custody funds, execute trades, or facilitate betting execution.",
       },
     },
   });
@@ -828,7 +828,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
 
     if (movement >= 15) {
       return {
-        trapStatus: "CONFIRMED_TRAP",
+        trapStatus: "OUTCOME_REJECTED_MOVE",
         trapScore: Math.min(100, Math.round(55 + movement)),
         trapReason: `${signal.target} had a sharp ${movement}% odds compression, but the final result rejected the move. GoalPulse flags this as a possible smart money trap or false market move.`,
         reversalRisk: movement >= 35 ? "EXTREME_REVERSAL" : "HIGH_REVERSAL",
@@ -961,7 +961,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
   const settledSignalCount = correctSignals + incorrectSignals;
 
   const confirmedTraps = detectedSignals.filter(
-    (signal) => signal.trapStatus === "CONFIRMED_TRAP"
+    (signal) => signal.trapStatus === "OUTCOME_REJECTED_MOVE"
   ).length;
 
   const possibleTraps = detectedSignals.filter(
