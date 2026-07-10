@@ -101,6 +101,14 @@ type AgentSignal = {
   discordAlertStatus?: "sent" | "failed" | "not_configured";
 };
 
+type OnChainVerifyData = {
+  available: boolean;
+  reason?: string;
+  isValid?: boolean;
+  provenStat?: { key: number; value: number; period: number };
+  dailyScoresPda?: string;
+};
+
 type SimilarSignalEntry = {
   matchId?: string;
   signalType?: string;
@@ -510,16 +518,9 @@ function App() {
   const [error, setError] = useState("");
   const [replayBacktest, setReplayBacktest] = useState<ReplayBacktest | null>(null);
   const [isReplayRunning, setIsReplayRunning] = useState(false);
-  const [onchainVerify, setOnchainVerify] = useState<{
-    loading: boolean;
-    data: {
-      available: boolean;
-      reason?: string;
-      isValid?: boolean;
-      provenStat?: { key: number; value: number; period: number };
-      dailyScoresPda?: string;
-    } | null;
-  }>({ loading: false, data: null });
+  const [onchainVerify, setOnchainVerify] = useState<
+    Record<string, { loading: boolean; data: OnChainVerifyData | null }>
+  >({});
   const hasLoadedOnceRef = useRef(false);
 
   const judgeDemoSteps = [
@@ -887,12 +888,18 @@ function App() {
         normalizedQuestion.includes("solana") ||
         normalizedQuestion.includes("verify")
       ) {
-        if (onchainVerify.data?.available) {
-          const statDetail = onchainVerify.data.provenStat
-            ? ` — proven stat key ${onchainVerify.data.provenStat.key}, value ${onchainVerify.data.provenStat.value}`
+        const chatVerifyTarget = getOnchainVerifyTarget(selectedSignal);
+        const chatVerifyKey = chatVerifyTarget
+          ? `${chatVerifyTarget.fixtureId}-${chatVerifyTarget.sequence}`
+          : null;
+        const chatVerifyData = chatVerifyKey ? onchainVerify[chatVerifyKey]?.data : undefined;
+
+        if (chatVerifyData?.available) {
+          const statDetail = chatVerifyData.provenStat
+            ? ` — proven stat key ${chatVerifyData.provenStat.key}, value ${chatVerifyData.provenStat.value}`
             : "";
 
-          return `On-chain verification: ${onchainVerify.data.isValid ? "PROOF VALID" : "PROOF FAILED"}${statDetail}. GoalPulse posts a SHA-256 proof hash to Solana devnet so signal evidence is independently checkable.`;
+          return `On-chain verification: ${chatVerifyData.isValid ? "PROOF VALID" : "PROOF FAILED"}${statDetail}. GoalPulse posts a SHA-256 proof hash to Solana devnet so signal evidence is independently checkable.`;
         }
 
         return `GoalPulse posts a SHA-256 proof hash of the outcome audit to Solana devnet for tamper-evident, independently-verifiable evidence. Run "Verify on Solana" from the Outcome Audit section to check a specific signal.`;
@@ -985,35 +992,35 @@ function App() {
 
     if (!target) return;
 
-    try {
-      setOnchainVerify({ loading: true, data: null });
+    const key = `${target.fixtureId}-${target.sequence}`;
 
-      const payload = await request<{
-        data: {
-          available: boolean;
-          reason?: string;
-          isValid?: boolean;
-          provenStat?: { key: number; value: number; period: number };
-          dailyScoresPda?: string;
-        };
-      }>(
+    try {
+      setOnchainVerify((current) => ({ ...current, [key]: { loading: true, data: null } }));
+
+      const payload = await request<{ data: OnChainVerifyData }>(
         `/api/onchain/validate-stat?fixtureId=${encodeURIComponent(
           target.fixtureId
         )}&seq=${target.sequence}&statKey=1002`
       );
 
-      setOnchainVerify({ loading: false, data: payload.data });
+      setOnchainVerify((current) => ({
+        ...current,
+        [key]: { loading: false, data: payload.data },
+      }));
     } catch (currentError) {
-      setOnchainVerify({
-        loading: false,
-        data: {
-          available: false,
-          reason:
-            currentError instanceof Error
-              ? currentError.message
-              : "Unable to reach the on-chain validation endpoint.",
+      setOnchainVerify((current) => ({
+        ...current,
+        [key]: {
+          loading: false,
+          data: {
+            available: false,
+            reason:
+              currentError instanceof Error
+                ? currentError.message
+                : "Unable to reach the on-chain validation endpoint.",
+          },
         },
-      });
+      }));
     }
   }
   const guideTargets = [
@@ -3287,67 +3294,80 @@ function App() {
                       Hash: {replayBacktest.proof?.hash ?? "pending"}
                     </p>
 
-                    <button
-                      type="button"
-                      onClick={() => runOnchainVerify(selectedSignal)}
-                      disabled={onchainVerify.loading || !getOnchainVerifyTarget(selectedSignal)}
-                      className="mt-2 w-full rounded-lg bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-sky-200 transition hover:bg-sky-400/20 disabled:opacity-50"
-                    >
-                      {onchainVerify.loading
-                        ? "Verifying on Solana…"
-                        : getOnchainVerifyTarget(selectedSignal)
-                          ? `Verify ${selectedSignal?.match ?? "this signal"} on Solana ⛓`
-                          : "Verify on Solana ⛓"}
-                    </button>
-                    {!getOnchainVerifyTarget(selectedSignal) && (
-                      <p className="mt-1.5 text-[10px] leading-4 text-stone-500">
-                        {selectedSignal
-                          ? "This signal has no TXODDS sequence data to verify."
-                          : "Select a signal above to verify it on Solana."}
-                      </p>
-                    )}
+                    {(() => {
+                      const target = getOnchainVerifyTarget(selectedSignal);
+                      const verifyKey = target ? `${target.fixtureId}-${target.sequence}` : null;
+                      const verifyEntry = (verifyKey && onchainVerify[verifyKey]) || {
+                        loading: false,
+                        data: null,
+                      };
 
-                    {onchainVerify.data && (
-                      <div className="mt-2 rounded-lg bg-black/30 p-2 text-[10px]">
-                        {onchainVerify.data.available ? (
-                          <>
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-stone-500">On-chain result</span>
-                              <span
-                                className={`font-semibold ${
-                                  onchainVerify.data.isValid
-                                    ? "text-emerald-300"
-                                    : "text-red-300"
-                                }`}
-                              >
-                                {onchainVerify.data.isValid ? "PROOF VALID" : "PROOF FAILED"}
-                              </span>
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => runOnchainVerify(selectedSignal)}
+                            disabled={verifyEntry.loading || !target}
+                            className="mt-2 w-full rounded-lg bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-sky-200 transition hover:bg-sky-400/20 disabled:opacity-50"
+                          >
+                            {verifyEntry.loading
+                              ? "Verifying on Solana…"
+                              : target
+                                ? `Verify ${selectedSignal?.match ?? "this signal"} on Solana ⛓`
+                                : "Verify on Solana ⛓"}
+                          </button>
+                          {!target && (
+                            <p className="mt-1.5 text-[10px] leading-4 text-stone-500">
+                              {selectedSignal
+                                ? "This signal has no TXODDS sequence data to verify."
+                                : "Select a signal above to verify it on Solana."}
+                            </p>
+                          )}
+
+                          {verifyEntry.data && (
+                            <div className="mt-2 rounded-lg bg-black/30 p-2 text-[10px]">
+                              {verifyEntry.data.available ? (
+                                <>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-stone-500">On-chain result</span>
+                                    <span
+                                      className={`font-semibold ${
+                                        verifyEntry.data.isValid
+                                          ? "text-emerald-300"
+                                          : "text-red-300"
+                                      }`}
+                                    >
+                                      {verifyEntry.data.isValid ? "PROOF VALID" : "PROOF FAILED"}
+                                    </span>
+                                  </div>
+                                  {verifyEntry.data.provenStat && (
+                                    <p className="mt-1 text-stone-500">
+                                      Proven stat: key {verifyEntry.data.provenStat.key}, value{" "}
+                                      {verifyEntry.data.provenStat.value}, period{" "}
+                                      {verifyEntry.data.provenStat.period}
+                                    </p>
+                                  )}
+                                  {verifyEntry.data.dailyScoresPda && (
+                                    <a
+                                      href={`https://explorer.solana.com/address/${verifyEntry.data.dailyScoresPda}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="mt-1 block truncate text-sky-300 underline"
+                                    >
+                                      View PDA on Solana Explorer ↗
+                                    </a>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-stone-500">
+                                  {verifyEntry.data.reason ?? "On-chain validation unavailable."}
+                                </p>
+                              )}
                             </div>
-                            {onchainVerify.data.provenStat && (
-                              <p className="mt-1 text-stone-500">
-                                Proven stat: key {onchainVerify.data.provenStat.key}, value{" "}
-                                {onchainVerify.data.provenStat.value}, period{" "}
-                                {onchainVerify.data.provenStat.period}
-                              </p>
-                            )}
-                            {onchainVerify.data.dailyScoresPda && (
-                              <a
-                                href={`https://explorer.solana.com/address/${onchainVerify.data.dailyScoresPda}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-1 block truncate text-sky-300 underline"
-                              >
-                                View PDA on Solana Explorer ↗
-                              </a>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-stone-500">
-                            {onchainVerify.data.reason ?? "On-chain validation unavailable."}
-                          </p>
-                        )}
-                      </div>
-                    )}
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
                 {(replayBacktest.events ?? []).length > 0 && (
