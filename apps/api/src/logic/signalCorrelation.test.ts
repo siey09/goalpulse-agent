@@ -116,6 +116,50 @@ describe("findSignalClusters", () => {
     expect(clusters).toHaveLength(1);
     expect(clusters[0].severityBreakdown).toEqual({ high: 1, medium: 1, low: 1 });
   });
+
+  it("does not report a cluster when multiple totals-line signals all come from the same real match", () => {
+    const signals = [
+      makeSignal({
+        id: "s0",
+        matchId: "fixture-1-totals-2.5",
+        createdAt: iso(0),
+        target: "Over 2.5",
+      }),
+      makeSignal({
+        id: "s1",
+        matchId: "fixture-1-totals-3.5",
+        createdAt: iso(60),
+        target: "Over 3.5",
+      }),
+    ];
+
+    expect(findSignalClusters(signals, 300000)).toEqual([]);
+  });
+
+  it("dedupes matchIds/matchCount by real match when totals lines are mixed with a genuine second match", () => {
+    const signals = [
+      makeSignal({
+        id: "s0",
+        matchId: "fixture-1-totals-2.5",
+        createdAt: iso(0),
+        target: "Over 2.5",
+      }),
+      makeSignal({
+        id: "s1",
+        matchId: "fixture-1-totals-3.5",
+        createdAt: iso(30),
+        target: "Over 3.5",
+      }),
+      makeSignal({ id: "s2", matchId: "fixture-2", createdAt: iso(60) }),
+    ];
+
+    const clusters = findSignalClusters(signals, 300000);
+
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0].matchIds).toEqual(["fixture-1", "fixture-2"]);
+    expect(clusters[0].matchCount).toBe(2);
+    expect(clusters[0].signalCount).toBe(3);
+  });
 });
 
 describe("sessionWindowGroups", () => {
@@ -245,5 +289,56 @@ describe("findPatternMatchedClusters", () => {
     expect(clusters[0].matchIds).toEqual(["match-1", "match-2"]);
     expect(clusters[0].signalCount).toBe(4);
     expect(clusters[0].spanMs).toBe(720000);
+  });
+
+  it("does not report a pattern cluster when multiple totals-line signals sharing the same pattern all come from the same real match", () => {
+    const signals = [
+      makeSignal({
+        id: "s0",
+        matchId: "fixture-1-totals-2.5",
+        createdAt: iso(0),
+        side: "home",
+        severity: "HIGH",
+        target: "Over 2.5",
+      }),
+      makeSignal({
+        id: "s1",
+        matchId: "fixture-1-totals-3.5",
+        createdAt: iso(60),
+        side: "home",
+        severity: "HIGH",
+        target: "Over 3.5",
+      }),
+    ];
+
+    expect(findPatternMatchedClusters(signals, 300000)).toEqual([]);
+  });
+
+  it("dedupes pattern-cluster matchIds/matchCount by real match across a genuine 2-match totals pattern", () => {
+    const signals = [
+      makeSignal({
+        id: "s0",
+        matchId: "fixture-1-totals-2.5",
+        createdAt: iso(0),
+        side: "home",
+        severity: "HIGH",
+        target: "Over 2.5",
+      }),
+      makeSignal({
+        id: "s1",
+        matchId: "fixture-2-totals-2.5",
+        createdAt: iso(60),
+        side: "home",
+        severity: "HIGH",
+        target: "Over 2.5",
+      }),
+    ];
+
+    const clusters = findPatternMatchedClusters(signals, 300000);
+
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0].matchIds).toEqual(["fixture-1", "fixture-2"]);
+    expect(clusters[0].matchCount).toBe(2);
+    expect(clusters[0].market).toBe("totals");
   });
 });

@@ -3,6 +3,18 @@ import { isTotalsSignal } from "./arena";
 
 export const CORRELATION_WINDOW_MS = 5 * 60 * 1000;
 
+/**
+ * A totals signal's matchId is `<fixtureId>-totals-<line>` (see
+ * isTotalsMatchId in services/archive.ts) - six different total-goals
+ * lines for the same real match would otherwise count as six "distinct
+ * matches" when building/filtering clusters below. Same implementation
+ * as logic/signalPerformance.ts's baseMatchId, duplicated locally per
+ * this codebase's convention of small independent logic modules.
+ */
+function baseMatchId(matchId: string): string {
+  return matchId.split("-totals-")[0];
+}
+
 export interface SignalCluster {
   matchIds: string[];
   matchCount: number;
@@ -27,9 +39,10 @@ function buildCluster(group: AgentSignal[]): SignalCluster {
   const severityBreakdown = { high: 0, medium: 0, low: 0 };
 
   for (const signal of group) {
-    if (!seenMatchIds.has(signal.matchId)) {
-      seenMatchIds.add(signal.matchId);
-      matchIds.push(signal.matchId);
+    const base = baseMatchId(signal.matchId);
+    if (!seenMatchIds.has(base)) {
+      seenMatchIds.add(base);
+      matchIds.push(base);
     }
 
     const key = severityKey(signal.severity);
@@ -111,7 +124,7 @@ export function findSignalClusters(
   const groups = sessionWindowGroups(signals, (signal) => signal.createdAt, windowMs);
 
   return groups
-    .filter((group) => new Set(group.map((signal) => signal.matchId)).size >= 2)
+    .filter((group) => new Set(group.map((signal) => baseMatchId(signal.matchId))).size >= 2)
     .map(buildCluster);
 }
 
@@ -139,9 +152,10 @@ function buildPatternCluster(group: AgentSignal[]): PatternCluster {
   const seenMatchIds = new Set<string>();
 
   for (const signal of group) {
-    if (!seenMatchIds.has(signal.matchId)) {
-      seenMatchIds.add(signal.matchId);
-      matchIds.push(signal.matchId);
+    const base = baseMatchId(signal.matchId);
+    if (!seenMatchIds.has(base)) {
+      seenMatchIds.add(base);
+      matchIds.push(base);
     }
   }
 
@@ -191,7 +205,7 @@ export function findPatternMatchedClusters(
     const windows = sessionWindowGroups(group, (signal) => signal.createdAt, windowMs);
 
     for (const window of windows) {
-      if (new Set(window.map((signal) => signal.matchId)).size >= 2) {
+      if (new Set(window.map((signal) => baseMatchId(signal.matchId))).size >= 2) {
         clusters.push(buildPatternCluster(window));
       }
     }
