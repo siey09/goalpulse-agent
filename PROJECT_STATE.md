@@ -32,13 +32,14 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: Tier 1, Tier 2, P1-3, and P1-2 all
-reviewed/approved/pushed/verified live as of 2026-07-11 (see "RESUME
-POINT" further below for full detail) — this was the user's full
-chosen Tier 3 sequencing (P1-3 then P1-2). Awaiting user direction on
-whether to continue into P1-1/P1-7/P1-16 (explicitly deferred pending
-a fresh cost/benefit discussion) or wrap up here given the July 19
-deadline.
+🔄 In Progress: user chose to continue through the full remaining PDF
+list (P1-1 → P1-7 → P1-16 → revisit P1-4/P1-5/P1-8/P1-19 → 20
+mandatory tests → 15-item Definition of Done), one item at a time, same
+investigate→brainstorm→spec→plan→implement→review→verify-live gate
+throughout. P1-1 implemented 2026-07-11 (see "RESUME POINT" further
+below) — 242 tests, awaiting user review before push. Tier 1, Tier 2,
+P1-3, and P1-2 all reviewed/approved/pushed/verified live as of
+2026-07-11.
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
@@ -868,17 +869,80 @@ tier breakdown:
   fresh longshot had fired live yet since deploy, which is why the
   replay endpoint was used instead. **P1-2 approved, closed out.**
 
-  **This was the last item in the user's chosen Tier 3 sequencing
-  (P1-3 then P1-2).** P1-1/P1-7/P1-16 remain explicitly deferred —
-  next action is a fresh cost/benefit discussion with the user on
-  whether to continue into them given the July 19 deadline, or
-  consider Tier 3 wrapped here.
+  **User decided to continue through the full remaining PDF list
+  2026-07-11, in explicit order:** P1-1 → P1-7 → P1-16 → revisit
+  P1-4/P1-5/P1-8/P1-19 (previously skip-listed, now in scope since
+  everything is being done) → the 20 mandatory tests → the 15-item
+  Definition of Done. Each item gated individually: investigate →
+  report → brainstorm → spec → plan → implement → tests → build →
+  user reviews diff → merge → user verifies live → next item. User
+  explicitly flagged P1-16 as the biggest remaining item and asked to
+  be told before starting if it risks destabilizing the demo this
+  close to July 19.
 
-- **SKIP unless time allows after everything above:** P1-4, P1-5, P1-8,
-  P1-19 — lower urgency or already effectively covered by earlier
-  session decisions (LLM already kept out of core decisions; types
-  already distinguish per-bookmaker vs consensus where relevant given
-  the verified single-consensus-source finding from the P0 phase).
+  **✅ P1-1 implemented 2026-07-11, awaiting user review before push.**
+  Wires the already-flowing `drawOdds` data (Market Maker already
+  quoted it; just never fed into signals) into the full 1X2 pipeline:
+  `TeamSide` widened to `"home" | "away" | "draw"`;
+  `buildSignalFromSnapshots` now compares `drawCompression` in a 3-way
+  max alongside home/away; settlement (`store.ts`) settles a draw
+  signal correct when the final score is level; Steam Move Detection
+  now scans all three sides (user-approved in-scope extension).
+  **Contrarian explicitly does not trade draw signals** — no
+  principled "opposite" in a 3-outcome market, so it returns `null` and
+  surfaces a new `draw_signal` rejection reason via the existing P1-6
+  mechanism, rather than inventing a fade heuristic (user-approved
+  decision). Momentum Follower and Kelly Criterion needed no logic
+  change — both already read `side`/`target`/`oddsAfter`/
+  `confidenceScore` generically.
+
+  **Real gap found only at build time, outside the original
+  investigation:** `logic/signalCorrelation.ts`'s `PatternCluster`
+  declares its own separate `side: "home" | "away"` literal, not
+  importing `TeamSide` — missed by the initial grep-based investigation
+  since it doesn't reference `TeamSide` by name. Caught immediately by
+  `npm run build` failing after the type widening, fixed in the same
+  task.
+
+  Frontend: type-widening only across 6 files (`api.ts`, `App.tsx`,
+  `ArenaPanel.tsx` including `ArenaRejection`'s reason union,
+  `SignalArchivePanel.tsx`, `SignalCorrelationPanel.tsx`,
+  `SteamMoveDetectionPanel.tsx`) — confirmed by inspection that no
+  component has a binary `side === "home" ? X : Y` ternary, so
+  `"draw"` renders correctly automatically. Explicitly NOT widened:
+  `pinnedCaseStudies.ts`'s `PinnedCaseStudySide` (frozen historical
+  records, same precedent as the OUTCOME_REJECTED_MOVE rename leaving
+  `pinned-case-studies-raw.json` untouched) and any `actionTeam` field
+  (a different concept — TXODDS Scores field-event indicator, can't
+  legitimately be "draw"). The pre-existing "Market pressure" home/away
+  bar in `App.tsx` is a separate, private momentum heuristic unrelated
+  to signal `side` — confirmed out of scope during brainstorming, not
+  touched.
+
+  6 commits on `main`: `259c0fe` (spec), `101799b` (plan), `dc672a9`
+  (TeamSide + 3-way generation + the signalCorrelation.ts fix),
+  `3c8cf7a` (settlement), `7979878` (steam detection), `2ac3e85`
+  (Contrarian rejection), `78eb9fb` (frontend). Backend: 242 tests pass
+  (up from 234 at P1-2 close), clean build. Frontend: clean build,
+  verified live in a local dev browser with real accumulated data —
+  zero console errors across Arena, Steam Move Detection, and Results
+  Settlement panels. No real draw signal has fired locally yet
+  (expected, same pattern as P1-2's longshot verification) — live
+  confirmation happens whenever one does.
+
+  **Exact next action:** same gate as every prior item — report diff,
+  user finds or waits for a real draw signal live in production to
+  confirm, then explicitly approves before push and before starting
+  P1-7.
+
+- **Revisit now in scope (previously skip-listed):** P1-4, P1-5, P1-8,
+  P1-19 — will each be investigated individually when reached, not
+  assumed. P1-4/P1-5 explicitly flagged by the user as likely
+  not-applicable given the verified single-consensus-source finding
+  (same pattern as P0-1/P0-2), to be confirmed not assumed before any
+  code is written. P1-8 (LLM already out of core decisions) and P1-19
+  (no large refactor before submission) are expected to be
+  confirm-and-document items, not build items.
 
 **Still fully pending, not started at all:** the 20 mandatory tests from
 the PDF's Mandatory Test Plan (map each to either a real applicable test
