@@ -577,30 +577,43 @@ tier breakdown:
     via the `package-lock.json` diff after `npm install` that this
     changed zero actual resolved package versions — only the top-level
     specifier strings.
-  - P1-11 (restrict CORS) — **implemented.** `server.ts`'s
-    `app.use(cors())` (previously fully open, any origin) now uses an
-    allowlist: `https://goalpulse-agent.vercel.app` (production),
-    `http://localhost:5173` and `http://127.0.0.1:5173` (local dev).
-    Manually verified locally with `curl -H "Origin: ..."` against both
-    an allowed and a disallowed origin — behaves exactly as designed.
+  - P1-11 (restrict CORS) — **implemented, then refined once per user
+    review.** `server.ts`'s `app.use(cors())` (previously fully open,
+    any origin) now uses an allowlist: `https://goalpulse-agent.vercel.app`
+    (production), `http://localhost:5173` and `http://127.0.0.1:5173`
+    (local dev). First pass used the plain-array `cors({ origin: [...] })`
+    form — user asked for explicit confirmation that requests with no
+    `Origin` header (curl, Postman, server-to-server, direct navigation)
+    pass through. Read the actual installed `cors` package source
+    (`node_modules/cors/lib/index.js`) to verify precisely rather than
+    assume: confirmed the array form was already safe in practice (the
+    middleware's non-OPTIONS branch calls `next()` unconditionally
+    regardless of origin match — it only ever conditionally sets a
+    response header, never blocks a request), but switched to the
+    standard explicit function-based pattern anyway
+    (`if (!origin || ALLOWED_CORS_ORIGINS.includes(origin)) { callback(null, true); }`)
+    since it's self-documenting and doesn't require reading package
+    internals to verify safety. Verified via `curl` against: allowed
+    origin (header set correctly), disallowed origin (200 OK, no
+    allow-origin header — correct CORS rejection, request still
+    processes), and no-Origin-header case (200 OK, full normal JSON
+    body) — plus confirmed `/api/docs` still resolves (200 after its
+    normal pre-existing trailing-slash redirect, unrelated to CORS).
     Only affects browser JS reading cross-origin responses — direct
     navigation to `/health` or `/api/docs` is unaffected either way.
   - P1-12 (add LICENSE file) — **implemented.** MIT license, copyright
     "GoalPulse Agent contributors", added at repo root.
 
-  **Tier 1 status: fully implemented, tested, and committed locally —
-  NOT YET PUSHED, NOT YET REVIEWED BY THE USER.** 6 commits on `main`
-  (local only): `40cd88b` (spec), `6048e06` (plan), `647bba2` (LICENSE),
-  `185596c` (CI workflow), `0f28a4b` (dependency pins), `b1ebc87` (CORS
-  allowlist). Backend: 216 tests pass, clean build (both before and
-  after the dependency-pin reinstall — confirmed the lockfile diff only
-  touched the top-level version-specifier strings, zero actual resolved
-  package versions changed). Frontend: clean build (no changes to this
-  app in Tier 1 — `apps/web/package.json` was already fully pinned).
-  CORS allowlist manually verified locally: allowed origins
-  (`https://goalpulse-agent.vercel.app`, `http://localhost:5173`) return
-  the `Access-Control-Allow-Origin` header, a disallowed test origin
-  (`https://evil-example.com`) correctly returns no such header.
+  **Tier 1 status: fully implemented, tested, reviewed, and approved by
+  the user — pushed to production.** Commits on `main`: `40cd88b` (spec),
+  `6048e06` (plan), `647bba2` (LICENSE), `185596c` (CI workflow),
+  `0f28a4b` (dependency pins), `b1ebc87` (CORS allowlist, first pass),
+  `c83a702`/`229e059` (PROJECT_STATE + previously-uncommitted plan docs
+  housekeeping), `54cc25c` (CORS refined to the explicit function-based
+  no-Origin-passthrough pattern per user review — see the P1-11 entry
+  above for the full verification trail). Backend: 216 tests pass, clean
+  build throughout. Frontend: clean build (no changes to this app in
+  Tier 1 — `apps/web/package.json` was already fully pinned).
 
   **Exact next action:** none pending from the implementer side — this
   was done while the user was away, per their explicit "proceed to
