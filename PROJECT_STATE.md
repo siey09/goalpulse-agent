@@ -32,12 +32,13 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: P1 Tier 3, P1-2 implemented (see "RESUME POINT" further
-below for full detail) — 234 tests, awaiting user review before push.
-Tier 1, Tier 2, and P1-3 all reviewed/approved/pushed/verified live as
-of 2026-07-11. P1-2 was reframed after real data investigation: not a
-4/8/15% threshold problem, but a longshot-odds confidence penalty
-backed by a clean accuracy cliff in 294 real archived signals.
+🔄 In Progress: Tier 1, Tier 2, P1-3, and P1-2 all
+reviewed/approved/pushed/verified live as of 2026-07-11 (see "RESUME
+POINT" further below for full detail) — this was the user's full
+chosen Tier 3 sequencing (P1-3 then P1-2). Awaiting user direction on
+whether to continue into P1-1/P1-7/P1-16 (explicitly deferred pending
+a fresh cost/benefit discussion) or wrap up here given the July 19
+deadline.
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
@@ -851,20 +852,27 @@ tier breakdown:
   confidence — a real improvement to the Arena's worst-performing
   exposure, achieved without touching `arena.ts`.
 
-  1 commit on `main` so far: `82ad41b` (implementation + tests).
-  Backend: 234 tests pass (up from 230 at P1-3 close), clean build.
-  Verified live against a running local dev server: a real longshot
-  signal (`oddsAfter: 9.15`) showed `confidenceScore` reduced to
-  `13.65` with the explanation caveat attached, exactly as designed —
-  5 of 7 currently-live local signals were longshots.
+  2 commits on `main`: `82ad41b` (implementation + tests), `df2413e`
+  (docs). Backend: 234 tests pass (up from 230 at P1-3 close), clean
+  build. Reviewed and approved by the user, pushed to `main` 2026-07-11.
 
-  **Exact next action:** same gate as every prior item this session —
-  report diff/tests/build, user finds or waits for a real longshot
-  signal live in production to confirm `confidenceScore`/explanation,
-  then explicitly approves before push. This is the last item in the
-  user's chosen Tier 3 sequencing (P1-3 then P1-2) — P1-1/P1-7/P1-16
-  remain explicitly deferred, not scheduled without a fresh cost/benefit
-  discussion.
+  **✅ P1-2 fully closed out 2026-07-11, confirmed live in production**
+  via `GET /api/replay/backtest`: a real historical signal
+  (`oddsAfter: 180`) showed `confidenceScore` reduced to `15.55` with
+  the exact designed caveat sentence attached — same code path as the
+  live feed, so this is genuine proof the fix is live and correct.
+  Note for context, not a bug: `GET /api/signals`' live feed at
+  verification time only showed old pre-restart signals restored from
+  a Supabase snapshot (predating this deploy) plus one new
+  sub-threshold signal (`oddsAfter: 1.95`, correctly unpenalized) — no
+  fresh longshot had fired live yet since deploy, which is why the
+  replay endpoint was used instead. **P1-2 approved, closed out.**
+
+  **This was the last item in the user's chosen Tier 3 sequencing
+  (P1-3 then P1-2).** P1-1/P1-7/P1-16 remain explicitly deferred —
+  next action is a fresh cost/benefit discussion with the user on
+  whether to continue into them given the July 19 deadline, or
+  consider Tier 3 wrapped here.
 
 - **SKIP unless time allows after everything above:** P1-4, P1-5, P1-8,
   P1-19 — lower urgency or already effectively covered by earlier
