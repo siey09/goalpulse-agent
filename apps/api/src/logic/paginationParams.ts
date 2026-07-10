@@ -1,4 +1,5 @@
 import type { ArchiveFilters } from "../types";
+import type { SimilarSignalsParams } from "./historicalPatternMatch";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 25;
@@ -35,4 +36,30 @@ export function parseArchiveFilters(query: Record<string, unknown>): ArchiveFilt
   }
 
   return filters;
+}
+
+export function parseSimilarSignalsParams(
+  query: Record<string, unknown>
+): SimilarSignalsParams {
+  const params: SimilarSignalsParams = {};
+
+  if (typeof query.signalType === "string" && query.signalType.length > 0) {
+    params.signalType = query.signalType;
+  }
+
+  const oddsChangePct = Number(query.oddsChangePct);
+  if (Number.isFinite(oddsChangePct)) {
+    params.oddsChangePct = oddsChangePct;
+  }
+
+  const fieldPressureScore = Number(query.fieldPressureScore);
+  if (Number.isFinite(fieldPressureScore)) {
+    params.fieldPressureScore = fieldPressureScore;
+  }
+
+  if (typeof query.excludeMatchId === "string" && query.excludeMatchId.length > 0) {
+    params.excludeMatchId = query.excludeMatchId;
+  }
+
+  return params;
 }

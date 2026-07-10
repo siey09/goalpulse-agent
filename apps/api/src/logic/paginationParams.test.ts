@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { parsePageParam, parsePageSizeParam, parseArchiveFilters } from "./paginationParams";
+import {
+  parsePageParam,
+  parsePageSizeParam,
+  parseArchiveFilters,
+  parseSimilarSignalsParams,
+} from "./paginationParams";
 
 describe("parsePageParam", () => {
   it("defaults to 1 when raw is undefined", () => {
@@ -78,5 +83,53 @@ describe("parseArchiveFilters", () => {
     expect(
       parseArchiveFilters({ matchId: "match-1", status: "correct", market: "totals", event: "settled" })
     ).toEqual({ matchId: "match-1", status: "correct", market: "totals", event: "settled" });
+  });
+});
+
+describe("parseSimilarSignalsParams", () => {
+  it("returns an empty object when no recognized query params are present", () => {
+    expect(parseSimilarSignalsParams({})).toEqual({});
+  });
+
+  it("includes signalType only when it is a non-empty string", () => {
+    expect(parseSimilarSignalsParams({ signalType: "SHARP_MOVE" })).toEqual({
+      signalType: "SHARP_MOVE",
+    });
+    expect(parseSimilarSignalsParams({ signalType: "" })).toEqual({});
+    expect(parseSimilarSignalsParams({ signalType: undefined })).toEqual({});
+  });
+
+  it("includes oddsChangePct only when it parses to a finite number", () => {
+    expect(parseSimilarSignalsParams({ oddsChangePct: "20.5" })).toEqual({ oddsChangePct: 20.5 });
+    expect(parseSimilarSignalsParams({ oddsChangePct: "not-a-number" })).toEqual({});
+    expect(parseSimilarSignalsParams({ oddsChangePct: undefined })).toEqual({});
+  });
+
+  it("includes fieldPressureScore only when it parses to a finite number", () => {
+    expect(parseSimilarSignalsParams({ fieldPressureScore: "12" })).toEqual({ fieldPressureScore: 12 });
+    expect(parseSimilarSignalsParams({ fieldPressureScore: "bogus" })).toEqual({});
+  });
+
+  it("includes excludeMatchId only when it is a non-empty string", () => {
+    expect(parseSimilarSignalsParams({ excludeMatchId: "match-1" })).toEqual({
+      excludeMatchId: "match-1",
+    });
+    expect(parseSimilarSignalsParams({ excludeMatchId: "" })).toEqual({});
+  });
+
+  it("combines multiple valid params together", () => {
+    expect(
+      parseSimilarSignalsParams({
+        signalType: "SHARP_MOVE",
+        oddsChangePct: "20",
+        fieldPressureScore: "10",
+        excludeMatchId: "match-1",
+      })
+    ).toEqual({
+      signalType: "SHARP_MOVE",
+      oddsChangePct: 20,
+      fieldPressureScore: 10,
+      excludeMatchId: "match-1",
+    });
   });
 });
