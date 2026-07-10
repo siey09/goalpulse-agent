@@ -367,9 +367,42 @@ console errors. Spec:
 `docs/superpowers/specs/2026-07-10-meta-agent-recommendation-design.md`,
 plan: `docs/superpowers/plans/2026-07-10-meta-agent-recommendation.md`.
 
+✅ **Skeptic Agent shipped 2026-07-10 — fourth and last of the "future
+ideas" candidates, backlog fully closed.** Deliberately built as a
+read-only critique layer, not a real 4th Arena agent: a Skeptic never
+trades, so it has no side/stake/P&L to track, meaning wiring it into
+`ArenaPosition`/`ArenaScoreboard`'s settlement/ledger system would have
+meant inventing fake positions to fit a data model that doesn't apply to
+it — an architectural mismatch, not just added risk. Chose the smaller,
+correct-shaped version instead, explicitly given deadline proximity.
+
+New `getSkepticCritique()` in `ArenaPanel.tsx` audits whichever agent the
+Meta-agent recommendation currently names as leader: groups that agent's
+settled positions by `baseMatchId` (same pattern already proven in
+`signalPerformance.ts`'s `distinctMatchCount`/`largestMatchSharePct`,
+including the totals-suffix collapsing) and flags when one real match
+accounts for ≥50% of the settled sample — confirming diversification
+plainly when it doesn't, not just raising alarms. Real finding used to
+calibrate the threshold before writing any code: live production data
+showed the Meta-agent's declared leader (Kelly Criterion) had 100% of
+its 17 settled positions from a single real match — a striking,
+honest, demonstrable validation of why this check matters.
+
+Rendered directly below the Meta-agent recommendation callout, same
+file, same visual section. Zero backend changes (`matchId` already on
+every position in `GET /api/arena`), zero touch to Arena's settlement
+code. Frontend-only, 1 commit, Inline Execution. Verified live in
+production: callout read exactly the calibration example verbatim, no
+console errors. Spec:
+`docs/superpowers/specs/2026-07-10-skeptic-agent-design.md`, plan:
+`docs/superpowers/plans/2026-07-10-skeptic-agent.md`.
+
 🔄 In Progress: none.
 
-📋 Next Steps: none queued. Deferred future option, not scheduled: fix the
+📋 Next Steps: none queued. All four "future ideas" candidates shipped
+2026-07-10 (Historical Pattern Match, Verification Depth Score,
+Meta-agent, Skeptic Agent). No further backlog items pending — await
+direction. Deferred future option, not scheduled: fix the
 totals-line overcounting server-side in `signalCorrelation.ts` (matching
 the Signal Performance precedent) rather than the current frontend-only
 dedup. `match_archive`'s Supabase setup is already complete (user ran the
@@ -1026,12 +1059,10 @@ severity/confidence-blending change would be justified — not before.
 concentration check is visible from the API itself going forward — no
 need to manually cross-reference archive entries by hand again.
 
-## Future ideas — not started
+## Future ideas — all four shipped 2026-07-10
 
-Four candidate novel-mechanism ideas discussed 2026-07-10 but not
-pursued this session. No design work done, nothing scoped — recorded
-only so they aren't lost. Revisit if there's time after the current
-backlog, weighed against the July 19 deadline.
+Four candidate novel-mechanism ideas discussed 2026-07-10, all now
+built and verified live. Backlog closed.
 
 ~~1. **Historical Pattern Match**~~ **Shipped 2026-07-10** — see the
 entry above.
@@ -1041,8 +1072,7 @@ entry above.
 
 ~~3. **Meta-agent**~~ **Shipped 2026-07-10** — see the entry above.
 
-1. **Skeptic Agent** — a 4th Arena agent that audits/critiques the
-   other agents' reliability rather than trading the feed itself.
+~~4. **Skeptic Agent**~~ **Shipped 2026-07-10** — see the entry above.
 
 ## Testing
 
