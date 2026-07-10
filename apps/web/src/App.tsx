@@ -437,6 +437,7 @@ function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [replayStep, setReplayStep] = useState(-1);
   const [isAnalystChatOpen, setIsAnalystChatOpen] = useState(false);
+  const [isAnalystReplying, setIsAnalystReplying] = useState(false);
   const [analystQuestion, setAnalystQuestion] = useState("");
   const [analystMessages, setAnalystMessages] = useState<
     { role: "user" | "assistant"; content: string }[]
@@ -565,80 +566,335 @@ function App() {
 
     return [...replayItems, ...liveItems].slice(0, 5);
   }, [signals, replayBacktest]);
-  function generateAnalystReply(question: string) {
-    const normalizedQuestion = question.toLowerCase();
-    const replaySignals = replayBacktest?.signals ?? [];
-    const trapSignals = replaySignals
-      .filter(
-        (signal) =>
-          signal.trapStatus === "CONFIRMED_TRAP" ||
-          signal.trapStatus === "POSSIBLE_TRAP"
-      )
-      .sort((a, b) => (b.trapScore ?? 0) - (a.trapScore ?? 0));
-    const topTrap = trapSignals[0];
-    const latestSignal = signals[0];
-    const summary = replayBacktest?.summary;
+  type ArenaScoreboardReply = {
+    agentId: string;
+    label: string;
+    netUnits: number;
+    roiPercent: number;
+    correctCount: number;
+    settledCount: number;
+  };
 
-    if (normalizedQuestion.includes("trap") || normalizedQuestion.includes("suspicious")) {
-      if (!topTrap) {
-        return "I do not see a confirmed trap pattern yet. Run the Outcome Audit first so I can inspect rejected market moves.";
-      }
+  type ArenaReplyResponse = {
+    momentumFollower: ArenaScoreboardReply;
+    contrarian: ArenaScoreboardReply;
+    kellyCriterion: ArenaScoreboardReply;
+  };
 
-      return `Top suspicious move: ${topTrap.match ?? topTrap.matchId ?? "Unknown match"} · ${getSignalTarget(topTrap)}. Trap score ${topTrap.trapScore ?? 0}. ${topTrap.trapReason ?? "The odds movement was rejected by the final result."}`;
-    }
+  type MarketMakerReplyQuote = {
+    matchId: string;
+    match: string;
+    fairOdds: { home: number; away: number; draw: number };
+    bidOdds: { home: number; away: number; draw: number };
+    askOdds: { home: number; away: number; draw: number };
+    spreadPct: number;
+    spreadWidth: "NARROW" | "MODERATE" | "WIDE";
+    reason: string;
+  };
 
-    if (normalizedQuestion.includes("reversal")) {
-      if (!topTrap) {
-        return "No reversal pattern is available yet. Run the Outcome Audit first.";
-      }
+  type SignalTypePerformanceReply = {
+    signalType: string;
+    settledCount: number;
+    correctCount: number;
+    accuracyPct: number;
+  };
 
-      return `Market Reversal Radar shows ${(topTrap.reversalRisk ?? "REVERSAL_SCAN").replaceAll("_", " ")} for ${getSignalTarget(topTrap)}. ${topTrap.reversalReason ?? "The move may have become overextended or failed score confirmation."}`;
-    }
+  type ConfidenceBucketReply = {
+    bucket: string;
+    settledCount: number;
+    correctCount: number;
+    accuracyPct: number;
+  };
 
-    if (normalizedQuestion.includes("score") || normalizedQuestion.includes("final")) {
-      if (!topTrap) {
-        return "Score Reality Check needs a finished match. Run the Outcome Audit to compare odds moves against final scores.";
-      }
+  type SteamMoveReply = {
+    match: string;
+    side: "home" | "away";
+    tickCount: number;
+    totalMovePct: number;
+    firstOdds: number;
+    lastOdds: number;
+  };
 
-      return `Score Reality Check: ${(topTrap.scoreRealityStatus ?? "WAITING_FOR_FINAL_SCORE").replaceAll("_", " ")}. Final score: ${topTrap.finalScore ?? "pending"}. ${topTrap.scoreRealityReason ?? "GoalPulse compares the odds move against the final result."}`;
-    }
+  type PatternClusterReply = {
+    side: string;
+    severity: string;
+    market: string;
+    matchIds: string[];
+    signalCount: number;
+  };
 
-    if (normalizedQuestion.includes("audit") || normalizedQuestion.includes("outcome")) {
-      if (!summary) {
-        return "The Outcome Audit has not been run yet. Click Run audit to replay stored TxLINE odds snapshots and verify what happened.";
-      }
-
-      return `Outcome Audit processed ${summary.signalsDetected ?? 0} signal(s), found ${summary.smartMoneyTraps ?? 0} smart money trap pattern(s), with ${summary.confirmedTraps ?? 0} confirmed and ${summary.possibleTraps ?? 0} possible.`;
-    }
-
-    if (normalizedQuestion.includes("latest") || normalizedQuestion.includes("signal")) {
-      if (!latestSignal) {
-        return "There is no latest live signal yet. The agent is waiting for a meaningful odds movement threshold.";
-      }
-
-      return `Latest live signal: ${latestSignal.match ?? latestSignal.matchId ?? "Unknown match"} · ${getSignalTarget(latestSignal)}. Odds moved from ${formatOdds(latestSignal.oddsBefore)} to ${formatOdds(latestSignal.oddsAfter)}, a ${formatOddsChange(latestSignal.oddsChangePct)} move.`;
-    }
-
-    if (normalizedQuestion.includes("advice") || normalizedQuestion.includes("bet")) {
-      return "GoalPulse is analytics only. It explains odds movement, trap risk, reversal risk, and score reality checks. It does not recommend bets.";
-    }
-
-    return "I can explain the latest signal, smart money traps, market reversal radar, score reality checks, or the outcome audit. Try asking: 'What is the biggest trap?'";
+  function baseMatchId(matchId: string): string {
+    return matchId.split("-totals-")[0];
   }
 
-  function sendAnalystMessage() {
+  async function generateAnalystReply(question: string): Promise<string> {
+    const normalizedQuestion = question.toLowerCase();
+
+    try {
+      const replaySignals = replayBacktest?.signals ?? [];
+      const trapSignals = replaySignals
+        .filter(
+          (signal) =>
+            signal.trapStatus === "CONFIRMED_TRAP" ||
+            signal.trapStatus === "POSSIBLE_TRAP"
+        )
+        .sort((a, b) => (b.trapScore ?? 0) - (a.trapScore ?? 0));
+      const topTrap = trapSignals[0];
+      const latestSignal = signals[0];
+      const summary = replayBacktest?.summary;
+
+      if (normalizedQuestion.includes("trap") || normalizedQuestion.includes("suspicious")) {
+        if (!topTrap) {
+          return "I do not see a confirmed trap pattern yet. Run the Outcome Audit first so I can inspect rejected market moves.";
+        }
+
+        return `Top suspicious move: ${topTrap.match ?? topTrap.matchId ?? "Unknown match"} · ${getSignalTarget(topTrap)}. Trap score ${topTrap.trapScore ?? 0}. ${topTrap.trapReason ?? "The odds movement was rejected by the final result."}`;
+      }
+
+      if (normalizedQuestion.includes("reversal")) {
+        if (!topTrap) {
+          return "No reversal pattern is available yet. Run the Outcome Audit first.";
+        }
+
+        return `Market Reversal Radar shows ${(topTrap.reversalRisk ?? "REVERSAL_SCAN").replaceAll("_", " ")} for ${getSignalTarget(topTrap)}. ${topTrap.reversalReason ?? "The move may have become overextended or failed score confirmation."}`;
+      }
+
+      if (
+        (normalizedQuestion.includes("score") && !normalizedQuestion.includes("confidence")) ||
+        normalizedQuestion.includes("final")
+      ) {
+        if (!topTrap) {
+          return "Score Reality Check needs a finished match. Run the Outcome Audit to compare odds moves against final scores.";
+        }
+
+        return `Score Reality Check: ${(topTrap.scoreRealityStatus ?? "WAITING_FOR_FINAL_SCORE").replaceAll("_", " ")}. Final score: ${topTrap.finalScore ?? "pending"}. ${topTrap.scoreRealityReason ?? "GoalPulse compares the odds move against the final result."}`;
+      }
+
+      if (normalizedQuestion.includes("audit") || normalizedQuestion.includes("outcome")) {
+        if (!summary) {
+          return "The Outcome Audit has not been run yet. Click Run audit to replay stored TxLINE odds snapshots and verify what happened.";
+        }
+
+        return `Outcome Audit processed ${summary.signalsDetected ?? 0} signal(s), found ${summary.smartMoneyTraps ?? 0} smart money trap pattern(s), with ${summary.confirmedTraps ?? 0} confirmed and ${summary.possibleTraps ?? 0} possible.`;
+      }
+
+      if (
+        normalizedQuestion.includes("arena") ||
+        normalizedQuestion.includes("kelly") ||
+        normalizedQuestion.includes("contrarian") ||
+        normalizedQuestion.includes("momentum follower") ||
+        normalizedQuestion.includes("which agent") ||
+        normalizedQuestion.includes("best strategy") ||
+        normalizedQuestion.includes("best agent")
+      ) {
+        const payload = await request<{ data?: ArenaReplyResponse }>("/api/arena");
+        const data = payload.data;
+
+        if (!data) {
+          return "Arena data isn't available right now — try again in a moment.";
+        }
+
+        const boards = [data.momentumFollower, data.contrarian, data.kellyCriterion];
+        const leader = boards.reduce((best, board) =>
+          board.netUnits > best.netUnits ? board : best
+        );
+        const boardSummary = boards
+          .map(
+            (board) =>
+              `${board.label}: ${board.netUnits.toFixed(2)}u (${board.roiPercent.toFixed(1)}% ROI, ${board.correctCount}/${board.settledCount} correct)`
+          )
+          .join(". ");
+
+        return `Agent vs Agent Arena — three strategies on the same live signal feed. ${boardSummary}. ${leader.label} currently leads by net units. Settlement is on-chain-verified; no funds move.`;
+      }
+
+      if (
+        normalizedQuestion.includes("market maker") ||
+        normalizedQuestion.includes("bid") ||
+        normalizedQuestion.includes("spread") ||
+        normalizedQuestion.includes("fair odds")
+      ) {
+        const payload = await request<unknown>("/api/market-maker");
+        const quotes = asArray<MarketMakerReplyQuote>(payload, ["data"]);
+        const quote =
+          quotes.find((item) => item.matchId === selectedMatchId) ?? quotes[0];
+
+        if (!quote) {
+          return "No Market Maker quote is available yet — quotes need at least one prior odds snapshot for a match.";
+        }
+
+        return `Market Maker for ${quote.match}: home bid ${formatOdds(quote.bidOdds.home)}/fair ${formatOdds(quote.fairOdds.home)}/ask ${formatOdds(quote.askOdds.home)}. Spread is ${quote.spreadWidth.toLowerCase()} (${quote.spreadPct.toFixed(1)}%) — ${quote.reason}`;
+      }
+
+      if (
+        normalizedQuestion.includes("archive") ||
+        normalizedQuestion.includes("permanent record")
+      ) {
+        const payload = await request<{ pagination?: { totalCount?: number } }>(
+          "/api/archive?page=1&pageSize=1"
+        );
+        const totalCount = payload.pagination?.totalCount ?? 0;
+
+        return `The Signal Archive permanently records every settled signal — ${totalCount} archived so far, independent of the dashboard's in-memory caps. There's also a separate match_archive table recording every match's final state, write-only with no dashboard panel yet.`;
+      }
+
+      if (
+        normalizedQuestion.includes("signal performance") ||
+        normalizedQuestion.includes("track record") ||
+        normalizedQuestion.includes("win rate") ||
+        (normalizedQuestion.includes("accuracy") && !normalizedQuestion.includes("confidence"))
+      ) {
+        const payload = await request<unknown>("/api/signal-performance");
+        const rows = asArray<SignalTypePerformanceReply>(payload, ["data"]);
+
+        if (rows.length === 0) {
+          return "No signal performance data is settled yet.";
+        }
+
+        const rowSummary = rows
+          .map(
+            (row) =>
+              `${row.signalType}: ${formatPercent(row.accuracyPct)} (${row.correctCount}/${row.settledCount})`
+          )
+          .join(". ");
+
+        return `Signal Performance by type — ${rowSummary}.`;
+      }
+
+      if (
+        normalizedQuestion.includes("confidence calibration") ||
+        normalizedQuestion.includes("confidence score") ||
+        normalizedQuestion.includes("calibrated") ||
+        normalizedQuestion.includes("calibration")
+      ) {
+        const payload = await request<unknown>("/api/signal-performance/by-confidence");
+        const rows = asArray<ConfidenceBucketReply>(payload, ["data"]);
+
+        if (rows.length === 0) {
+          return "No confidence-bucketed signals are settled yet.";
+        }
+
+        const rowSummary = rows
+          .map(
+            (row) =>
+              `${row.bucket}: ${formatPercent(row.accuracyPct)} (${row.correctCount}/${row.settledCount})`
+          )
+          .join(". ");
+
+        return `Confidence Calibration checks whether higher-confidence signals settle correct more often. Current buckets — ${rowSummary}. Small sample sizes so far, not yet a statistically confirmed pattern.`;
+      }
+
+      if (
+        normalizedQuestion.includes("steam move") ||
+        normalizedQuestion.includes("sustained movement") ||
+        normalizedQuestion.includes("scanning")
+      ) {
+        const payload = await request<{
+          data?: SteamMoveReply[];
+          summary?: { matchesScanned?: number };
+        }>("/api/steam-moves");
+        const moves = payload.data ?? [];
+        const matchesScanned = payload.summary?.matchesScanned ?? 0;
+
+        if (moves.length === 0) {
+          return `Steam Move Detection scans every match every 5 seconds for sustained same-direction odds movement. Scanning ${matchesScanned} match(es) — no steam move right now.`;
+        }
+
+        const top = moves[0];
+
+        return `Steam move detected: ${top.match}, ${top.side} side, ${formatOdds(top.firstOdds)} → ${formatOdds(top.lastOdds)} over ${top.tickCount} ticks (${top.totalMovePct.toFixed(1)}% move).`;
+      }
+
+      if (
+        normalizedQuestion.includes("correlation") ||
+        normalizedQuestion.includes("cluster") ||
+        normalizedQuestion.includes("cross-match")
+      ) {
+        const payload = await request<unknown>("/api/signal-correlation/patterns");
+        const raw = asArray<PatternClusterReply>(payload, ["data"]);
+        const genuine = raw.filter(
+          (cluster) => new Set(cluster.matchIds.map(baseMatchId)).size >= 2
+        );
+
+        if (genuine.length === 0) {
+          return "No genuine cross-match signal correlation clusters right now — Signal Correlation looks for the same pattern (side/severity/market) firing across 2+ distinct real matches.";
+        }
+
+        const top = genuine[0];
+        const distinctRealMatchCount = new Set(top.matchIds.map(baseMatchId)).size;
+
+        return `Signal Correlation found ${genuine.length} genuine cluster(s) across multiple real matches. Top: ${top.side}/${top.severity}/${top.market}, ${top.signalCount} signals across ${distinctRealMatchCount} real matches.`;
+      }
+
+      if (
+        normalizedQuestion.includes("on-chain") ||
+        normalizedQuestion.includes("onchain") ||
+        normalizedQuestion.includes("blockchain") ||
+        normalizedQuestion.includes("solana") ||
+        normalizedQuestion.includes("verify")
+      ) {
+        if (onchainVerify.data?.available) {
+          const statDetail = onchainVerify.data.provenStat
+            ? ` — proven stat key ${onchainVerify.data.provenStat.key}, value ${onchainVerify.data.provenStat.value}`
+            : "";
+
+          return `On-chain verification: ${onchainVerify.data.isValid ? "PROOF VALID" : "PROOF FAILED"}${statDetail}. GoalPulse posts a SHA-256 proof hash to Solana devnet so signal evidence is independently checkable.`;
+        }
+
+        return `GoalPulse posts a SHA-256 proof hash of the outcome audit to Solana devnet for tamper-evident, independently-verifiable evidence. Run "Verify on Solana" from the Outcome Audit section to check a specific signal.`;
+      }
+
+      if (
+        normalizedQuestion.includes("tech stack") ||
+        normalizedQuestion.includes("architecture") ||
+        normalizedQuestion.includes("how is this built") ||
+        normalizedQuestion.includes("what technology") ||
+        normalizedQuestion.includes("built with")
+      ) {
+        return "GoalPulse is built on: live TxLINE market data (real-time odds + TXODDS Scores field context), a Node/Express + TypeScript backend running a 5-second autonomous agent cycle, a React + TypeScript frontend, and Solana devnet for tamper-evident on-chain proof verification. Backend runs on Render, frontend on Vercel.";
+      }
+
+      if (normalizedQuestion.includes("latest")) {
+        if (!latestSignal) {
+          return "There is no latest live signal yet. The agent is waiting for a meaningful odds movement threshold.";
+        }
+
+        return `Latest live signal: ${latestSignal.match ?? latestSignal.matchId ?? "Unknown match"} · ${getSignalTarget(latestSignal)}. Odds moved from ${formatOdds(latestSignal.oddsBefore)} to ${formatOdds(latestSignal.oddsAfter)}, a ${formatOddsChange(latestSignal.oddsChangePct)} move.`;
+      }
+
+      if (normalizedQuestion.includes("advice") || normalizedQuestion.includes("bet")) {
+        return "GoalPulse is analytics only. It explains odds movement, trap risk, reversal risk, and score reality checks. It does not recommend bets.";
+      }
+
+      return "I can help with: latest signal, smart money traps, market reversal radar, score reality checks, the Outcome Audit, Agent Arena (Momentum Follower/Contrarian/Kelly Criterion), Market Maker spreads, the Signal Archive, Signal Performance, Confidence Calibration, Steam Move Detection, Signal Correlation, on-chain verification, or the tech stack. Ask me about any of these.";
+    } catch (error) {
+      console.error("Analyst chat reply failed", error);
+      return "I couldn't reach that data right now — try again in a moment.";
+    }
+  }
+
+  async function sendAnalystMessage() {
     const trimmedQuestion = analystQuestion.trim();
 
-    if (!trimmedQuestion) return;
-
-    const reply = generateAnalystReply(trimmedQuestion);
+    if (!trimmedQuestion || isAnalystReplying) return;
 
     setAnalystMessages((currentMessages) => [
       ...currentMessages,
       { role: "user", content: trimmedQuestion },
-      { role: "assistant", content: reply },
     ]);
     setAnalystQuestion("");
+    setIsAnalystReplying(true);
+
+    try {
+      const reply = await generateAnalystReply(trimmedQuestion);
+
+      setAnalystMessages((currentMessages) => [
+        ...currentMessages,
+        { role: "assistant", content: reply },
+      ]);
+    } finally {
+      setIsAnalystReplying(false);
+    }
   }
   async function runReplayBacktest() {
     try {
