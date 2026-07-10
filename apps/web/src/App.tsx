@@ -2455,6 +2455,17 @@ function App() {
                                       Odds: {formatOdds(marker.oddsBefore)} → {formatOdds(marker.oddsAfter)}
                                     </p>
                                     <p>Move: {formatOddsChange(marker.oddsChangePct)}</p>
+                                    <p>
+                                      Confidence:{" "}
+                                      {marker.confidenceScore != null ? `${marker.confidenceScore}%` : "—"}
+                                    </p>
+                                    <p>
+                                      Field pressure:{" "}
+                                      {marker.fieldPressureScore != null ? marker.fieldPressureScore : "—"}
+                                    </p>
+                                    {marker.explanation && (
+                                      <p className="mt-1 text-orange-50/80">{marker.explanation}</p>
+                                    )}
                                   </div>
                                 )}
                               </div>
