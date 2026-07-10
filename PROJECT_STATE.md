@@ -877,6 +877,23 @@ severity/confidence-blending change would be justified — not before.
 concentration check is visible from the API itself going forward — no
 need to manually cross-reference archive entries by hand again.
 
+## Future ideas — not started
+
+Four candidate novel-mechanism ideas discussed 2026-07-10 but not
+pursued this session. No design work done, nothing scoped — recorded
+only so they aren't lost. Revisit if there's time after the current
+backlog, weighed against the July 19 deadline.
+
+1. **Historical Pattern Match** — find similar past signal patterns in
+   `match_archive`/`signal_archive` and show how they resolved, as
+   context for a live signal.
+2. **Verification Depth Score** — an ongoing per-signal score for how
+   much of its claims are on-chain-verified versus claimed-only.
+3. **Skeptic Agent** — a 4th Arena agent that audits/critiques the
+   other agents' reliability rather than trading the feed itself.
+4. **Meta-agent** — recommends which existing strategy is performing
+   best under current match conditions.
+
 ## Testing
 
 **189 tests across 18 files**, all passing, `npm run test` from `apps/api/`:
