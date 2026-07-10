@@ -278,6 +278,48 @@ documented under "Open questions" below, not a new bug. Spec:
 `docs/superpowers/specs/2026-07-10-historical-pattern-match-design.md`,
 plan: `docs/superpowers/plans/2026-07-10-historical-pattern-match.md`.
 
+✅ **Verification Depth Score shipped 2026-07-10** — second of the four
+"future ideas" candidates, now built. Plain-label (never a percentage —
+user-corrected during brainstorming: there's only one real on-chain
+claim checked per signal today, `statKey=1002`, so a fractional score
+would be fabricated precision) status badge in the existing Outcome
+Audit Layer, next to the pre-existing "Verify on Solana" button and
+proof hash. States: not independently verifiable (no
+`evidence.fixtureId`/`scoresContext.sequence`) / not yet verified /
+checking on-chain / on-chain verified / verification failed /
+verification unavailable — never inferred, only ever the result of an
+actual live Solana `.view()` RPC call via the existing
+`GET /api/onchain/validate-stat`.
+
+Bundled a real pre-existing bug fix (confirmed in-scope during
+brainstorming): `onchainVerify` was a single shared piece of state, not
+keyed per signal — switching the selected signal left the previous
+signal's stale result showing until Verify was clicked again. Re-keyed
+by `` `${fixtureId}-${sequence}` ``. Found and fixed a 4th consumer of
+the old shared shape during implementation that the plan's own code
+search had missed (the analyst-chat answer function).
+
+Frontend-only, `App.tsx`, 2 commits, Inline Execution, no backend
+changes (`GET /api/onchain/validate-stat` already provided everything
+needed). Verified live in production: the "not verifiable" state and
+disabled button confirmed correct across multiple different signals; the
+"not yet verified"/"checking"/"on-chain verified" states and the
+staleness fix were verified with a real Solana mainnet check
+(`PROOF VALID`) during implementation, since no currently-eligible
+signal was reachable in live production data at verification time — the
+user explicitly accepted that earlier real-mainnet test as sufficient
+evidence for those states. No console errors from this feature.
+
+**Noted, not a bug:** a batch of transient "Failed to fetch" console
+errors across several panels (Arena, Market Maker, Steam Moves, Results
+Settlement, Signal Intelligence) appeared right at this deploy's Vercel
+transition window; confirmed self-resolving — a reload minutes later
+showed zero errors. Expected brief blip during any deploy, not specific
+to this feature; no action taken.
+
+Spec: `docs/superpowers/specs/2026-07-10-verification-depth-score-design.md`,
+plan: `docs/superpowers/plans/2026-07-10-verification-depth-score.md`.
+
 🔄 In Progress: none.
 
 📋 Next Steps: none queued. Deferred future option, not scheduled: fix the
@@ -947,11 +989,12 @@ backlog, weighed against the July 19 deadline.
 ~~1. **Historical Pattern Match**~~ **Shipped 2026-07-10** — see the
 entry above.
 
-1. **Verification Depth Score** — an ongoing per-signal score for how
-   much of its claims are on-chain-verified versus claimed-only.
-2. **Skeptic Agent** — a 4th Arena agent that audits/critiques the
+~~2. **Verification Depth Score**~~ **Shipped 2026-07-10** — see the
+entry above.
+
+1. **Skeptic Agent** — a 4th Arena agent that audits/critiques the
    other agents' reliability rather than trading the feed itself.
-3. **Meta-agent** — recommends which existing strategy is performing
+2. **Meta-agent** — recommends which existing strategy is performing
    best under current match conditions.
 
 ## Testing
