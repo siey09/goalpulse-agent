@@ -65,7 +65,23 @@ const ALLOWED_CORS_ORIGINS = [
   "http://127.0.0.1:5173",
 ];
 
-app.use(cors({ origin: ALLOWED_CORS_ORIGINS }));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // No Origin header at all (curl, Postman, server-to-server calls,
+      // direct navigation to /api/docs) is not a browser cross-origin
+      // request in the first place - always allow it through. Origin-based
+      // CORS only ever restricts browser JS reading a cross-origin
+      // response; it is not a security boundary against direct API calls.
+      if (!origin || ALLOWED_CORS_ORIGINS.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(null, false);
+    },
+  })
+);
 app.use(express.json());
 app.use(generalApiLimiter);
 
