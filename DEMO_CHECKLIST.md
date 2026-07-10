@@ -54,7 +54,7 @@ URL. This is the actual live feed, not a canned dataset."
 
 ### 4. Guided Tour Walkthrough — the breadth pass
 
-[Click "Guide", click Next through all 20 steps at a brisk pace —
+[Click "Guide", click Next through all 22 steps at a brisk pace —
 roughly 3-4 seconds per step]
 
 **Say (before starting):** "Rather than me narrating every panel one by
@@ -197,7 +197,7 @@ Point out:
 
 ### 4. Guided Tour Walkthrough
 
-Click "Guide" (bottom-right). Walks through all 20 steps in order:
+Click "Guide" (bottom-right). Walks through all 22 steps in order:
 
 1. Autonomous intelligence overview
 2. Odds movement timeline
@@ -208,17 +208,19 @@ Click "Guide" (bottom-right). Walks through all 20 steps in order:
 7. In-Play Market Maker
 8. Steam move detection
 9. Agent vs Agent Arena
-10. Autonomous agent timeline
-11. Real TxLINE replay
-12. Evidence chain
-13. Signal review council
-14. Proof hash
-15. Transparent thresholds
-16. Full tournament archive
-17. Signal performance
-18. Confidence calibration
-19. Signal correlation
-20. Compliance boundary
+10. Meta-agent & Skeptic Check
+11. Autonomous agent timeline
+12. Real TxLINE replay
+13. Evidence chain
+14. Signal review council
+15. Proof hash
+16. Signal detail: precedent & verification
+17. Transparent thresholds
+18. Full tournament archive
+19. Signal performance
+20. Confidence calibration
+21. Signal correlation
+22. Compliance boundary
 
 Suggested line: This tour was built to let a judge see the full system
 in one guided pass without needing me to narrate every panel.
@@ -459,7 +461,7 @@ execution.
 
 1. Opening Problem
 2. Production app + API health
-3. Guided Tour (all 20 steps, fast pass)
+3. Guided Tour (all 22 steps, fast pass)
 4. Agent vs Agent Arena (deep dive)
 5. Signal detail: Historical Pattern Match + Verification Depth (deep
    dive)
@@ -479,7 +481,7 @@ Run locally or verify production:
 - Signal panel displays field context
 - Odds chart shows severity-colored markers with confidence/field
   pressure in the hover tooltip
-- Guided Tour opens and all 20 steps navigate without console errors
+- Guided Tour opens and all 22 steps navigate without console errors
 - Arena scoreboard loads all three agents (Momentum Follower, Contrarian,
   Kelly Criterion) with non-empty position data
 - Arena's "Verify underlying data on Solana ⛓" returns a result
