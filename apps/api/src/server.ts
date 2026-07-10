@@ -40,7 +40,7 @@ import { archiveMatch, getArchivedSignals } from "./services/archive";
 import { config } from "./config";
 import { requireApiKey } from "./middleware/apiKeyAuth";
 import { generalApiLimiter, runOnceLimiter } from "./middleware/rateLimiters";
-import { findPreviousSnapshot, getPnlSummary, getStats, store , upsertRecentFinishedMatches } from "./store";
+import { findPreviousSnapshot, getPnlSummary, getStats, mergeOddsSnapshots, store , upsertRecentFinishedMatches } from "./store";
 import type { OddsSnapshot } from "./types";
 
 const app = express();
@@ -127,20 +127,7 @@ app.get("/api/recent-results", async (_req, res) => {
       void archiveMatch(match);
     }
 
-    for (const snapshot of recentFeed.snapshots) {
-      const alreadyExists = store.oddsSnapshots.some(
-        (item) => item.id === snapshot.id
-      );
-
-      if (!alreadyExists) {
-        store.oddsSnapshots.push(snapshot);
-      }
-    }
-
-    store.oddsSnapshots = store.oddsSnapshots.sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
+    mergeOddsSnapshots(recentFeed.snapshots);
   }
 
   res.json({

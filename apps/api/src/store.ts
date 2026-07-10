@@ -29,6 +29,27 @@ export function findPreviousSnapshot(matchId: string): OddsSnapshot | undefined 
   return snapshots[0];
 }
 
+/**
+ * Appends newly-fetched snapshots (deduped by id) into the shared store and
+ * re-sorts the whole array descending by createdAt (newest first). Every
+ * reader of store.oddsSnapshots (agent.ts's unshift ordering, the
+ * .slice(0,100).reverse() pattern in /api/odds-stream, /api/odds-history,
+ * /api/live/replay-stream) assumes this newest-first order — sorting
+ * ascending here instead previously corrupted that shared order and produced
+ * out-of-sequence timestamps on the odds movement chart.
+ */
+export function mergeOddsSnapshots(newSnapshots: OddsSnapshot[]): void {
+  for (const snapshot of newSnapshots) {
+    if (!snapshotAlreadyExists(snapshot.id)) {
+      store.oddsSnapshots.push(snapshot);
+    }
+  }
+
+  store.oddsSnapshots.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
 export function signalAlreadyExists(signal: AgentSignal): boolean {
   const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
 

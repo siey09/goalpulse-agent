@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { store, evaluatePendingSignalsForFinishedMatches, upsertRecentFinishedMatches } from "./store";
-import type { AgentSignal, Match } from "./types";
+import {
+  store,
+  evaluatePendingSignalsForFinishedMatches,
+  mergeOddsSnapshots,
+  upsertRecentFinishedMatches,
+} from "./store";
+import type { AgentSignal, Match, OddsSnapshot } from "./types";
 
 function makeMatch(overrides: Partial<Match> = {}): Match {
   return {
@@ -33,6 +38,24 @@ function makeSignal(overrides: Partial<AgentSignal> = {}): AgentSignal {
     resultStatus: "pending",
     ...overrides,
   } as AgentSignal;
+}
+
+function makeSnapshot(overrides: Partial<OddsSnapshot> = {}): OddsSnapshot {
+  return {
+    id: "snap-1",
+    matchId: "match-1",
+    homeTeam: "Team A",
+    awayTeam: "Team B",
+    homeOdds: 2.0,
+    awayOdds: 3.5,
+    drawOdds: 3.2,
+    homeScore: 0,
+    awayScore: 0,
+    minute: 1,
+    source: "txline",
+    createdAt: "2026-07-10T07:47:00.000Z",
+    ...overrides,
+  } as OddsSnapshot;
 }
 
 beforeEach(() => {
@@ -88,6 +111,38 @@ describe("upsertRecentFinishedMatches", () => {
     upsertRecentFinishedMatches([match]);
 
     expect(store.recentFinishedMatches).toEqual([match]);
+  });
+});
+
+describe("mergeOddsSnapshots", () => {
+  it("keeps store.oddsSnapshots sorted newest-first after merging backfilled snapshots", () => {
+    // Simulates the live agent loop's invariant (agent.ts unshifts new
+    // snapshots), i.e. the array starts newest-first.
+    store.oddsSnapshots = [
+      makeSnapshot({ id: "live-3", createdAt: "2026-07-10T07:48:00.000Z" }),
+      makeSnapshot({ id: "live-2", createdAt: "2026-07-10T07:47:30.000Z" }),
+      makeSnapshot({ id: "live-1", createdAt: "2026-07-10T07:47:00.000Z" }),
+    ];
+
+    // Recent-results backfill fetches finished-match history that can
+    // interleave anywhere in time relative to what's already stored.
+    mergeOddsSnapshots([
+      makeSnapshot({ id: "backfill-2", createdAt: "2026-07-10T07:47:45.000Z" }),
+      makeSnapshot({ id: "backfill-1", createdAt: "2026-07-10T07:46:00.000Z" }),
+    ]);
+
+    const timestamps = store.oddsSnapshots.map((s) => new Date(s.createdAt).getTime());
+    const sortedDescending = [...timestamps].sort((a, b) => b - a);
+
+    expect(timestamps).toEqual(sortedDescending);
+  });
+
+  it("does not duplicate a snapshot that already exists by id", () => {
+    store.oddsSnapshots = [makeSnapshot({ id: "existing" })];
+
+    mergeOddsSnapshots([makeSnapshot({ id: "existing" })]);
+
+    expect(store.oddsSnapshots).toHaveLength(1);
   });
 });
 
