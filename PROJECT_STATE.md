@@ -171,6 +171,29 @@ against live production data (not just local): `mergeOddsSnapshots()` fix
 `persistence.ts`'s restore path baking in legacy corrupted order forever —
 fixed by re-sorting on restore (`95436aa`). 192 tests passing.
 
+✅ **Real-time TxLINE odds stream connectivity monitor shipped 2026-07-10**
+— second SSE monitor, additive to and independent from both the existing
+scores-stream monitor and `agent.ts`'s polling loop (which remains the
+sole source of odds data for signal generation and the odds chart; no
+change to either). Extracted the scores stream's connect/reconnect/
+backoff/SSE-parse logic out of `txlineStream.ts` into a shared
+`services/sseStreamMonitor.ts` factory (`createSseStreamMonitor`, 9 unit
+tests with mocked `fetch`), so both streams run the same tested code path
+instead of duplicated logic; `txlineStream.ts` is now a thin wrapper
+(unchanged exported names/behavior) and `txlineOddsStream.ts` is the new
+odds-side equivalent. Wired into `/health` as `liveOddsStream` alongside
+the existing `liveStream` field. Purely observational, same scope as the
+scores stream — proves *that* JSON frames arrive, never inspects payload
+contents, never touches `store`. Deliberately stays on the safe side of
+the boundary drawn in `docs/superpowers/specs/2026-07-09-txlinestream-extension-assessment.md`
+(wiring live-stream events into signal generation is a no-go before July
+19). Verified live in production after deploy: both streams `connected:
+true`, scores climbing 5→8 events and odds climbing 38→49 events over a
+10s window, zero reconnects/errors on either. Spec:
+`docs/superpowers/specs/2026-07-10-odds-stream-monitor-design.md`, plan:
+`docs/superpowers/plans/2026-07-10-odds-stream-monitor.md`. 201 tests
+passing.
+
 🔄 In Progress: none.
 
 📋 Next Steps: none queued. Deferred future option, not scheduled: fix the
