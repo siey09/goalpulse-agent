@@ -65,9 +65,33 @@ record.
 
 **Entire external technical review (6 P0 items + full P1 tier queue +
 this 4-gap Mandatory Test Plan pass) is complete as of 2026-07-11.
-Nothing outstanding from that review. Next direction is open — awaiting
-user's call given the 2026-07-19 deadline (8 days out at time of
-writing).**
+Nothing outstanding from that review.**
+
+🔄 **Command Center Frontend Redesign (2026-07-11-ish, branch
+`feature/command-center-redesign`, `main` untouched):** phased
+restructure from the single-scroll `App.tsx` into a 9-destination
+Command Center (Operations/Strategy/Trust nav groups), gated behind
+`?preview=command-center` the whole way so the default page is
+provably unaffected through every phase. Phase 1 (design tokens + UI
+primitives + Vitest harness), Phase 2 (Command Center page, additive),
+Phase 3a (Signals/Agent Arena/Market Maker/Archive pages, additive),
+Phase 3b (Live Markets/Replay Lab/Verification/System Health pages;
+first non-additive App.tsx refactor — extracted shared
+`VerificationReceipt` so Verification and Replay Lab share one live
+verify state) — all pushed and independently reviewed.
+✅ **Guided Tour rework pushed** — new single-source-of-truth
+`GUIDE_STEPS` (`app/guideSteps.ts`) + one imperative spotlight
+mechanism (`app/guideSpotlight.ts`) drive a 22-step tour across the
+Command Center destinations, replacing the old default page's
+two-array (`judgeDemoSteps`/`guideTargets`) + 4-scattered-conditional
+pattern for this new surface only — the old tour is untouched and
+still works standalone. Verified live against production data at
+human pace, all 22 steps land on the right destination/card,
+replay-lab steps correctly auto-trigger the backtest. Two content
+gaps fixed along the way: added the "Selected match"/market-pressure
+card to Live Markets, and made the Compliance footer a persistent
+`AppShell` element (was default-page-only before). Pushed
+`5befcc5`. **Holding for user review before merging to `main`.**
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
