@@ -7,10 +7,9 @@
 
 body {
   margin: 0;
-  background: #07111f;
+  background: var(--color-canvas);
   color: white;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: var(--font-body);
 }
 
 @keyframes fade-in-up {

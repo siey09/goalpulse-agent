@@ -1,4 +1,4 @@
-﻿import {
+import {
   Activity,
   CheckCircle2,
   Database,
@@ -6,10 +6,14 @@
   GitBranch,
   Radar,
   ShieldCheck,
-  Sparkles,
   TrendingDown,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Card } from "./ui/Card";
+import { SectionHeader } from "./ui/SectionHeader";
+import { StatusBadge, type StatusTone } from "./ui/StatusBadge";
+import { MetricCard } from "./ui/MetricCard";
+import { EvidenceStamp } from "./ui/EvidenceStamp";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
@@ -126,6 +130,18 @@ function compact(value?: string, max = 48) {
   return `${value.slice(0, max)}...`;
 }
 
+function severityTone(severity?: string): StatusTone {
+  if (severity === "HIGH") return "danger";
+  if (severity === "MEDIUM") return "warning";
+  return "info";
+}
+
+function thresholdRule(severity?: string) {
+  if (severity === "HIGH") return "SHARP MOVE ≥ 15%";
+  if (severity === "MEDIUM") return "MOMENTUM SHIFT ≥ 8%";
+  return "WATCH ≥ 4%";
+}
+
 export function SignalIntelligencePanel() {
   const [health, setHealth] = useState<Health | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -211,126 +227,109 @@ export function SignalIntelligencePanel() {
   const rejectedNoise = Math.max(verifiedSnapshots - generatedSignals, 0);
 
   return (
-    <section
-      id="signal-intelligence"
-      className="rounded-[28px] border border-emerald-400/20 bg-gradient-to-br from-[#10140f] via-[#11100d] to-[#070706] p-5 shadow-2xl shadow-emerald-950/20"
-    >
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-emerald-300">
-            <Sparkles className="h-4 w-4" />
-            Signal Intelligence Layer
+    <Card id="signal-intelligence" className="p-5">
+      <SectionHeader
+        eyebrow="Signal Intelligence Layer"
+        title="Explainable TxLINE market forensics"
+        action={
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-3 px-3 py-2">
+            <CheckCircle2 className="h-4 w-4 text-positive" />
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-stone-500">Feed status</p>
+              <p className="text-xs font-semibold text-stone-200">
+                {isRealFeed ? "Real TxLINE API" : "Sandbox / Demo Feed"}
+              </p>
+            </div>
           </div>
-
-          <h2 className="mt-2 text-2xl font-semibold text-white">
-            Explainable TxLINE market forensics
-          </h2>
-
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-400">
-            GoalPulse does not simply list odds. It detects market movement,
-            filters noise, explains the decision path, and attaches TxLINE
-            evidence fields for judge-verifiable signal review.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-300">
-            Feed Status
-          </p>
-          <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-emerald-100">
-            <CheckCircle2 className="h-4 w-4" />
-            {isRealFeed ? "Real TxLINE API" : "Sandbox / Demo Feed"}
-          </div>
-        </div>
-      </div>
+        }
+      />
+      <p className="-mt-3 mb-5 max-w-3xl text-sm leading-6 text-stone-400">
+        GoalPulse does not simply list odds. It detects market movement, filters noise, explains the decision
+        path, and attaches TxLINE evidence fields for judge-verifiable signal review.
+      </p>
 
       <div className="grid gap-3 md:grid-cols-4">
         <MetricCard
           icon={<Database className="h-4 w-4" />}
           label="Verified snapshots"
-          value={isLoading ? "..." : String(verifiedSnapshots)}
-          tone="emerald"
+          value={isLoading ? "..." : verifiedSnapshots}
+          tone="positive"
         />
         <MetricCard
           icon={<Radar className="h-4 w-4" />}
           label="Signals detected"
-          value={isLoading ? "..." : String(generatedSignals)}
-          tone="orange"
+          value={isLoading ? "..." : generatedSignals}
+          tone="info"
         />
         <MetricCard
           icon={<ShieldCheck className="h-4 w-4" />}
           label="Noise filtered"
-          value={isLoading ? "..." : String(rejectedNoise)}
-          tone="slate"
+          value={isLoading ? "..." : rejectedNoise}
+          tone="neutral"
         />
         <MetricCard
           icon={<Activity className="h-4 w-4" />}
           label="Field-backed"
-          value={isLoading ? "..." : String(fieldBackedSignals)}
-          tone="rose"
+          value={isLoading ? "..." : fieldBackedSignals}
+          tone="neutral"
         />
       </div>
 
       {bestSignal ? (
         <div className="mt-5 grid gap-4 2xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+          <div className="rounded-2xl border border-border bg-surface-1 p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="mb-2 inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-200">
-                  {fieldContextLabel}
+                <div className="mb-2">
+                  <StatusBadge
+                    label={fieldContextLabel}
+                    tone={selectedFieldPressure >= 22 ? "positive" : "neutral"}
+                  />
                 </div>
-                <p className="text-[11px] uppercase tracking-[0.22em] text-stone-500">
-                  Best current signal
-                </p>
-                <h3 className="mt-1 text-xl font-semibold text-white">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-stone-500">Best current signal</p>
+                <h3 className="mt-1 font-display text-xl font-semibold text-white">
                   {bestSignal.match} → {bestSignal.target}
                 </h3>
                 <p className="mt-1 text-sm text-stone-400">
-                  {bestSignal.explanation ??
-                    "Market movement detected from TxLINE odds updates."}
+                  {bestSignal.explanation ?? "Market movement detected from TxLINE odds updates."}
                 </p>
               </div>
 
-              <div className="rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1.5 text-xs font-semibold text-orange-200">
-                {bestSignal.signalType?.replaceAll("_", " ")} /{" "}
-                {bestSignal.severity}
-              </div>
+              <StatusBadge label={`${bestSignal.signalType?.replaceAll("_", " ")} / ${bestSignal.severity}`} tone={severityTone(bestSignal.severity)} withDot />
             </div>
 
             <div className="grid gap-3 lg:grid-cols-3">
-              <div className="rounded-2xl bg-[#0b0806] p-4">
+              <div className="rounded-xl border border-border bg-surface-3 p-4">
                 <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-stone-500">
                   <TrendingDown className="h-4 w-4" />
                   Odds move
                 </div>
-                <p className="mt-2 text-2xl font-semibold text-white">
+                <p className="mt-2 font-mono text-2xl font-semibold text-white">
                   {bestSignal.oddsBefore} → {bestSignal.oddsAfter}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-[#0b0806] p-4">
+              <div className="rounded-xl border border-border bg-surface-3 p-4">
                 <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-stone-500">
                   <Activity className="h-4 w-4" />
                   Compression
                 </div>
-                <p className="mt-2 text-2xl font-semibold text-emerald-300">
+                <p className="mt-2 font-mono text-2xl font-semibold text-accent-soft">
                   {bestSignal.oddsChangePct}%
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-[#0b0806] p-4">
+              <div className="rounded-xl border border-border bg-surface-3 p-4">
                 <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-stone-500">
                   <ShieldCheck className="h-4 w-4" />
                   Confidence
                 </div>
-                <p className="mt-2 text-2xl font-semibold text-sky-300">
-                  {confidence}/100
-                </p>
+                <p className="mt-2 font-mono text-2xl font-semibold text-info">{confidence}/100</p>
               </div>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-emerald-400/10 bg-emerald-400/5 p-4">
-              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200">
+            <div className="mt-4 rounded-xl border border-border bg-surface-3 p-4">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
                 <Radar className="h-4 w-4" />
                 TXODDS field context
               </div>
@@ -349,8 +348,8 @@ export function SignalIntelligencePanel() {
               </p>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-sky-400/10 bg-sky-400/5 p-4">
-              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">
+            <div className="mt-4 rounded-xl border border-border bg-surface-3 p-4">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
                 <GitBranch className="h-4 w-4" />
                 Agent decision path
               </div>
@@ -364,17 +363,24 @@ export function SignalIntelligencePanel() {
                 <DecisionStep number="06" text="Applied reliability and pressure scoring" />
               </div>
             </div>
+
+            <EvidenceStamp
+              rule={thresholdRule(bestSignal.severity)}
+              delta={`Δ ${bestSignal.oddsChangePct}%`}
+              reference={bestSignal.evidence?.fixtureId ? `#${bestSignal.evidence.fixtureId}` : undefined}
+              tone={severityTone(bestSignal.severity) === "danger" ? "accent" : "neutral"}
+            />
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+          <div className="rounded-2xl border border-border bg-surface-1 p-5">
             <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
               <Fingerprint className="h-4 w-4" />
               TxLINE evidence chain
             </div>
 
             <div className="space-y-3">
-              <EvidenceRow label="Fixture ID" value={bestSignal.evidence?.fixtureId} />
-              <EvidenceRow label="Endpoint" value={bestSignal.evidence?.endpointUsed} />
+              <EvidenceRow label="Fixture ID" value={bestSignal.evidence?.fixtureId} mono />
+              <EvidenceRow label="Endpoint" value={bestSignal.evidence?.endpointUsed} mono />
               <EvidenceRow label="Bookmaker" value={bestSignal.evidence?.bookmaker} />
               <EvidenceRow label="Market Type" value={bestSignal.evidence?.marketType} />
               <EvidenceRow label="Message ID" value={bestSignal.evidence?.messageId} mono />
@@ -391,6 +397,7 @@ export function SignalIntelligencePanel() {
               <EvidenceRow
                 label="Scores Endpoint"
                 value={bestSignal.evidence?.scoresContext?.endpointUsed}
+                mono
               />
               <EvidenceRow
                 label="Latest Scores Action"
@@ -404,50 +411,18 @@ export function SignalIntelligencePanel() {
           </div>
         </div>
       ) : (
-        <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-5 text-sm text-stone-400">
-          Waiting for live TxLINE signals. Run the agent cycle or wait for the
-          backend refresh interval.
+        <div className="mt-5 rounded-2xl border border-border bg-surface-3 p-5 text-sm text-stone-400">
+          Waiting for live TxLINE signals. Run the agent cycle or wait for the backend refresh interval.
         </div>
       )}
-    </section>
-  );
-}
-
-function MetricCard({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  tone: "emerald" | "orange" | "rose" | "slate";
-}) {
-  const toneClass =
-    tone === "emerald"
-      ? "text-emerald-200 border-emerald-400/20 bg-emerald-400/10"
-      : tone === "orange"
-      ? "text-orange-200 border-orange-400/20 bg-orange-400/10"
-      : tone === "rose"
-      ? "text-rose-200 border-rose-400/20 bg-rose-400/10"
-      : "text-stone-200 border-white/10 bg-white/5";
-
-  return (
-    <div className={`rounded-2xl border p-4 ${toneClass}`}>
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] opacity-80">
-        {icon}
-        {label}
-      </div>
-      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
-    </div>
+    </Card>
   );
 }
 
 function DecisionStep({ number, text }: { number: string; text: string }) {
   return (
     <div className="flex items-center gap-3 rounded-xl bg-black/25 p-3">
-      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-400/10 text-[11px] font-bold text-sky-200">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-info/10 font-mono text-[11px] font-bold text-info">
         {number}
       </span>
       <span>{text}</span>
@@ -465,7 +440,7 @@ function EvidenceRow({
   mono?: boolean;
 }) {
   return (
-    <div className="rounded-2xl bg-[#0b0806] p-3">
+    <div className="rounded-xl bg-black/25 p-3">
       <p className="text-[10px] uppercase tracking-[0.2em] text-stone-500">
         {label}
       </p>
@@ -479,9 +454,3 @@ function EvidenceRow({
     </div>
   );
 }
-
-
-
-
-
-

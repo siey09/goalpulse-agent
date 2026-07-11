@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { Zap } from "lucide-react";
+import { Card } from "./ui/Card";
+import { SectionHeader } from "./ui/SectionHeader";
+import { StatusBadge } from "./ui/StatusBadge";
+import { EmptyState } from "./ui/EmptyState";
+import { EvidenceStamp } from "./ui/EvidenceStamp";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
@@ -68,50 +72,41 @@ export function SteamMoveDetectionPanel() {
   }, []);
 
   return (
-    <div className="rounded-[28px] border border-white/10 bg-[#120d09]/90 p-5 shadow-2xl shadow-black/30">
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs text-stone-500">Live market scan</p>
-          <h2 className="text-xl font-semibold text-white">Steam move detection</h2>
-        </div>
-
-        <div className="flex items-center gap-2 rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1.5 text-xs font-semibold text-orange-200">
-          <Zap className="h-3.5 w-3.5" />
-          {summary ? `${summary.matchesScanned} matches scanned` : "Scanning"}
-        </div>
-      </div>
+    <Card className="p-5">
+      <SectionHeader
+        eyebrow="Live market scan"
+        title="Steam move detection"
+        action={<StatusBadge label={summary ? `${summary.matchesScanned} matches scanned` : "Scanning"} tone="accent" withDot />}
+      />
 
       <div className="space-y-3">
         {isLoading ? (
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-stone-400">
-            Loading steam moves...
-          </div>
+          <EmptyState reason="Loading steam moves..." />
         ) : moves.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-stone-400">
-            No steam move happening right now — scanning every 5s.
-          </div>
+          <EmptyState reason="No steam move happening right now — scanning every 5s." />
         ) : (
           moves.map((move) => (
-            <div key={move.matchId} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div key={move.matchId} className="rounded-xl border border-border bg-surface-3 p-4">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <span className="text-sm font-semibold text-white">{move.match}</span>
-                <span className="rounded-full border border-orange-400/20 bg-orange-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-orange-200">
-                  {move.side}
-                </span>
+                <StatusBadge label={move.side} tone="accent" />
               </div>
-              <p className="text-2xl font-semibold text-orange-300">
+              <p className="font-mono text-2xl font-semibold text-accent-soft">
                 {move.firstOdds.toFixed(2)} &rarr; {move.lastOdds.toFixed(2)}
-                <span className="ml-2 text-sm font-semibold text-orange-200">
+                <span className="ml-2 text-sm font-semibold text-accent-soft/80">
                   ({move.totalMovePct}%)
                 </span>
               </p>
-              <p className="mt-1 text-xs text-stone-500">
-                {move.tickCount} consecutive ticks over {formatDuration(move.windowMs)}
-              </p>
+              <EvidenceStamp
+                rule={`${move.tickCount} CONSECUTIVE TICKS`}
+                delta={`over ${formatDuration(move.windowMs)}`}
+                reference={`#${move.matchId}`}
+                tone="accent"
+              />
             </div>
           ))
         )}
       </div>
-    </div>
+    </Card>
   );
 }

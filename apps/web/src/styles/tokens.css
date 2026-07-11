@@ -19,4 +19,8 @@
   --color-danger: #f87171;
   --color-info: #38bdf8;
   --color-proof: #a78bfa;
+
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
