@@ -43,9 +43,14 @@ for the full verbatim lists, every verdict, and 4 real gaps found.
 **Gap 1 is fixed and pushed** (draw + totals settlement bugs in the
 replay path, verified live locally against a real "Algeria 3-3
 Austria" scenario). **Gap 4 is fixed** (README.md limitations section
-+ stale numbers corrected), awaiting review/push. **Gaps 2-3 remain
-unresolved.** A fresh session/tool should read that full section before doing
-anything else — do not re-run the
++ stale numbers corrected), awaiting review/push — note its "Current
+Limitations" section now needs a follow-up correction since Gap 2 and
+Gap 3 below fixed exactly the two things it lists as missing. **Gap 2
+is fixed** (Kelly Criterion risk-limit rejection, `a321413`), **not yet
+pushed.** **Gap 3 is fixed** (probability-point-shift reporting,
+`4c4c0a0`), **not yet pushed — diff needs to be reported to the user
+first, same gate as every other item.** A fresh session/tool should
+read that full section before doing anything else — do not re-run the
 investigation, the findings are already real and current as of
 2026-07-11.
 
@@ -1163,7 +1168,7 @@ re-derive or guess these from memory.**
 
 **DoD 1, 4, 5, 7, 9, 11, 13, 14**: PASS — same evidence as the corresponding numbered tests above (DoD 1↔Tests 1-3, DoD 4↔Test 9/11, DoD 5↔both paths call `buildSignalFromSnapshots`, DoD 7↔`signalEngine.ts` inspection, DoD 9↔Arena/settlement pipeline confirmed, DoD 11↔`OUTCOME_REJECTED_MOVE` rename from the P0 triage, DoD 13↔`GET /api/metrics`/`/health`/Guided Tour, DoD 14↔Tier 1's P1-9/P1-10/P1-12).
 
-### 4 real gaps found — Gap 1 fixed, Gaps 2-4 still awaiting decision
+### 4 real gaps found — all 4 fixed, awaiting review/push
 
 **✅ Gap 1 — Draw settlement missing from the replay path — FIXED
 2026-07-11, awaiting user review before push.** Root cause exactly as
@@ -1221,23 +1226,76 @@ not this session's call to discard) — but their proposed approach was
 not used. Do not resume or implement that plan without first checking
 with the user; Gap 1 is already fixed via the smaller approach above.
 
-**Gap 2 — No "risk limit exceeded → rejected" mechanism (Test 14, partially DoD 8).**
-The only risk-sizing control anywhere is Kelly Criterion's `MAX_STAKE_FRACTION` (`logic/arena.ts`) — it **clamps** the stake to at most 20% of bankroll, it does not **reject** the position. No code path anywhere rejects a paper position outright for exceeding a risk threshold with an explicit reason code. The existing P1-6 rejection-reason mechanism only covers `totals_signal`/`not_market_only_move`/`no_original_snapshot`/`draw_signal` — none risk-limit-based. DoD 8 ("every rejected signal contains a precise reason") is true for the rejections that exist, not true for a risk-limit rejection that doesn't exist.
+**✅ Gap 2 — "Risk limit exceeded → rejected" mechanism — FIXED
+2026-07-11, awaiting user review before push.** User chose Option A
+during a design brainstorm (`AskUserQuestion`): "risk limit exceeded"
+means the raw/uncapped Kelly fraction exceeds `MAX_STAKE_FRACTION`
+(0.2), not some separately-invented threshold. Implemented by
+extracting the existing inline fraction calculation in
+`calculateKellyStake` (`logic/arena.ts`) into a private
+`computeRawKellyFraction(oddsTaken, confidenceScore)` helper
+(behavior-preserving — `calculateKellyStake` still clamps exactly as
+before), then a new exported `exceedsKellyRiskLimit(oddsTaken,
+confidenceScore)` that returns `computeRawKellyFraction(...) >
+MAX_STAKE_FRACTION`. `buildKellyCriterionPosition` now returns `null`
+outright (no position opened, not silently clamped) when this is
+true. New `"risk_limit_exceeded"` branch added to the existing P1-6
+`getRejectionReason` mechanism (`RejectionReason` type in `types.ts`
+widened to match), so the same "N signals not traded" UI in
+`ArenaPanel.tsx` picks it up automatically — only a type-union
+widening needed on the frontend, no new UI code.
 
-**Gap 3 — No raw-compression-vs-probability-shift separate reporting (Test 8, DoD 3).**
-Now that Test 7 confirms the underlying odds are genuinely de-vigged, computing a probability-point shift (e.g. `1/oddsBefore - 1/oddsAfter`) would be straightforward — but `AgentSignal` only ever carries `oddsChangePct` (raw percentage compression). No probability-point-shift field exists anywhere in the signal, the archive, or any API response.
+**Real test-fixture breakage found and fixed, not a regression:** 3
+existing tests in `arena.test.ts` and 1 in `backtest.test.ts` used a
+`confidenceScore: 100, oddsAfter: 2.0` fixture combo that, correctly,
+now triggers the new rejection — by design, since that combo
+genuinely produces a raw Kelly fraction above the cap. Fixed by
+changing those fixtures to a `confidenceScore` under the trigger
+threshold (50/60, hand-verified against the Kelly formula) and
+recalculating every dependent expected value (`stakeUnits`,
+`profitUnits`, `netUnits`, `roiPercent`).
+
+9 new tests (4 for `exceedsKellyRiskLimit`, plus rejection-reason and
+`buildKellyCriterionPosition` cases), 275 total (up from 268), clean
+build. Verified live against a local dev server: a real signal with a
+high enough confidence/odds combo triggered `risk_limit_exceeded` with
+the correct reason text. Committed (`a321413`), not yet pushed.
+
+**✅ Gap 3 — Raw-compression-vs-probability-shift separate reporting —
+FIXED 2026-07-11, awaiting user review before push.** User chose
+"backend field + explanation text only" during a design brainstorm
+(`AskUserQuestion`) — no new UI panel. New
+`calculateProbabilityPointShift(oddsBefore, oddsAfter)` in
+`logic/signalEngine.ts` (`(1 / oddsAfter - 1 / oddsBefore) * 100`,
+same sign convention as the existing `oddsChangePct` — reuses TxLINE's
+already-de-vigged feed directly, no new de-vig computation, consistent
+with the Test 7 finding above). New optional
+`probabilityPointShiftPct?: number` on `AgentSignal` (`types.ts`) —
+deliberately optional, matching the existing `confidenceScore?:
+number` precedent in the same interface, so no required-field ripple
+across the many existing `AgentSignal` test fixtures across the
+codebase. `buildBaseExplanation` appends one sentence across all three
+severity branches: `"This is a separate N percentage-point
+implied-probability shift, distinct from the raw odds compression
+above."` `buildSignalFromSnapshots` computes and includes the new
+field on every signal it builds.
+
+2 new tests, 276 total (up from 275), clean build. Verified live
+against a local dev server: a real signal showed `oddsChangePct: 5.08`
+and `probabilityPointShiftPct: 0.68` as genuinely separate numbers in
+both the JSON response and the explanation text. Committed (`4c4c0a0`),
+not yet pushed.
 
 **✅ Gap 4 — `README.md` staleness — FIXED 2026-07-11, awaiting user
 review before push.** Added a "Current Limitations" section (directly
 satisfying DoD 15's "states current limitations honestly" — this
 section did not exist before): single-source odds/no multi-bookmaker
-consensus, no risk-limit rejection mechanism (cross-references Gap 2,
-still open), no probability-point-shift metric (cross-references Gap
-3, still open), the two-different-persistence-mechanisms distinction,
-free-tier hosting caveats, and tournament-bounded live validation for
-the newest features. Corrected the top-line test count (24 → 268) and
-the one present-tense "181 automated unit tests" feature-list claim
-(now 268/23 files) — deliberately left the *historical* per-session
+consensus, no risk-limit rejection mechanism, no probability-point-shift
+metric, the two-different-persistence-mechanisms distinction, free-tier
+hosting caveats, and tournament-bounded live validation for the newest
+features. Corrected the top-line test count (24 → 268) and the one
+present-tense "181 automated unit tests" feature-list claim (now
+268/23 files) — deliberately left the *historical* per-session
 narrative sections' own point-in-time numbers untouched (e.g. "63 more
 unit tests, 87 total" is an accurate record of that day, not a stale
 current claim). Added a pointer at the top of the file directing
@@ -1248,11 +1306,24 @@ session that were missing (`/api/metrics`,
 `/api/archive/similar-signals`). Docs-only, no code/test/build risk —
 `git diff --stat` confirms only `README.md` changed, 59 insertions.
 
-**Exact next action for a future session/tool:** report Gap 1 and Gap
-4's diffs to the user (Gap 1 already pushed as of this writing — see
-above), wait for review/approval on Gap 4 before push. Gaps 2-3 remain
-unresolved — present them and get the user's decision on priority/scope
-before writing any fix, same gate as every other item this session.
+**⚠️ Now stale, needs a follow-up correction:** Gap 4 was written
+*before* Gap 2 and Gap 3 were fixed, so its new "Current Limitations"
+section literally still says "no risk-limit rejection mechanism" and
+"no probability-point-shift metric" — both now false. Fix this in the
+same pass as reporting Gap 2/3's diffs: either strike those two lines
+entirely or reword them to describe what actually shipped (e.g. Kelly
+Criterion's risk-limit rejection, `probabilityPointShiftPct` in the
+explanation text) if there's still a genuinely-honest limitation to
+state about them (e.g. no dedicated UI surface for either, by design).
+
+**Exact next action for a future session/tool:** report Gap 2 and Gap
+3's diffs to the user (both committed, `a321413` and `4c4c0a0`, neither
+pushed yet — Gap 1 is already pushed, Gap 4 is committed and awaiting
+review same as 2/3), fix the now-stale README "Current Limitations"
+lines called out above, then wait for the user's explicit "push"
+before pushing anything. Once all four are pushed and verified live,
+the 20 Mandatory Tests / 15-item DoD audit is fully closed — no further
+action needed on that list.
 
 📋 Next Steps: implement Tier 1 (see above), report back, wait for
 review before Tier 2. All four "future ideas" candidates shipped

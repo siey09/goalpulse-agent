@@ -244,15 +244,19 @@ Stated honestly, as of 2026-07-11:
   it doesn't need to be. Features premised on comparing multiple
   bookmakers or computing cross-bookmaker dispersion do not apply to
   this data source and are not implemented.
-- **No explicit risk-limit rejection.** Kelly Criterion caps its stake
-  at a maximum bankroll fraction, but nothing in the system rejects a
-  paper position outright for exceeding a risk threshold with an
-  explicit reason code — the only sizing control is a clamp, not a
-  reject.
-- **No separate probability-point-shift metric.** Signals report raw
-  percentage odds compression (`oddsChangePct`) only. A de-vigged
-  implied-probability-point shift is not currently computed or
-  surfaced anywhere, despite the underlying data supporting it.
+- **Risk-limit rejection is a rule, not just a clamp.** Kelly Criterion
+  rejects a paper position outright (`risk_limit_exceeded`, surfaced in
+  the Arena's rejection reasons) when its raw, uncapped stake fraction
+  would exceed the maximum bankroll fraction — the pre-existing 20% cap
+  still exists as a display clamp, but the position itself is never
+  opened once the raw sizing crosses that line.
+- **Probability-point shift is reported alongside raw compression, in
+  the signal explanation only.** Signals carry an optional
+  `probabilityPointShiftPct` field (a de-vigged implied-probability-point
+  shift, distinct from the raw percentage odds compression in
+  `oddsChangePct`) and mention it in the explanation text. There is no
+  dedicated UI panel or chart for it — it's a backend field plus prose,
+  by design, not a gap.
 - **In-memory store resets on restart; two different persistence
   mechanisms cover different things.** `store_snapshots` (Supabase) is
   a periodic snapshot for restart recovery only — it is not a
