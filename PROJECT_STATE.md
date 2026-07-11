@@ -36,11 +36,13 @@ July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 list (P1-1 → P1-7 → P1-16 → revisit P1-4/P1-5/P1-8/P1-19 → 20
 mandatory tests → 15-item Definition of Done), one item at a time, same
 investigate→brainstorm→spec→plan→implement→review→verify-live gate
-throughout. P1-1 and P1-7 both implemented 2026-07-11 (see "RESUME
-POINT" further below) — 247 tests, awaiting user review before push.
-Next up: P1-16, user-flagged as the biggest remaining item — scope and
-flag risk before starting. Tier 1, Tier 2, P1-3, and P1-2 all
-reviewed/approved/pushed/verified live as of 2026-07-11.
+throughout. P1-1, P1-7, and P1-16 all implemented 2026-07-11 (see
+"RESUME POINT" further below) — 253 tests, awaiting user review before
+push. P1-16 was scoped down significantly (4 states, SSE monitors only,
+no polling-loop changes, no UI) after an explicit risk assessment
+presented to and approved by the user before any code was written.
+Next up: the P1-4/P1-5/P1-8/P1-19 revisits. Tier 1, Tier 2, P1-3, and
+P1-2 all reviewed/approved/pushed/verified live as of 2026-07-11.
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
@@ -983,6 +985,57 @@ tier breakdown:
   starting P1-16. **P1-16 is the user-flagged biggest remaining item —
   must scope it carefully and flag realistic effort/risk before
   starting, per their explicit instruction.**
+
+  **✅ P1-16 implemented 2026-07-11, awaiting user review before push
+  — scoped down significantly after an explicit risk assessment,
+  presented to and approved by the user before any code was written.**
+  The original ask was a unified 8-state machine
+  (INITIALIZING/SYNCING/STREAMING/ANALYZING/DEGRADED/RECONNECTING/
+  CIRCUIT_BREAKER/STOPPED) spanning the whole app. Investigated first:
+  this app has three deliberately independent subsystems (the polling
+  agent loop, documented as the signal-generation "source of truth,"
+  plus two separate SSE monitors, documented as "additive to and
+  independent from" it) — the 8 named states are a mix of
+  startup-phase concepts, one SSE connection's lifecycle, and a
+  processing-state concept that don't map onto one subsystem. Forcing
+  them into a single state would misrepresent reality or require three
+  separate machines under one banner.
+
+  **User approved the scoped-down version exactly as assessed:** 4
+  states (`STREAMING`/`STALE`/`RECONNECTING`/`STOPPED`), applied only
+  to the two SSE monitors (`services/sseStreamMonitor.ts`), **not**
+  the polling agent loop — confirmed that loop has zero existing
+  circuit-breaker substrate today, and adding real behavioral logic
+  there this close to the tournament ending was assessed as genuine
+  risk to signal generation itself, which the user explicitly agreed
+  not to take on. New `deriveStreamStatus` is a pure, read-only
+  function over `LiveStreamState`'s already-existing fields plus one
+  new `isEnabled` input — no new stored state, no change to actual
+  connect/reconnect/backoff control flow. Reuses
+  `ODDS_STALE_THRESHOLD_MS` from `feedHealth.ts` (5 minutes) rather
+  than inventing a new threshold. Surfaced **backend-only** via
+  `GET /api/metrics` — no UI indicator, user-approved decision (an
+  internal-observability field doesn't need judge-facing surface, and
+  risks alarming a judge during a live demo over a normal reconnect
+  blip). `/health` untouched.
+
+  Verified live against a running local dev server: observed the full
+  real transition sequence on startup — `RECONNECTING` (not yet
+  connected) → `STALE` (connected, no event yet) → `STREAMING`
+  (connected, real events arriving, `staleForMs` well under the
+  5-minute threshold) — using this project's real TxLINE credentials,
+  not a mock.
+
+  3 commits on `main`: `720b628` (spec), `7bdcfe3` (plan), `8d378c4`
+  (`deriveStreamStatus` + 6 new tests), `97a7fa1` (route +
+  openapi.yaml). Backend: 253 tests pass (up from 247 at P1-7 close),
+  clean build. No frontend changes, no changes to `processAgentCycle`/
+  `runGuardedAgentCycle` — confirmed exactly as scoped.
+
+  **Exact next action:** same gate as every prior item — report diff,
+  user reviews and verifies live in production, then explicitly
+  approves before push and before starting the P1-4/P1-5/P1-8/P1-19
+  revisits.
 
 - **Revisit now in scope (previously skip-listed):** P1-4, P1-5, P1-8,
   P1-19 — will each be investigated individually when reached, not
