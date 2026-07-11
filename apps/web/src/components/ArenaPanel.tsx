@@ -1,5 +1,10 @@
 import { ShieldCheck, ShieldQuestion, Swords, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Card } from "./ui/Card";
+import { SectionHeader } from "./ui/SectionHeader";
+import { StatusBadge, type StatusTone } from "./ui/StatusBadge";
+import { MetricCard } from "./ui/MetricCard";
+import { EmptyState } from "./ui/EmptyState";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
@@ -153,17 +158,21 @@ function getSkepticCritique(
   return `Skeptic check: ${leaderScoreboard.label}'s lead is diversified across ${distinctMatchCount} distinct real matches (largest single match is ${largestMatchSharePct}% of its ${settled.length} settled positions) — not an artifact of one match's outcome.`;
 }
 
+const AGENT_TONE: Record<ArenaAgentId, StatusTone> = {
+  momentum_follower: "info",
+  contrarian: "accent",
+  kelly_criterion: "proof",
+};
+
 function ScoreboardCard({
   scoreboard,
   rejections,
   isLeader,
-  accent,
   onSelectSignalId,
 }: {
   scoreboard: ArenaScoreboard;
   rejections: ArenaRejection[];
   isLeader: boolean;
-  accent: "sky" | "orange" | "violet";
   onSelectSignalId?: (signalId: string) => void;
 }) {
   // Defensive: rejections may be absent from an older backend response
@@ -172,51 +181,48 @@ function ScoreboardCard({
   // backend) - never let a shape mismatch crash the whole panel.
   const agentRejections = (rejections ?? []).filter((r) => r.agentId === scoreboard.agentId);
   const distinctReasons = Array.from(new Set(agentRejections.map((r) => r.reasonText))).slice(0, 3);
-  const accentClass =
-    accent === "sky"
-      ? "border-sky-400/20 bg-sky-400/10 text-sky-200"
-      : accent === "orange"
-        ? "border-orange-400/20 bg-orange-400/10 text-orange-200"
-        : "border-violet-400/20 bg-violet-400/10 text-violet-200";
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+    <Card className="p-5">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold text-white">{scoreboard.label}</h3>
+        <div className="flex items-center gap-2">
+          <span
+            className="h-1.5 w-1.5 shrink-0 rounded-full"
+            style={{ backgroundColor: `var(--color-${AGENT_TONE[scoreboard.agentId]})` }}
+            aria-hidden="true"
+          />
+          <h3 className="text-lg font-semibold text-white">{scoreboard.label}</h3>
+        </div>
         {isLeader && (
-          <span className="flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200">
-            <Trophy className="h-3 w-3" />
-            Leading
-          </span>
+          <StatusBadge label="Leading" tone="warning" />
         )}
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-2">
-        <div className={`rounded-2xl border p-3 ${accentClass}`}>
-          <p className="text-[9px] uppercase tracking-[0.14em] opacity-80">Net units</p>
-          <p className="mt-1 text-xl font-bold">{formatUnits(scoreboard.netUnits)}</p>
-        </div>
-        <div className={`rounded-2xl border p-3 ${accentClass}`}>
-          <p className="text-[9px] uppercase tracking-[0.14em] opacity-80">ROI</p>
-          <p className="mt-1 text-xl font-bold">
-            {scoreboard.roiPercent > 0 ? "+" : ""}
-            {scoreboard.roiPercent}%
-          </p>
-        </div>
+        <MetricCard
+          label="Net units"
+          value={formatUnits(scoreboard.netUnits)}
+          tone={scoreboard.netUnits > 0 ? "positive" : scoreboard.netUnits < 0 ? "danger" : "neutral"}
+        />
+        <MetricCard
+          label="ROI"
+          value={`${scoreboard.roiPercent > 0 ? "+" : ""}${scoreboard.roiPercent}%`}
+          tone={scoreboard.roiPercent > 0 ? "positive" : scoreboard.roiPercent < 0 ? "danger" : "neutral"}
+        />
       </div>
 
       <div className="mb-4 grid grid-cols-3 gap-2 text-center text-[11px]">
-        <div className="rounded-xl bg-[#0b0806] p-2">
+        <div className="rounded-xl border border-border bg-surface-3 p-2">
           <p className="text-stone-500">Win rate</p>
-          <p className="mt-1 font-semibold text-white">{scoreboard.winRatePct}%</p>
+          <p className="mt-1 font-mono font-semibold text-white">{scoreboard.winRatePct}%</p>
         </div>
-        <div className="rounded-xl bg-[#0b0806] p-2">
+        <div className="rounded-xl border border-border bg-surface-3 p-2">
           <p className="text-stone-500">Settled</p>
-          <p className="mt-1 font-semibold text-white">{scoreboard.settledCount}</p>
+          <p className="mt-1 font-mono font-semibold text-white">{scoreboard.settledCount}</p>
         </div>
-        <div className="rounded-xl bg-[#0b0806] p-2">
+        <div className="rounded-xl border border-border bg-surface-3 p-2">
           <p className="text-stone-500">Open</p>
-          <p className="mt-1 font-semibold text-white">{scoreboard.openPositions}</p>
+          <p className="mt-1 font-mono font-semibold text-white">{scoreboard.openPositions}</p>
         </div>
       </div>
 
@@ -232,12 +238,12 @@ function ScoreboardCard({
               {position.match} → {position.target}
             </span>
             <span
-              className={`shrink-0 font-semibold ${
+              className={`shrink-0 font-mono font-semibold ${
                 position.resultStatus === "correct"
-                  ? "text-emerald-300"
+                  ? "text-positive"
                   : position.resultStatus === "incorrect"
-                    ? "text-rose-300"
-                    : "text-amber-300"
+                    ? "text-danger"
+                    : "text-warning"
               }`}
             >
               {position.resultStatus === "pending" ? "pending" : formatUnits(position.profitUnits)}
@@ -250,7 +256,7 @@ function ScoreboardCard({
       </div>
 
       {agentRejections.length > 0 && (
-        <div className="mt-3 border-t border-white/5 pt-3">
+        <div className="mt-3 border-t border-border pt-3">
           <p className="text-[10px] uppercase tracking-[0.14em] text-stone-500">
             {agentRejections.length} signal{agentRejections.length === 1 ? "" : "s"} not traded
           </p>
@@ -263,7 +269,7 @@ function ScoreboardCard({
           </ul>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -340,40 +346,34 @@ export function ArenaPanel({ onSelectSignalId }: ArenaPanelProps = {}) {
   const skepticMessage = getSkepticCritique(recommendation, arena);
 
   return (
-    <section
-      id="agent-arena"
-      className="rounded-[28px] border border-amber-400/20 bg-gradient-to-br from-[#160f08] via-[#120d0a] to-[#070706] p-5 shadow-2xl shadow-amber-950/20"
-    >
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-amber-300">
-            <Swords className="h-4 w-4" />
-            Agent vs Agent Arena
+    <Card id="agent-arena" className="p-5">
+      <SectionHeader
+        eyebrow="Agent vs Agent Arena"
+        title="Momentum Follower vs Contrarian vs Kelly Criterion"
+        action={
+          <div className="hidden items-center gap-2 rounded-xl border border-border bg-surface-3 px-3 py-2 sm:flex">
+            <Swords className="h-3.5 w-3.5 text-accent-soft" />
+            <span className="text-[10px] uppercase tracking-[0.1em] text-stone-400">Live tournament</span>
           </div>
-          <h2 className="mt-2 text-2xl font-semibold text-white">
-            Momentum Follower vs Contrarian vs Kelly Criterion
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-400">
-            Three agents, same live signal feed, three strategies. Contrarian
-            fades signals that fire without real field support - a live,
-            causal check made at signal-creation time, never the final result.
-            Kelly Criterion takes the same side as the signal but sizes its
-            stake by an edge derived from confidence score, instead of flat
-            staking. Settlement is tamper-evident and on-chain-verified: no
-            funds move, no wagers are placed.
-          </p>
-        </div>
-      </div>
+        }
+      />
+      <p className="-mt-2 mb-5 max-w-3xl text-sm leading-6 text-stone-400">
+        Three agents, same live signal feed, three strategies. Contrarian
+        fades signals that fire without real field support - a live,
+        causal check made at signal-creation time, never the final result.
+        Kelly Criterion takes the same side as the signal but sizes its
+        stake by an edge derived from confidence score, instead of flat
+        staking. Settlement is tamper-evident and on-chain-verified: no
+        funds move, no wagers are placed.
+      </p>
 
       {isLoading ? (
-        <div className="rounded-2xl border border-white/10 bg-black/25 p-5 text-sm text-stone-400">
-          Loading arena scoreboard...
-        </div>
+        <EmptyState reason="Loading arena scoreboard..." />
       ) : arena ? (
         <>
           <div id="guide-meta-skeptic">
-            <div className="mb-4 rounded-2xl border border-amber-400/15 bg-amber-400/5 p-4">
-              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+            <div className="mb-4 rounded-2xl border border-accent/15 bg-accent/5 p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">
                 <Trophy className="h-4 w-4" />
                 Meta-agent recommendation
               </div>
@@ -381,8 +381,8 @@ export function ArenaPanel({ onSelectSignalId }: ArenaPanelProps = {}) {
             </div>
 
             {skepticMessage && (
-              <div className="mb-4 rounded-2xl border border-rose-400/15 bg-rose-400/5 p-4">
-                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-300">
+              <div className="mb-4 rounded-2xl border border-danger/15 bg-danger/5 p-4">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-danger">
                   <ShieldQuestion className="h-4 w-4" />
                   Skeptic check
                 </div>
@@ -396,38 +396,35 @@ export function ArenaPanel({ onSelectSignalId }: ArenaPanelProps = {}) {
               scoreboard={arena.momentumFollower}
               rejections={arena.rejections}
               isLeader={recommendation.agentId === "momentum_follower"}
-              accent="sky"
               onSelectSignalId={onSelectSignalId}
             />
             <ScoreboardCard
               scoreboard={arena.contrarian}
               rejections={arena.rejections}
               isLeader={recommendation.agentId === "contrarian"}
-              accent="orange"
               onSelectSignalId={onSelectSignalId}
             />
             <ScoreboardCard
               scoreboard={arena.kellyCriterion}
               rejections={arena.rejections}
               isLeader={recommendation.agentId === "kelly_criterion"}
-              accent="violet"
               onSelectSignalId={onSelectSignalId}
             />
           </div>
 
-          <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4">
+          <div className="mt-4 rounded-2xl border border-border bg-surface-3 p-4">
             <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
               <ShieldCheck className="h-4 w-4" />
               Tamper-evident settlement
             </div>
             <p className="mb-3 text-[11px] leading-5 text-stone-400">{arena.proof.note}</p>
-            <p className="mb-3 truncate text-[10px] text-stone-500">Hash: {arena.proof.hash}</p>
+            <p className="mb-3 truncate font-mono text-[10px] text-stone-500">Hash: {arena.proof.hash}</p>
 
             <button
               type="button"
               onClick={runOnchainVerify}
               disabled={onchainVerify.loading || !arena.proof.verifiableStat}
-              className="w-full rounded-lg bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-sky-200 transition hover:bg-sky-400/20 disabled:opacity-50"
+              className="w-full rounded-lg bg-info/10 px-2.5 py-1.5 text-[10px] font-semibold text-info transition hover:bg-info/20 disabled:opacity-50"
             >
               {onchainVerify.loading
                 ? "Verifying on Solana…"
@@ -442,7 +439,7 @@ export function ArenaPanel({ onSelectSignalId }: ArenaPanelProps = {}) {
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-stone-500">On-chain result</span>
                     <span
-                      className={`font-semibold ${onchainVerify.data.isValid ? "text-emerald-300" : "text-rose-300"}`}
+                      className={`font-mono font-semibold ${onchainVerify.data.isValid ? "text-positive" : "text-danger"}`}
                     >
                       {onchainVerify.data.isValid ? "PROOF VALID" : "PROOF INVALID"}
                     </span>
@@ -455,10 +452,8 @@ export function ArenaPanel({ onSelectSignalId }: ArenaPanelProps = {}) {
           </div>
         </>
       ) : (
-        <div className="rounded-2xl border border-white/10 bg-black/25 p-5 text-sm text-stone-400">
-          Waiting for settled signals to populate the tournament.
-        </div>
+        <EmptyState reason="Waiting for settled signals to populate the tournament." />
       )}
-    </section>
+    </Card>
   );
 }

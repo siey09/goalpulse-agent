@@ -1,5 +1,10 @@
 import { Activity, Gauge } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Card } from "./ui/Card";
+import { SectionHeader } from "./ui/SectionHeader";
+import { StatusBadge, type StatusTone } from "./ui/StatusBadge";
+import { EmptyState } from "./ui/EmptyState";
+import { EvidenceStamp } from "./ui/EvidenceStamp";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
@@ -23,10 +28,17 @@ function formatOdds(value?: number) {
   return value.toFixed(2);
 }
 
-function spreadWidthClass(width: MarketMakerQuote["spreadWidth"]) {
-  if (width === "NARROW") return "border-emerald-400/20 bg-emerald-400/10 text-emerald-200";
-  if (width === "MODERATE") return "border-amber-400/20 bg-amber-400/10 text-amber-200";
-  return "border-red-400/20 bg-red-400/10 text-red-200";
+function spreadWidthTone(width: MarketMakerQuote["spreadWidth"]): StatusTone {
+  if (width === "NARROW") return "positive";
+  if (width === "MODERATE") return "warning";
+  return "danger";
+}
+
+function reliabilityTone(reliability: MarketMakerQuote["reliability"]): StatusTone {
+  if (reliability === "RELIABLE") return "positive";
+  if (reliability === "UNRELIABLE") return "warning";
+  if (reliability === "SUSPENDED") return "danger";
+  return "neutral";
 }
 
 function QuoteRow({
@@ -41,20 +53,20 @@ function QuoteRow({
   ask: number;
 }) {
   return (
-    <div className="rounded-2xl bg-black/25 p-3">
+    <div className="rounded-xl border border-border bg-surface-3 p-3">
       <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">{label}</p>
       <div className="mt-2 grid grid-cols-3 gap-2 text-center">
         <div>
           <p className="text-[9px] text-stone-500">Bid</p>
-          <p className="text-sm font-semibold text-emerald-200">{formatOdds(bid)}</p>
+          <p className="font-mono text-sm font-semibold text-positive">{formatOdds(bid)}</p>
         </div>
         <div>
           <p className="text-[9px] text-stone-500">Fair</p>
-          <p className="text-sm font-semibold text-white">{formatOdds(fair)}</p>
+          <p className="font-mono text-sm font-semibold text-white">{formatOdds(fair)}</p>
         </div>
         <div>
           <p className="text-[9px] text-stone-500">Ask</p>
-          <p className="text-sm font-semibold text-orange-200">{formatOdds(ask)}</p>
+          <p className="font-mono text-sm font-semibold text-accent-soft">{formatOdds(ask)}</p>
         </div>
       </div>
     </div>
@@ -96,41 +108,34 @@ export function MarketMakerPanel() {
   const bestQuote = quotes[0];
 
   return (
-    <section
-      id="market-maker"
-      className="rounded-[28px] border border-sky-400/20 bg-gradient-to-br from-[#0d1420] via-[#10141d] to-[#070708] p-5 shadow-2xl shadow-sky-950/20"
-    >
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-sky-300">
-            <Gauge className="h-4 w-4" />
-            In-Play Market Maker
+    <Card id="market-maker" className="p-5">
+      <SectionHeader
+        eyebrow="In-Play Market Maker"
+        title="Live bid/ask quotes"
+        action={
+          <div className="hidden items-center gap-2 rounded-xl border border-border bg-surface-3 px-3 py-2 sm:flex">
+            <Gauge className="h-3.5 w-3.5 text-info" />
+            <span className="text-[10px] uppercase tracking-[0.1em] text-stone-400">De-margined fair odds</span>
           </div>
-          <h2 className="mt-2 text-2xl font-semibold text-white">
-            Live bid/ask quotes
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-400">
-            Quotes a bid/ask spread around TxLINE's own de-margined fair odds.
-            The spread widens with field pressure and data-reliability
-            problems, and narrows in calm, reliable conditions.
-          </p>
-        </div>
-      </div>
+        }
+      />
+      <p className="-mt-2 mb-5 max-w-3xl text-sm leading-6 text-stone-400">
+        Quotes a bid/ask spread around TxLINE's own de-margined fair odds.
+        The spread widens with field pressure and data-reliability
+        problems, and narrows in calm, reliable conditions.
+      </p>
 
       {isLoading ? (
-        <div className="rounded-2xl border border-white/10 bg-black/25 p-5 text-sm text-stone-400">
-          Loading market maker quotes...
-        </div>
+        <EmptyState reason="Loading market maker quotes..." />
       ) : bestQuote ? (
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+          <div className="rounded-xl border border-border bg-surface-3 p-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-lg font-semibold text-white">{bestQuote.match}</h3>
-              <span
-                className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] ${spreadWidthClass(bestQuote.spreadWidth)}`}
-              >
-                {bestQuote.spreadWidth} · {bestQuote.spreadPct}%
-              </span>
+              <StatusBadge
+                label={`${bestQuote.spreadWidth} · ${bestQuote.spreadPct}%`}
+                tone={spreadWidthTone(bestQuote.spreadWidth)}
+              />
             </div>
 
             <p className="mb-4 text-xs leading-5 text-stone-400">{bestQuote.reason}</p>
@@ -155,30 +160,37 @@ export function MarketMakerPanel() {
                 ask={bestQuote.askOdds.away}
               />
             </div>
+
+            <EvidenceStamp
+              rule="SPREAD WIDENS WITH FIELD PRESSURE"
+              delta={`${bestQuote.spreadPct}% spread`}
+              reference={`#${bestQuote.matchId}`}
+              tone="info"
+            />
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+          <div className="rounded-xl border border-border bg-surface-3 p-5">
             <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
               <Activity className="h-4 w-4" />
               Spread inputs
             </div>
             <div className="space-y-3">
-              <div className="rounded-2xl bg-[#0b0806] p-3">
+              <div className="rounded-xl border border-border bg-black/20 p-3">
                 <p className="text-[10px] uppercase tracking-[0.2em] text-stone-500">Field Pressure Score</p>
-                <p className="mt-1 text-xl font-semibold text-white">{bestQuote.fieldPressureScore}/45</p>
+                <p className="mt-1 font-mono text-xl font-semibold text-white">{bestQuote.fieldPressureScore}/45</p>
               </div>
-              <div className="rounded-2xl bg-[#0b0806] p-3">
+              <div className="rounded-xl border border-border bg-black/20 p-3">
                 <p className="text-[10px] uppercase tracking-[0.2em] text-stone-500">Reliability</p>
-                <p className="mt-1 text-xl font-semibold text-white">{bestQuote.reliability}</p>
+                <p className="mt-1">
+                  <StatusBadge label={bestQuote.reliability} tone={reliabilityTone(bestQuote.reliability)} withDot />
+                </p>
               </div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-white/10 bg-black/25 p-5 text-sm text-stone-400">
-          Waiting for a live match with odds history to quote.
-        </div>
+        <EmptyState reason="Waiting for a live match with odds history to quote." />
       )}
-    </section>
+    </Card>
   );
 }

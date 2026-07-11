@@ -28,16 +28,16 @@ export function VerificationReceipt({ selectedSignal, onchainVerify, onVerify }:
 
   const toneClass = depth
     ? depth.tone === "success"
-      ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+      ? "border-positive/30 bg-positive/10 text-positive"
       : depth.tone === "danger"
-        ? "border-red-400/30 bg-red-400/10 text-red-200"
+        ? "border-danger/30 bg-danger/10 text-danger"
         : depth.tone === "warn"
-          ? "border-orange-400/30 bg-orange-400/10 text-orange-200"
-          : "border-white/10 bg-white/5 text-stone-400"
+          ? "border-warning/30 bg-warning/10 text-warning"
+          : "border-border bg-surface-3 text-stone-400"
     : "";
 
   return (
-    <div className="rounded-lg bg-black/20 p-2 text-[10px]">
+    <div className="rounded-xl border border-border bg-surface-3 p-2 text-[10px]">
       {depth && (
         <span className={`mb-2 inline-block rounded-full border px-2.5 py-1 text-[10px] font-semibold ${toneClass}`}>
           {depth.label}
@@ -47,7 +47,7 @@ export function VerificationReceipt({ selectedSignal, onchainVerify, onVerify }:
         type="button"
         onClick={() => onVerify(selectedSignal)}
         disabled={verifyEntry.loading || !target}
-        className="mt-2 w-full rounded-lg bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-sky-200 transition hover:bg-sky-400/20 disabled:opacity-50"
+        className="mt-2 w-full rounded-lg bg-info/10 px-2.5 py-1.5 text-[10px] font-semibold text-info transition hover:bg-info/20 disabled:opacity-50"
       >
         {verifyEntry.loading
           ? "Verifying on Solana…"
@@ -70,7 +70,7 @@ export function VerificationReceipt({ selectedSignal, onchainVerify, onVerify }:
               <div className="flex items-center justify-between gap-2">
                 <span className="text-stone-500">On-chain result</span>
                 <span
-                  className={`font-semibold ${verifyEntry.data.isValid ? "text-emerald-300" : "text-red-300"}`}
+                  className={`font-mono font-semibold ${verifyEntry.data.isValid ? "text-positive" : "text-danger"}`}
                 >
                   {verifyEntry.data.isValid ? "PROOF VALID" : "PROOF FAILED"}
                 </span>
@@ -86,7 +86,7 @@ export function VerificationReceipt({ selectedSignal, onchainVerify, onVerify }:
                   href={`https://explorer.solana.com/address/${verifyEntry.data.dailyScoresPda}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-1 block truncate text-sky-300 underline"
+                  className="mt-1 block truncate text-info underline"
                 >
                   View PDA on Solana Explorer ↗
                 </a>

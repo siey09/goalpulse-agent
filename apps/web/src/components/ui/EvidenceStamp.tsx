@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
 import { Radio } from "lucide-react";
 
-export type EvidenceStampTone = "accent" | "positive" | "warning" | "danger" | "proof" | "neutral";
+export type EvidenceStampTone = "accent" | "positive" | "warning" | "danger" | "info" | "proof" | "neutral";
 
 const TONE_TEXT: Record<EvidenceStampTone, string> = {
   accent: "text-accent-soft",
   positive: "text-positive",
   warning: "text-warning",
   danger: "text-danger",
+  info: "text-info",
   proof: "text-proof",
   neutral: "text-stone-400",
 };
