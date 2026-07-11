@@ -1,5 +1,6 @@
 import { config } from "../config";
 import { getGuestJwt } from "./txlineClient";
+import { ODDS_STALE_THRESHOLD_MS } from "../logic/feedHealth";
 
 export interface LiveStreamState {
   connected: boolean;
@@ -7,6 +8,42 @@ export interface LiveStreamState {
   totalEventsReceived: number;
   totalReconnects: number;
   lastError: string | null;
+}
+
+export type StreamStatus = "STREAMING" | "STALE" | "RECONNECTING" | "STOPPED";
+
+/**
+ * Read-only derived label over LiveStreamState's existing fields - never
+ * writes state, never changes connect/reconnect/backoff behavior. Scoped
+ * to these two SSE monitors only, deliberately NOT extended to the
+ * polling agent loop (no circuit breaker) or unified into a single
+ * app-wide state machine - both confirmed as real regression risk to
+ * signal generation this close to the tournament ending (see P1-16 spec).
+ *
+ * isEnabled must be passed in (mirrors the exact condition start() uses
+ * to no-op) because state alone can't distinguish "feed disabled" from
+ * "enabled but hasn't connected yet" - both look identical
+ * (connected: false, totalReconnects: 0).
+ *
+ * RECONNECTING covers both an active backoff retry and the sub-second
+ * window before the very first connection attempt resolves - the
+ * underlying monitor has no separate "CONNECTING" state either, and this
+ * window is too short to be worth a 5th label.
+ *
+ * STALE's threshold reuses ODDS_STALE_THRESHOLD_MS from feedHealth.ts
+ * (5 minutes) rather than inventing a new one.
+ */
+export function deriveStreamStatus(
+  state: LiveStreamState,
+  isEnabled: boolean,
+  nowMs: number
+): StreamStatus {
+  if (!isEnabled) return "STOPPED";
+  if (!state.connected) return "RECONNECTING";
+  if (!state.lastEventAt) return "STALE";
+
+  const ageMs = nowMs - new Date(state.lastEventAt).getTime();
+  return ageMs > ODDS_STALE_THRESHOLD_MS ? "STALE" : "STREAMING";
 }
 
 export function parseSseData(chunk: string): string | null {

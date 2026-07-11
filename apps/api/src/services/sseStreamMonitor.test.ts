@@ -5,7 +5,8 @@ vi.mock("./txlineClient", () => ({
   getGuestJwt: vi.fn().mockResolvedValue("fake-jwt"),
 }));
 
-import { createSseStreamMonitor, parseSseData } from "./sseStreamMonitor";
+import { createSseStreamMonitor, deriveStreamStatus, parseSseData } from "./sseStreamMonitor";
+import type { LiveStreamState } from "./sseStreamMonitor";
 
 function makeFetchResponse(
   chunks: string[],
@@ -51,6 +52,60 @@ describe("parseSseData", () => {
 
   it("returns null when there is no data: line", () => {
     expect(parseSseData(": keepalive")).toBeNull();
+  });
+});
+
+function makeState(overrides: Partial<LiveStreamState> = {}): LiveStreamState {
+  return {
+    connected: false,
+    lastEventAt: null,
+    totalEventsReceived: 0,
+    totalReconnects: 0,
+    lastError: null,
+    ...overrides,
+  };
+}
+
+const NOW = new Date("2026-07-11T12:00:00.000Z").getTime();
+
+describe("deriveStreamStatus", () => {
+  it("returns STOPPED when the feed is disabled, regardless of other state", () => {
+    const state = makeState({ connected: true, lastEventAt: new Date(NOW).toISOString() });
+
+    expect(deriveStreamStatus(state, false, NOW)).toBe("STOPPED");
+  });
+
+  it("returns RECONNECTING when enabled but not currently connected", () => {
+    const state = makeState({ connected: false });
+
+    expect(deriveStreamStatus(state, true, NOW)).toBe("RECONNECTING");
+  });
+
+  it("returns STALE when connected but no event has arrived yet", () => {
+    const state = makeState({ connected: true, lastEventAt: null });
+
+    expect(deriveStreamStatus(state, true, NOW)).toBe("STALE");
+  });
+
+  it("returns STREAMING when connected with a recent event", () => {
+    const recentEventAt = new Date(NOW - 60_000).toISOString(); // 1 minute ago
+    const state = makeState({ connected: true, lastEventAt: recentEventAt });
+
+    expect(deriveStreamStatus(state, true, NOW)).toBe("STREAMING");
+  });
+
+  it("returns STALE when the last event is exactly at the 5-minute threshold", () => {
+    const eventAt = new Date(NOW - 5 * 60 * 1000).toISOString();
+    const state = makeState({ connected: true, lastEventAt: eventAt });
+
+    expect(deriveStreamStatus(state, true, NOW)).toBe("STREAMING");
+  });
+
+  it("returns STALE when the last event is just past the 5-minute threshold", () => {
+    const eventAt = new Date(NOW - 5 * 60 * 1000 - 1).toISOString();
+    const state = makeState({ connected: true, lastEventAt: eventAt });
+
+    expect(deriveStreamStatus(state, true, NOW)).toBe("STALE");
   });
 });
 
