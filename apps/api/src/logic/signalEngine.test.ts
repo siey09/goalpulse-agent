@@ -222,6 +222,21 @@ describe("buildSignalFromSnapshots", () => {
     expect(signal).not.toBeNull();
     expect(signal?.explanation).not.toContain("long-shot odds");
   });
+
+  it("reports a separate probability-point shift alongside the raw odds compression", () => {
+    const previous = makeSnapshot({ homeOdds: 2.0, awayOdds: 2.0 });
+    // 2.0 -> 1.5: implied probability moves from 50% to 66.67%, a +16.67
+    // percentage-point shift - a genuinely different number from the 25%
+    // raw compression, reported separately per the Mandatory Test Plan.
+    const current = makeSnapshot({ homeOdds: 1.5, awayOdds: 2.0 });
+
+    const signal = buildSignalFromSnapshots(current, previous);
+
+    expect(signal).not.toBeNull();
+    expect(signal?.oddsChangePct).toBe(25);
+    expect(signal?.probabilityPointShiftPct).toBe(16.67);
+    expect(signal?.explanation).toContain("16.67 percentage-point implied-probability shift");
+  });
 });
 
 describe("calculateConfidenceScore", () => {

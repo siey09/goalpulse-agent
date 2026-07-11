@@ -104,6 +104,7 @@ export interface AgentSignal {
   oddsBefore: number;
   oddsAfter: number;
   oddsChangePct: number;
+  probabilityPointShiftPct?: number;
   momentumScore: number;
   confidenceScore?: number;
   explanation: string;

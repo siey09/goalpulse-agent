@@ -25,6 +25,21 @@ function calculateCompressionPct(previousOdds: number, currentOdds: number) {
   return ((previousOdds - currentOdds) / previousOdds) * 100;
 }
 
+/**
+ * Mandatory Test Plan Gap 3: raw compression (calculateCompressionPct
+ * above) and de-vigged implied-probability movement must be reported
+ * separately, not conflated. TxLINE's feed is already de-vigged at the
+ * source (verified 2026-07-11: implied probabilities sum to ~1.0 in
+ * real live data), so this is a direct 1/odds conversion, not a new
+ * de-vig calculation. Same sign convention as calculateCompressionPct:
+ * positive means the move strengthened this side (shorter odds, higher
+ * implied probability), matching oddsChangePct's own positive direction
+ * for the identical move.
+ */
+function calculateProbabilityPointShift(oddsBefore: number, oddsAfter: number) {
+  return (1 / oddsAfter - 1 / oddsBefore) * 100;
+}
+
 function calculateMomentumScore(
   changePct: number,
   minute: number,
@@ -172,17 +187,20 @@ function buildBaseExplanation(
   target: string,
   changePct: number,
   oddsBefore: number,
-  oddsAfter: number
+  oddsAfter: number,
+  probabilityPointShiftPct: number
 ) {
+  const probabilitySentence = ` This is a separate ${round(probabilityPointShiftPct)} percentage-point implied-probability shift, distinct from the raw odds compression above.`;
+
   if (severity === "HIGH") {
-    return `${target} odds compressed by ${round(changePct)}% from ${oddsBefore} to ${oddsAfter}. The agent flags this as a high-severity sharp movement.`;
+    return `${target} odds compressed by ${round(changePct)}% from ${oddsBefore} to ${oddsAfter}. The agent flags this as a high-severity sharp movement.${probabilitySentence}`;
   }
 
   if (severity === "MEDIUM") {
-    return `${target} odds moved by ${round(changePct)}% with sustained market direction. The agent flags this as a momentum shift.`;
+    return `${target} odds moved by ${round(changePct)}% with sustained market direction. The agent flags this as a momentum shift.${probabilitySentence}`;
   }
 
-  return `${target} odds moved by ${round(changePct)}%. The agent will continue watching this match for continuation.`;
+  return `${target} odds moved by ${round(changePct)}%. The agent will continue watching this match for continuation.${probabilitySentence}`;
 }
 
 export function buildSignalFromSnapshots(
@@ -261,12 +279,15 @@ export function buildSignalFromSnapshots(
         ? "MOMENTUM_SHIFT"
         : "WATCH";
 
+  const probabilityPointShiftPct = calculateProbabilityPointShift(oddsBefore, oddsAfter);
+
   const explanation = `${buildBaseExplanation(
     severity,
     target,
     bestChangePct,
     oddsBefore,
-    oddsAfter
+    oddsAfter,
+    probabilityPointShiftPct
   )}${buildContextExplanation(target, side, oddsAfter, scoresContext)}`;
 
   const evidence = {
@@ -296,6 +317,7 @@ export function buildSignalFromSnapshots(
     oddsBefore,
     oddsAfter,
     oddsChangePct: round(bestChangePct),
+    probabilityPointShiftPct: round(probabilityPointShiftPct),
     momentumScore,
     confidenceScore,
     explanation,
