@@ -40,19 +40,21 @@ P1-2, P1-1, P1-7, P1-16, revisits — all reviewed/approved/pushed/
 verified live). The 20 Mandatory Tests + 15-item Definition of Done
 investigation pass is ALSO complete — see "RESUME POINT" further below
 for the full verbatim lists, every verdict, and 4 real gaps found.
-**Gap 1 is fixed and pushed** (draw + totals settlement bugs in the
-replay path, verified live locally against a real "Algeria 3-3
-Austria" scenario). **Gap 4 is fixed** (README.md limitations section
-+ stale numbers corrected), awaiting review/push — note its "Current
-Limitations" section now needs a follow-up correction since Gap 2 and
-Gap 3 below fixed exactly the two things it lists as missing. **Gap 2
-is fixed** (Kelly Criterion risk-limit rejection, `a321413`), **not yet
-pushed.** **Gap 3 is fixed** (probability-point-shift reporting,
-`4c4c0a0`), **not yet pushed — diff needs to be reported to the user
-first, same gate as every other item.** A fresh session/tool should
-read that full section before doing anything else — do not re-run the
-investigation, the findings are already real and current as of
-2026-07-11.
+**All 4 gaps fixed, pushed, and verified live in production
+2026-07-11.** Gap 1 (draw + totals settlement bugs in the replay
+path), Gap 2 (Kelly Criterion risk-limit rejection), Gap 3
+(probability-point-shift reporting), Gap 4 (README staleness +
+follow-up correction for the two claims Gap 2/3 made stale) —
+pushed as `f9d76cc..13f41e2`. Live verification: `/health` clean
+(both streams connected, zero reconnects), `/api/arena` showed 65
+real `risk_limit_exceeded` rejections with correct reason text,
+`/api/signals` showed a real signal with `oddsChangePct: 31.91` and
+`probabilityPointShiftPct: 18.23` as genuinely separate numbers, both
+in the JSON and the explanation text. **The 20 Mandatory Tests /
+15-item Definition of Done audit is now fully closed — no further
+action needed on that list.** A fresh session/tool does not need to
+read the rest of this "RESUME POINT" section unless investigating
+history; see below only for the full record.
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
@@ -1168,7 +1170,7 @@ re-derive or guess these from memory.**
 
 **DoD 1, 4, 5, 7, 9, 11, 13, 14**: PASS — same evidence as the corresponding numbered tests above (DoD 1↔Tests 1-3, DoD 4↔Test 9/11, DoD 5↔both paths call `buildSignalFromSnapshots`, DoD 7↔`signalEngine.ts` inspection, DoD 9↔Arena/settlement pipeline confirmed, DoD 11↔`OUTCOME_REJECTED_MOVE` rename from the P0 triage, DoD 13↔`GET /api/metrics`/`/health`/Guided Tour, DoD 14↔Tier 1's P1-9/P1-10/P1-12).
 
-### 4 real gaps found — all 4 fixed, awaiting review/push
+### 4 real gaps found — all 4 fixed, pushed, and verified live 2026-07-11
 
 **✅ Gap 1 — Draw settlement missing from the replay path — FIXED
 2026-07-11, awaiting user review before push.** Root cause exactly as
@@ -1316,14 +1318,15 @@ Criterion's risk-limit rejection, `probabilityPointShiftPct` in the
 explanation text) if there's still a genuinely-honest limitation to
 state about them (e.g. no dedicated UI surface for either, by design).
 
-**Exact next action for a future session/tool:** report Gap 2 and Gap
-3's diffs to the user (both committed, `a321413` and `4c4c0a0`, neither
-pushed yet — Gap 1 is already pushed, Gap 4 is committed and awaiting
-review same as 2/3), fix the now-stale README "Current Limitations"
-lines called out above, then wait for the user's explicit "push"
-before pushing anything. Once all four are pushed and verified live,
-the 20 Mandatory Tests / 15-item DoD audit is fully closed — no further
-action needed on that list.
+**✅ All 4 gaps pushed and confirmed live in production 2026-07-11**
+(`f9d76cc..13f41e2`). `/health` clean, `/api/arena` showed 65 real
+`risk_limit_exceeded` rejections with correct reason text, `/api/signals`
+showed a real signal (`oddsChangePct: 31.91`, `probabilityPointShiftPct:
+18.23`) proving the two numbers are genuinely separate, in both the
+JSON and the explanation text. The README's now-stale "Current
+Limitations" claims were corrected in the same push. **The 20
+Mandatory Tests / 15-item DoD audit is fully closed — no further
+action needed on that list.**
 
 📋 Next Steps: implement Tier 1 (see above), report back, wait for
 review before Tier 2. All four "future ideas" candidates shipped
