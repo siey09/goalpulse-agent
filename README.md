@@ -6,6 +6,13 @@ It monitors live football match markets, detects meaningful odds movement, enric
 
 GoalPulse is analytics-only. It does not place wagers, custody funds, execute trades, or facilitate betting.
 
+**This README is a project overview, not the current session log.** For
+up-to-date, session-by-session detail on what shipped, what's in
+progress, and what's deliberately deferred, `PROJECT_STATE.md` at the
+repo root is the authoritative reference — it is updated after every
+milestone. As of 2026-07-11: 268 automated backend unit tests across
+23 files, 26 API endpoints (documented interactively at `/api/docs`).
+
 ## Live Links
 
 - Frontend: https://goalpulse-agent.vercel.app
@@ -109,7 +116,15 @@ Beyond code bugs, two real production deployment incidents were found and resolv
 - Historical hit-rate per signal type from the permanent archive, now visible on the dashboard's Signal Performance panel
 - Retroactive Arena backtest (Momentum Follower + Kelly Criterion) against the full archived signal history
 - Pattern-matched signal correlation: same side/severity/market repeating across matches
-- 181 automated unit tests
+- Agent vs Agent Arena third-strategy meta-agent recommendation and Skeptic self-audit (concentration-bias check on whichever agent is currently leading)
+- Historical Pattern Match: ranks past archived signals by similarity to the one currently selected
+- Verification Depth Score: honest per-signal on-chain verifiability status, never inferred
+- Confidence Calibration, Signal Correlation, and Signal Performance dashboard panels backed by the permanent archive
+- Draw-side (three-way 1X2) signal generation, settlement, and steam-move detection
+- Longshot-odds confidence penalty, calibrated from real archived settlement data
+- SSE stream connectivity status (`STREAMING`/`STALE`/`RECONNECTING`/`STOPPED`) via `GET /api/metrics`
+- CI (GitHub Actions), pinned dependencies, MIT license
+- 268 automated backend unit tests across 23 files
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer
@@ -201,6 +216,9 @@ npm.cmd run test
 - GET /api/signal-correlation/patterns (pattern-matched cross-match clusters)
 - GET /api/signal-performance (historical hit-rate per signal type)
 - GET /api/signal-performance/by-confidence (accuracy bucketed by composite confidence score)
+- GET /api/signal-performance/event-latency (event-to-signal timing gap; explicitly a proxy metric, not a full reaction-latency pipeline)
+- GET /api/archive/similar-signals (ranks past archived signals by similarity to a given one)
+- GET /api/metrics (uptime, decision latency, SSE stream status, duplicate-drop counters)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events)
@@ -211,6 +229,46 @@ npm.cmd run test
 ## Demo Highlights
 
 Judges should look for the live market board, TXODDS field context, Field Pressure Index, field-backed vs market-only labels, final score settlement audit, score breakdown rows, replay mode, the Verified Case Studies panel and small-sample disclaimer, the interactive API docs at /api/docs, and analytics-only compliance boundary.
+
+## Current Limitations
+
+Stated honestly, as of 2026-07-11:
+
+- **Single-source odds, not multi-bookmaker consensus.** TxLINE's feed is
+  powered by TXODDS' own "Stable Price" consensus pricing engine — lines
+  across global operators are already blended into one price before
+  reaching this API. `evidence.bookmaker` is effectively a constant
+  value, not genuine per-bookmaker data. Verified: the feed is already
+  de-vigged at the source (implied probabilities sum to ~1.0 in real
+  live data), so no de-vig calculation is performed by this codebase —
+  it doesn't need to be. Features premised on comparing multiple
+  bookmakers or computing cross-bookmaker dispersion do not apply to
+  this data source and are not implemented.
+- **No explicit risk-limit rejection.** Kelly Criterion caps its stake
+  at a maximum bankroll fraction, but nothing in the system rejects a
+  paper position outright for exceeding a risk threshold with an
+  explicit reason code — the only sizing control is a clamp, not a
+  reject.
+- **No separate probability-point-shift metric.** Signals report raw
+  percentage odds compression (`oddsChangePct`) only. A de-vigged
+  implied-probability-point shift is not currently computed or
+  surfaced anywhere, despite the underlying data supporting it.
+- **In-memory store resets on restart; two different persistence
+  mechanisms cover different things.** `store_snapshots` (Supabase) is
+  a periodic snapshot for restart recovery only — it is not a
+  permanent history. `signal_archive` and `match_archive` are separate,
+  genuinely permanent, insert-only Supabase tables that survive both
+  restarts and the in-memory store's own retention caps.
+- **Free-tier hosting.** Render's backend free tier has a real monthly
+  bandwidth cap (hit once, on 2026-07-10, and resolved by adding a
+  billing card) and deploys can lag noticeably behind a push to `main`
+  — do not assume a push is live within minutes.
+- **Tournament-bounded live validation.** As the World Cup narrows
+  toward its final, the volume of new live signals available to
+  validate new features against shrinks correspondingly; some recent
+  additions (e.g. draw-side signal generation) are verified correct by
+  unit tests and structurally, but had not yet had a real live
+  occurrence to observe end-to-end at the time they shipped.
 
 ## Compliance Boundary
 

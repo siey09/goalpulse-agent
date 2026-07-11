@@ -40,10 +40,11 @@ P1-2, P1-1, P1-7, P1-16, revisits — all reviewed/approved/pushed/
 verified live). The 20 Mandatory Tests + 15-item Definition of Done
 investigation pass is ALSO complete — see "RESUME POINT" further below
 for the full verbatim lists, every verdict, and 4 real gaps found.
-**Gap 1 is now fixed** (draw + totals settlement bugs in the replay
-path, verified live locally against a real "Algeria 3-3 Austria"
-scenario) — awaiting user review/push. **Gaps 2-4 remain unresolved.**
-A fresh session/tool should read that full section before doing
+**Gap 1 is fixed and pushed** (draw + totals settlement bugs in the
+replay path, verified live locally against a real "Algeria 3-3
+Austria" scenario). **Gap 4 is fixed** (README.md limitations section
++ stale numbers corrected), awaiting review/push. **Gaps 2-3 remain
+unresolved.** A fresh session/tool should read that full section before doing
 anything else — do not re-run the
 investigation, the findings are already real and current as of
 2026-07-11.
@@ -1226,11 +1227,30 @@ The only risk-sizing control anywhere is Kelly Criterion's `MAX_STAKE_FRACTION` 
 **Gap 3 — No raw-compression-vs-probability-shift separate reporting (Test 8, DoD 3).**
 Now that Test 7 confirms the underlying odds are genuinely de-vigged, computing a probability-point shift (e.g. `1/oddsBefore - 1/oddsAfter`) would be straightforward — but `AgentSignal` only ever carries `oddsChangePct` (raw percentage compression). No probability-point-shift field exists anywhere in the signal, the archive, or any API response.
 
-**Gap 4 — `README.md` is badly stale (DoD 15, indirectly DoD 13).**
-Still describes pre-session state: "24 automated unit tests" (actual count is 253 as of P1-16), and only 6 "beyond the core loop" features listed when dozens have shipped this session (Arena's 3rd strategy, Signal Correlation, Confidence Calibration, draw-side signals, the P1-2 longshot penalty, P1-18 idempotency, CI, P1-16 stream status, etc.). Last synced 2026-07-10, predates the entire day-of P0/P1 remediation arc (Tier 1 through P1-16 plus the P1-4/P1-5/P1-8/P1-19 revisits).
+**✅ Gap 4 — `README.md` staleness — FIXED 2026-07-11, awaiting user
+review before push.** Added a "Current Limitations" section (directly
+satisfying DoD 15's "states current limitations honestly" — this
+section did not exist before): single-source odds/no multi-bookmaker
+consensus, no risk-limit rejection mechanism (cross-references Gap 2,
+still open), no probability-point-shift metric (cross-references Gap
+3, still open), the two-different-persistence-mechanisms distinction,
+free-tier hosting caveats, and tournament-bounded live validation for
+the newest features. Corrected the top-line test count (24 → 268) and
+the one present-tense "181 automated unit tests" feature-list claim
+(now 268/23 files) — deliberately left the *historical* per-session
+narrative sections' own point-in-time numbers untouched (e.g. "63 more
+unit tests, 87 total" is an accurate record of that day, not a stale
+current claim). Added a pointer at the top of the file directing
+readers to `PROJECT_STATE.md` as the authoritative current-state
+reference. Updated the API endpoint list with routes added this
+session that were missing (`/api/metrics`,
+`/api/signal-performance/event-latency`,
+`/api/archive/similar-signals`). Docs-only, no code/test/build risk —
+`git diff --stat` confirms only `README.md` changed, 59 insertions.
 
-**Exact next action for a future session/tool:** report Gap 1's diff to
-the user, wait for review/approval before push. Gaps 2-4 remain fully
+**Exact next action for a future session/tool:** report Gap 1 and Gap
+4's diffs to the user (Gap 1 already pushed as of this writing — see
+above), wait for review/approval on Gap 4 before push. Gaps 2-3 remain
 unresolved — present them and get the user's decision on priority/scope
 before writing any fix, same gate as every other item this session.
 
