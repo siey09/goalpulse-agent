@@ -36,13 +36,12 @@ July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 list (P1-1 → P1-7 → P1-16 → revisit P1-4/P1-5/P1-8/P1-19 → 20
 mandatory tests → 15-item Definition of Done), one item at a time, same
 investigate→brainstorm→spec→plan→implement→review→verify-live gate
-throughout. P1-1, P1-7, and P1-16 all implemented 2026-07-11 (see
-"RESUME POINT" further below) — 253 tests, awaiting user review before
-push. P1-16 was scoped down significantly (4 states, SSE monitors only,
-no polling-loop changes, no UI) after an explicit risk assessment
-presented to and approved by the user before any code was written.
-Next up: the P1-4/P1-5/P1-8/P1-19 revisits. Tier 1, Tier 2, P1-3, and
-P1-2 all reviewed/approved/pushed/verified live as of 2026-07-11.
+throughout. Everything through P1-16 is done and pushed: Tier 1, Tier
+2, P1-3, P1-2, P1-1, P1-7, and P1-16 all reviewed/approved/pushed/
+verified live as of 2026-07-11. The P1-4/P1-5/P1-8/P1-19 revisits are
+also done (investigation-only, all four confirmed, zero code changes).
+Next up: the 20 mandatory tests and the 15-item Definition of Done
+checklist (see "RESUME POINT" further below for full detail).
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
@@ -1026,25 +1025,53 @@ tier breakdown:
   5-minute threshold) — using this project's real TxLINE credentials,
   not a mock.
 
-  3 commits on `main`: `720b628` (spec), `7bdcfe3` (plan), `8d378c4`
+  4 commits on `main`: `720b628` (spec), `7bdcfe3` (plan), `8d378c4`
   (`deriveStreamStatus` + 6 new tests), `97a7fa1` (route +
   openapi.yaml). Backend: 253 tests pass (up from 247 at P1-7 close),
   clean build. No frontend changes, no changes to `processAgentCycle`/
-  `runGuardedAgentCycle` — confirmed exactly as scoped.
+  `runGuardedAgentCycle` — confirmed exactly as scoped. Reviewed and
+  approved by the user, pushed to `main` 2026-07-11.
 
-  **Exact next action:** same gate as every prior item — report diff,
-  user reviews and verifies live in production, then explicitly
-  approves before push and before starting the P1-4/P1-5/P1-8/P1-19
-  revisits.
+  **✅ P1-4/P1-5/P1-8/P1-19 revisited 2026-07-11 — all four confirmed,
+  zero code changes needed.** Investigated each against real current
+  state rather than assumed from the earlier P0-phase finding:
+  - **P1-4** (distinguish per-bookmaker vs consensus): confirmed
+    not-applicable. Re-verified live: 100 current live signals via
+    `GET /api/signals` show exactly one `evidence.bookmaker` value
+    (`TXLineStablePriceDemargined`); `txlineClient.ts` still does a
+    straight passthrough with zero aggregation logic. Same finding as
+    the P0-1/P0-2 triage, unchanged.
+  - **P1-5** (coverage/dispersion in confidence scoring):
+    confirmed not-applicable, same root cause as P1-4 — "coverage/
+    dispersion" is inherently a multi-source concept (how many
+    bookmakers reported, how much they disagree); with only one
+    consensus price stream, there is no dispersion to compute.
+  - **P1-8** (LLM out of core decisions): confirmed true. Zero
+    LLM/AI API references anywhere in the codebase (backend or
+    frontend, confirmed by grep). The "GoalPulse Analyst Chat"
+    feature — the only plausible place one could be hiding — is
+    explicitly deterministic: its own UI copy states this
+    ("Deterministic analyst replies using the current signals...")
+    and its implementation is plain keyword-matching over
+    already-computed API data, no external model call.
+  - **P1-19** (no large refactor before submission): confirmed not
+    violated. Every actual application-code commit this session is
+    small and incremental (largest under ~100 lines changed); the one
+    3000+ line commit found in the session's git history was a
+    docs/plans housekeeping bundle, not a code refactor.
 
-- **Revisit now in scope (previously skip-listed):** P1-4, P1-5, P1-8,
-  P1-19 — will each be investigated individually when reached, not
-  assumed. P1-4/P1-5 explicitly flagged by the user as likely
-  not-applicable given the verified single-consensus-source finding
-  (same pattern as P0-1/P0-2), to be confirmed not assumed before any
-  code is written. P1-8 (LLM already out of core decisions) and P1-19
-  (no large refactor before submission) are expected to be
-  confirm-and-document items, not build items.
+  No spec/plan/implementation cycle for these four — pure
+  investigation-and-confirm items, no code diff to review, consistent
+  with the P1-13/P1-14 precedent from Tier 1.
+
+  **Exact next action:** the 20 mandatory tests from the PDF's
+  Mandatory Test Plan (map each to a real applicable test or mark
+  not-applicable with reasoning) and the 15-item Definition of Done
+  checklist, per the user's explicit ordering.
+
+- **P1-4, P1-5, P1-8, P1-19 (previously skip-listed):** ✅ done — see
+  "P1-4/P1-5/P1-8/P1-19 revisited 2026-07-11" entry above for the full
+  verdict on all four (all confirmed, zero code changes needed).
 
 **Still fully pending, not started at all:** the 20 mandatory tests from
 the PDF's Mandatory Test Plan (map each to either a real applicable test
