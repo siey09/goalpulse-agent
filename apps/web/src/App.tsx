@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+﻿import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SignalIntelligencePanel } from "./components/SignalIntelligencePanel";
 import { MarketMakerPanel } from "./components/MarketMakerPanel";
 import { SteamMoveDetectionPanel } from "./components/SteamMoveDetectionPanel";
@@ -18,15 +18,38 @@ import {
   applyGuideSpotlight as applyPreviewGuideSpotlight,
   getGuideStepElement,
 } from "./app/guideSpotlight";
-import { CommandCenterPage } from "./features/overview/CommandCenterPage";
-import { SignalsPage } from "./features/signals/SignalsPage";
-import { AgentArenaPage } from "./features/arena/AgentArenaPage";
-import { MarketMakerPage } from "./features/market-maker/MarketMakerPage";
-import { ArchivePage } from "./features/archive/ArchivePage";
-import { LiveMarketsPage } from "./features/markets/LiveMarketsPage";
-import { ReplayLabPage } from "./features/replay/ReplayLabPage";
-import { VerificationPage } from "./features/verification/VerificationPage";
-import { SystemHealthPage } from "./features/health/SystemHealthPage";
+// Lazy-loaded: only one destination is ever visible at a time in the
+// Command Center preview, so there's no reason to bundle all 9 pages'
+// code into the initial chunk a default-page (non-preview) visitor
+// never needs. Named-export modules, so each resolves .default via
+// .then() rather than requiring the page files themselves to change.
+const CommandCenterPage = lazy(() =>
+  import("./features/overview/CommandCenterPage").then((m) => ({ default: m.CommandCenterPage }))
+);
+const SignalsPage = lazy(() =>
+  import("./features/signals/SignalsPage").then((m) => ({ default: m.SignalsPage }))
+);
+const AgentArenaPage = lazy(() =>
+  import("./features/arena/AgentArenaPage").then((m) => ({ default: m.AgentArenaPage }))
+);
+const MarketMakerPage = lazy(() =>
+  import("./features/market-maker/MarketMakerPage").then((m) => ({ default: m.MarketMakerPage }))
+);
+const ArchivePage = lazy(() =>
+  import("./features/archive/ArchivePage").then((m) => ({ default: m.ArchivePage }))
+);
+const LiveMarketsPage = lazy(() =>
+  import("./features/markets/LiveMarketsPage").then((m) => ({ default: m.LiveMarketsPage }))
+);
+const ReplayLabPage = lazy(() =>
+  import("./features/replay/ReplayLabPage").then((m) => ({ default: m.ReplayLabPage }))
+);
+const VerificationPage = lazy(() =>
+  import("./features/verification/VerificationPage").then((m) => ({ default: m.VerificationPage }))
+);
+const SystemHealthPage = lazy(() =>
+  import("./features/health/SystemHealthPage").then((m) => ({ default: m.SystemHealthPage }))
+);
 import { VerificationReceipt } from "./components/VerificationReceipt";
 import { SignalAuditDrawer } from "./components/signals/SignalAuditDrawer";
 import type {
@@ -1620,13 +1643,17 @@ function App() {
         );
         break;
       case "agent-arena":
-        destinationContent = <AgentArenaPage />;
+        destinationContent = (
+          <AgentArenaPage
+            onSelectSignalId={(signalId) => setSelectedSignal(signals.find((signal) => signal.id === signalId) ?? null)}
+          />
+        );
         break;
       case "market-maker":
         destinationContent = <MarketMakerPage />;
         break;
       case "archive":
-        destinationContent = <ArchivePage />;
+        destinationContent = <ArchivePage onSelectSignal={setSelectedSignal} />;
         break;
       case "live-markets":
         destinationContent = (
@@ -1719,7 +1746,15 @@ function App() {
           onSelectDestination={setPreviewDestination}
           {...shellProps}
         >
-          {destinationContent}
+          <Suspense
+            fallback={
+              <div className="rounded-2xl border border-border bg-surface-2 p-5 text-sm text-stone-400">
+                Loading...
+              </div>
+            }
+          >
+            {destinationContent}
+          </Suspense>
         </AppShell>
 
         <SignalAuditDrawer

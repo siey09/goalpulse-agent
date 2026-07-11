@@ -1,9 +1,13 @@
 import { ArenaPanel } from "../../components/ArenaPanel";
 
-export function AgentArenaPage() {
+export interface AgentArenaPageProps {
+  onSelectSignalId?: (signalId: string) => void;
+}
+
+export function AgentArenaPage({ onSelectSignalId }: AgentArenaPageProps = {}) {
   return (
     <div className="space-y-4">
-      <ArenaPanel />
+      <ArenaPanel onSelectSignalId={onSelectSignalId} />
     </div>
   );
 }

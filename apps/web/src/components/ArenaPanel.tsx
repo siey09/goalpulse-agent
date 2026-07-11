@@ -158,11 +158,13 @@ function ScoreboardCard({
   rejections,
   isLeader,
   accent,
+  onSelectSignalId,
 }: {
   scoreboard: ArenaScoreboard;
   rejections: ArenaRejection[];
   isLeader: boolean;
   accent: "sky" | "orange" | "violet";
+  onSelectSignalId?: (signalId: string) => void;
 }) {
   // Defensive: rejections may be absent from an older backend response
   // (e.g. during this project's documented Render deploy-lag window,
@@ -220,9 +222,11 @@ function ScoreboardCard({
 
       <div className="space-y-1.5">
         {scoreboard.positions.slice(0, 4).map((position) => (
-          <div
+          <button
             key={position.signalId}
-            className="flex items-center justify-between gap-2 rounded-xl bg-black/25 px-3 py-2 text-[11px]"
+            type="button"
+            onClick={() => onSelectSignalId?.(position.signalId)}
+            className="flex w-full items-center justify-between gap-2 rounded-xl bg-black/25 px-3 py-2 text-left text-[11px] transition hover:bg-black/40"
           >
             <span className="truncate text-stone-300">
               {position.match} → {position.target}
@@ -238,7 +242,7 @@ function ScoreboardCard({
             >
               {position.resultStatus === "pending" ? "pending" : formatUnits(position.profitUnits)}
             </span>
-          </div>
+          </button>
         ))}
         {scoreboard.positions.length === 0 && (
           <p className="text-[11px] text-stone-500">No positions yet.</p>
@@ -263,7 +267,11 @@ function ScoreboardCard({
   );
 }
 
-export function ArenaPanel() {
+export interface ArenaPanelProps {
+  onSelectSignalId?: (signalId: string) => void;
+}
+
+export function ArenaPanel({ onSelectSignalId }: ArenaPanelProps = {}) {
   const [arena, setArena] = useState<ArenaResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [onchainVerify, setOnchainVerify] = useState<{
@@ -389,18 +397,21 @@ export function ArenaPanel() {
               rejections={arena.rejections}
               isLeader={recommendation.agentId === "momentum_follower"}
               accent="sky"
+              onSelectSignalId={onSelectSignalId}
             />
             <ScoreboardCard
               scoreboard={arena.contrarian}
               rejections={arena.rejections}
               isLeader={recommendation.agentId === "contrarian"}
               accent="orange"
+              onSelectSignalId={onSelectSignalId}
             />
             <ScoreboardCard
               scoreboard={arena.kellyCriterion}
               rejections={arena.rejections}
               isLeader={recommendation.agentId === "kelly_criterion"}
               accent="violet"
+              onSelectSignalId={onSelectSignalId}
             />
           </div>
 

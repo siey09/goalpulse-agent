@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Archive, Search } from "lucide-react";
+import type { AgentSignal } from "../types";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
@@ -22,6 +23,32 @@ type ArchiveEntry = {
     confidenceScore?: number;
   };
 };
+
+/**
+ * Archive rows don't carry the full live-signal shape (no oddsBefore/
+ * oddsAfter, no evidence/scoresContext, no probabilityPointShiftPct -
+ * the permanent archive is a narrower record than the in-memory
+ * signal). The Signal Audit Drawer already renders honest fallbacks
+ * for whatever's missing rather than fabricating it, so mapping only
+ * the fields that genuinely exist here is safe.
+ */
+function archiveEntryToSignal(entry: ArchiveEntry): AgentSignal {
+  return {
+    id: entry.signalId,
+    matchId: entry.matchId,
+    match: entry.signalData?.match,
+    target: entry.signalData?.target,
+    side: entry.side,
+    type: entry.signalType,
+    severity: entry.severity,
+    momentumScore: entry.momentumScore,
+    oddsChangePct: entry.oddsChangePct,
+    confidenceScore: entry.signalData?.confidenceScore,
+    explanation: entry.signalData?.explanation,
+    createdAt: entry.archivedAt,
+    resultStatus: entry.resultStatus,
+  };
+}
 
 type ArchivePagination = {
   page: number;
@@ -58,7 +85,11 @@ function severityClass(severity: string) {
   return "border-white/10 bg-black/20 text-stone-400";
 }
 
-export function SignalArchivePanel() {
+export interface SignalArchivePanelProps {
+  onSelectSignal?: (signal: AgentSignal) => void;
+}
+
+export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps = {}) {
   const [entries, setEntries] = useState<ArchiveEntry[]>([]);
   const [pagination, setPagination] = useState<ArchivePagination | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -212,9 +243,11 @@ export function SignalArchivePanel() {
           </div>
         ) : (
           entries.map((entry) => (
-            <div
+            <button
               key={`${entry.signalId}-${entry.event}`}
-              className="rounded-2xl border border-white/10 bg-black/20 p-3"
+              type="button"
+              onClick={() => onSelectSignal?.(archiveEntryToSignal(entry))}
+              className="w-full rounded-2xl border border-white/10 bg-black/20 p-3 text-left transition hover:bg-black/30"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-sm font-semibold text-white">
@@ -240,7 +273,7 @@ export function SignalArchivePanel() {
                 <span>{entry.oddsChangePct}%</span>
                 <span className="ml-auto text-stone-500">{formatDate(entry.archivedAt)}</span>
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>
