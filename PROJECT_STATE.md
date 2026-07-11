@@ -41,20 +41,33 @@ verified live). The 20 Mandatory Tests + 15-item Definition of Done
 investigation pass is ALSO complete — see "RESUME POINT" further below
 for the full verbatim lists, every verdict, and 4 real gaps found.
 **All 4 gaps fixed, pushed, and verified live in production
-2026-07-11.** Gap 1 (draw + totals settlement bugs in the replay
-path), Gap 2 (Kelly Criterion risk-limit rejection), Gap 3
-(probability-point-shift reporting), Gap 4 (README staleness +
-follow-up correction for the two claims Gap 2/3 made stale) —
-pushed as `f9d76cc..13f41e2`. Live verification: `/health` clean
-(both streams connected, zero reconnects), `/api/arena` showed 65
-real `risk_limit_exceeded` rejections with correct reason text,
-`/api/signals` showed a real signal with `oddsChangePct: 31.91` and
-`probabilityPointShiftPct: 18.23` as genuinely separate numbers, both
-in the JSON and the explanation text. **The 20 Mandatory Tests /
-15-item Definition of Done audit is now fully closed — no further
-action needed on that list.** A fresh session/tool does not need to
-read the rest of this "RESUME POINT" section unless investigating
-history; see below only for the full record.
+2026-07-11 — independently confirmed twice (once during
+implementation, once separately by the user).** Gap 1 (draw + totals
+settlement bugs in the replay path), Gap 2 (Kelly Criterion
+risk-limit rejection), Gap 3 (probability-point-shift reporting),
+Gap 4 (README staleness + follow-up correction for the two claims
+Gap 2/3 made stale) — pushed as `f9d76cc..13f41e2`. Live verification:
+`/health` clean (both streams connected, zero reconnects),
+`/api/arena` showed real `risk_limit_exceeded` rejections with
+correct reason text (65 at first check, 90 at the user's independent
+recheck minutes later — production data accumulating between checks,
+not a discrepancy), `/api/signals` showed a real signal with
+`oddsChangePct: 31.91` and `probabilityPointShiftPct: 18.23` as
+genuinely separate numbers, both in the JSON and the explanation
+text. One transient deploy-transition console blip self-resolved on
+reload (same known pattern documented earlier this session, not a
+new bug). **User has explicitly approved and closed this out.** **The
+20 Mandatory Tests / 15-item Definition of Done audit is now fully
+closed — no further action needed on that list.** A fresh
+session/tool does not need to read the rest of this "RESUME POINT"
+section unless investigating history; see below only for the full
+record.
+
+**Entire external technical review (6 P0 items + full P1 tier queue +
+this 4-gap Mandatory Test Plan pass) is complete as of 2026-07-11.
+Nothing outstanding from that review. Next direction is open — awaiting
+user's call given the 2026-07-19 deadline (8 days out at time of
+writing).**
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
