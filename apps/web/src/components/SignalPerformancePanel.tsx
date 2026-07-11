@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import { TrendingUp } from "lucide-react";
+import { Card } from "./ui/Card";
+import { SectionHeader } from "./ui/SectionHeader";
+import type { StatusTone } from "./ui/StatusBadge";
+import { EmptyState } from "./ui/EmptyState";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
@@ -21,11 +25,21 @@ type EventLatencySummary = {
   negativeGapPct: number;
 };
 
-function accuracyClass(accuracyPct: number) {
-  if (accuracyPct >= 70) return "text-emerald-300";
-  if (accuracyPct >= 50) return "text-amber-300";
-  return "text-rose-300";
+function accuracyTone(accuracyPct: number): StatusTone {
+  if (accuracyPct >= 70) return "positive";
+  if (accuracyPct >= 50) return "warning";
+  return "danger";
 }
+
+const ACCURACY_TEXT: Record<StatusTone, string> = {
+  positive: "text-positive",
+  warning: "text-warning",
+  danger: "text-danger",
+  info: "text-info",
+  neutral: "text-stone-300",
+  accent: "text-accent-soft",
+  proof: "text-proof",
+};
 
 export function SignalPerformancePanel() {
   const [performance, setPerformance] = useState<SignalTypePerformance[]>([]);
@@ -96,38 +110,37 @@ export function SignalPerformancePanel() {
   }, []);
 
   return (
-    <div className="rounded-[28px] border border-white/10 bg-[#120d09]/90 p-5 shadow-2xl shadow-black/30">
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs text-stone-500">Track record</p>
-          <h2 className="text-xl font-semibold text-white">Signal performance</h2>
-        </div>
-
-        <div className="flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1.5 text-xs font-semibold text-sky-200">
-          <TrendingUp className="h-3.5 w-3.5" />
-          Historical accuracy
-        </div>
-      </div>
+    <Card className="p-5">
+      <SectionHeader
+        eyebrow="Track record"
+        title="Signal performance"
+        action={
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-3 px-3 py-2">
+            <TrendingUp className="h-3.5 w-3.5 text-info" />
+            <span className="text-[10px] uppercase tracking-[0.1em] text-stone-400">Historical accuracy</span>
+          </div>
+        }
+      />
 
       <div className="grid gap-3 sm:grid-cols-3">
         {isLoading ? (
-          <div className="col-span-full rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-stone-400">
-            Loading signal performance...
+          <div className="col-span-full">
+            <EmptyState reason="Loading signal performance..." />
           </div>
         ) : performance.length === 0 ? (
-          <div className="col-span-full rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-stone-400">
-            No settled signals yet.
+          <div className="col-span-full">
+            <EmptyState reason="No settled signals yet." />
           </div>
         ) : (
           performance.map((entry) => (
             <div
               key={entry.signalType}
-              className="rounded-2xl border border-white/10 bg-black/20 p-4"
+              className="rounded-xl border border-border bg-surface-3 p-4"
             >
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
                 {entry.signalType}
               </p>
-              <p className={`mt-2 text-3xl font-semibold ${accuracyClass(entry.accuracyPct)}`}>
+              <p className={`mt-2 font-mono text-3xl font-semibold ${ACCURACY_TEXT[accuracyTone(entry.accuracyPct)]}`}>
                 {entry.accuracyPct}%
               </p>
               <p className="mt-1 text-xs text-stone-500">
@@ -138,7 +151,7 @@ export function SignalPerformancePanel() {
         )}
       </div>
 
-      <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+      <div className="mt-4 rounded-xl border border-border bg-surface-3 p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
           Event-to-signal latency (proxy metric)
         </p>
@@ -153,7 +166,7 @@ export function SignalPerformancePanel() {
             <p className="mt-2 text-sm text-stone-300">
               Median gap between a signal's attached TXODDS event and its
               triggering odds tick:{" "}
-              <span className="font-semibold text-white">
+              <span className="font-mono font-semibold text-white">
                 {(eventLatency.medianGapMs / 1000).toFixed(1)}s
               </span>{" "}
               (p25 {(eventLatency.p25GapMs / 1000).toFixed(1)}s, p75{" "}
@@ -171,6 +184,6 @@ export function SignalPerformancePanel() {
           </>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
