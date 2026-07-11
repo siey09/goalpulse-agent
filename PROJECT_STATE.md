@@ -32,16 +32,19 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress — LIKELY SESSION HANDOFF POINT (user may be switching
-tools/sessions here, 2026-07-11): everything through the
+🔄 In Progress (user is moving between tools/sessions due to token
+limits, 2026-07-11 — treat any "resume" request from here carefully,
+check what actually happened before assuming): everything through the
 P1-4/P1-5/P1-8/P1-19 revisits is done and pushed (Tier 1, Tier 2, P1-3,
 P1-2, P1-1, P1-7, P1-16, revisits — all reviewed/approved/pushed/
 verified live). The 20 Mandatory Tests + 15-item Definition of Done
 investigation pass is ALSO complete — see "RESUME POINT" further below
-for the full verbatim lists, every verdict, and **4 real gaps found
-that are reported to the user but NOT YET FIXED, awaiting their
-decision on priority/scope.** A fresh session/tool should read that
-full section before doing anything else — do not re-run the
+for the full verbatim lists, every verdict, and 4 real gaps found.
+**Gap 1 is now fixed** (draw + totals settlement bugs in the replay
+path, verified live locally against a real "Algeria 3-3 Austria"
+scenario) — awaiting user review/push. **Gaps 2-4 remain unresolved.**
+A fresh session/tool should read that full section before doing
+anything else — do not re-run the
 investigation, the findings are already real and current as of
 2026-07-11.
 
@@ -1159,10 +1162,63 @@ re-derive or guess these from memory.**
 
 **DoD 1, 4, 5, 7, 9, 11, 13, 14**: PASS — same evidence as the corresponding numbered tests above (DoD 1↔Tests 1-3, DoD 4↔Test 9/11, DoD 5↔both paths call `buildSignalFromSnapshots`, DoD 7↔`signalEngine.ts` inspection, DoD 9↔Arena/settlement pipeline confirmed, DoD 11↔`OUTCOME_REJECTED_MOVE` rename from the P0 triage, DoD 13↔`GET /api/metrics`/`/health`/Guided Tour, DoD 14↔Tier 1's P1-9/P1-10/P1-12).
 
-### 4 real gaps found — reported to user, NONE fixed yet, awaiting decision on priority/scope
+### 4 real gaps found — Gap 1 fixed, Gaps 2-4 still awaiting decision
 
-**Gap 1 — Draw settlement missing from the replay path (affects Tests 10, 18, 20, DoD 6).**
-P1-1 added draw settlement to `store.ts`'s live-cycle `evaluatePendingSignalsForFinishedMatches`, but `server.ts`'s `/api/replay/backtest` route has a **separate, duplicate settlement implementation** that P1-1 did not touch: `settleReplaySignal` (lines 817-836) and `checkScoreReality` (lines 838+) both only check `side === "home"`/`"away"` win conditions. A draw signal replayed through this endpoint always settles `"incorrect"` even on a real drawn final score, and `checkScoreReality`'s `CONFIRMED_BY_SCORE` branch has the identical gap. Straightforward fix, same pattern as P1-1's `store.ts` change (add a `signal.side === "draw" && match.homeScore === match.awayScore` clause to both functions). Note: a third `side === "away" ? "correct" : "incorrect"` check at line 954 is inside the synthetic/pinned demo-dataset fallback path (`useRealReplay` false branch) — not real settlement logic, deliberately not flagged as a bug.
+**✅ Gap 1 — Draw settlement missing from the replay path — FIXED
+2026-07-11, awaiting user review before push.** Root cause exactly as
+originally diagnosed: `server.ts`'s `/api/replay/backtest` route had a
+**separate, duplicate settlement implementation** (inline
+`settleReplaySignal`/`checkScoreReality` functions) that P1-1 never
+touched, both missing a draw branch. **A second, independent real bug
+was found and fixed in the same pass** (surfaced during a parallel
+Codex investigation of this same gap, then independently verified
+against real code here before acting on it): the route's
+finished-vs-live snapshot bucketing compared raw `matchId` against a
+set of base fixture ids, so a totals signal/snapshot (matchId
+`<fixtureId>-totals-<line>`) could never match even when its real
+fixture had finished — every totals signal in real replay stayed
+permanently `"pending"`.
+
+**Scope decision:** a parallel Codex session proposed a much larger
+"shared settlement module" spanning `store.ts`, `server.ts`, and
+`arena.ts` (1428-line plan, 37 new tests) to fix this. Rejected as
+disproportionate to the actual bug and in direct tension with the
+P1-19 "no large refactor before submission" constraint this session
+re-confirmed only hours earlier. Implemented instead: extracted the
+two buggy inline functions into a new small, focused, independently
+testable module (`logic/replaySettlement.ts`), matching this
+session's established convention (same pattern as `eventLatency.ts`,
+`deriveStreamStatus`) — not a cross-cutting refactor. **No change to
+`store.ts` or `arena.ts` at all.**
+
+New `logic/replaySettlement.ts`: `baseMatchId` (same implementation as
+`signalPerformance.ts`/`signalCorrelation.ts`'s own), `isFinishedMatchId`
+(fixes the totals-bucketing bug), `settleReplaySignal` and
+`checkScoreReality` (both gain a draw clause identical to `store.ts`'s
+P1-1 fix, and both resolve a totals signal's matchId to its base
+fixture before looking up the match). `server.ts` wired to import and
+call these instead of the old inline versions; also fixed the
+identical `recentResultIds.has(snapshot.matchId)` pattern in the
+sibling `/api/recent-results` route for consistency (same one-line
+mechanical fix, same precedent as P1-3 fixing both sibling functions).
+
+15 new tests, 268 total (up from 253), clean build. **Verified live
+against a local dev server with real production-shaped data — the
+exact scenario originally found broken (an Algeria vs Austria signal
+with a 3-3 final score) now correctly shows `resultStatus: "correct"`,
+`scoreRealityStatus: "CONFIRMED_BY_SCORE"`.** No totals signal happened
+to be present in the live replay window at verification time
+(timing-dependent, not a failure) — that fix is covered directly by
+dedicated unit tests instead. Not yet committed/pushed — awaiting user
+review of the diff.
+
+**Note for continuity:** the parallel Codex session's uncommitted
+`docs/superpowers/specs/2026-07-11-shared-settlement-design.md` and
+`docs/superpowers/plans/2026-07-11-shared-settlement.md` were
+deliberately left in place, untouched, not deleted (real work product,
+not this session's call to discard) — but their proposed approach was
+not used. Do not resume or implement that plan without first checking
+with the user; Gap 1 is already fixed via the smaller approach above.
 
 **Gap 2 — No "risk limit exceeded → rejected" mechanism (Test 14, partially DoD 8).**
 The only risk-sizing control anywhere is Kelly Criterion's `MAX_STAKE_FRACTION` (`logic/arena.ts`) — it **clamps** the stake to at most 20% of bankroll, it does not **reject** the position. No code path anywhere rejects a paper position outright for exceeding a risk threshold with an explicit reason code. The existing P1-6 rejection-reason mechanism only covers `totals_signal`/`not_market_only_move`/`no_original_snapshot`/`draw_signal` — none risk-limit-based. DoD 8 ("every rejected signal contains a precise reason") is true for the rejections that exist, not true for a risk-limit rejection that doesn't exist.
@@ -1173,7 +1229,10 @@ Now that Test 7 confirms the underlying odds are genuinely de-vigged, computing 
 **Gap 4 — `README.md` is badly stale (DoD 15, indirectly DoD 13).**
 Still describes pre-session state: "24 automated unit tests" (actual count is 253 as of P1-16), and only 6 "beyond the core loop" features listed when dozens have shipped this session (Arena's 3rd strategy, Signal Correlation, Confidence Calibration, draw-side signals, the P1-2 longshot penalty, P1-18 idempotency, CI, P1-16 stream status, etc.). Last synced 2026-07-10, predates the entire day-of P0/P1 remediation arc (Tier 1 through P1-16 plus the P1-4/P1-5/P1-8/P1-19 revisits).
 
-**Exact next action for a future session/tool:** present these 4 gaps to the user (already done once in the original session, response pending at time of writing) and get their decision on priority/scope for each before writing any fix — same investigate→brainstorm→spec→plan→implement→review→verify-live gate as every other item this session. Do not silently patch any of these without that conversation happening first, even though Gap 1 in particular is a small, well-understood fix.
+**Exact next action for a future session/tool:** report Gap 1's diff to
+the user, wait for review/approval before push. Gaps 2-4 remain fully
+unresolved — present them and get the user's decision on priority/scope
+before writing any fix, same gate as every other item this session.
 
 📋 Next Steps: implement Tier 1 (see above), report back, wait for
 review before Tier 2. All four "future ideas" candidates shipped

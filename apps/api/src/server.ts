@@ -5,6 +5,7 @@ import express from "express";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
 import { processAgentCycle } from "./agent";
+import { checkScoreReality, isFinishedMatchId, settleReplaySignal } from "./logic/replaySettlement";
 import { fetchRecentTxLineResults } from "./services/txlineClient";
 import { getLiveStreamState, startLiveStreamMonitor } from "./services/txlineStream";
 import { getLiveOddsStreamState, startLiveOddsStreamMonitor } from "./services/txlineOddsStream";
@@ -186,7 +187,7 @@ app.get("/api/recent-results", async (_req, res) => {
     store.recentFinishedMatches.map((match) => match.id)
   );
   const hasRecentOddsHistory = store.oddsSnapshots.some((snapshot) =>
-    recentResultIds.has(snapshot.matchId)
+    isFinishedMatchId(snapshot.matchId, recentResultIds)
   );
 
   if (store.recentFinishedMatches.length === 0 || !hasRecentOddsHistory) {
@@ -741,7 +742,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
     store.recentFinishedMatches.map((match) => match.id)
   );
   const hasRecentOddsHistory = store.oddsSnapshots.some((snapshot) =>
-    recentResultIds.has(snapshot.matchId)
+    isFinishedMatchId(snapshot.matchId, recentResultIds)
   );
 
   if (store.recentFinishedMatches.length === 0 || !hasRecentOddsHistory) {
@@ -770,7 +771,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
   const finishedReplaySnapshots = store.oddsSnapshots
     .filter(
       (snapshot) =>
-        snapshot.source === "txline" && finishedMatchIds.has(snapshot.matchId)
+        snapshot.source === "txline" && isFinishedMatchId(snapshot.matchId, finishedMatchIds)
     )
     .sort(
       (a, b) =>
@@ -780,7 +781,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
   const liveReplaySnapshots = store.oddsSnapshots
     .filter(
       (snapshot) =>
-        snapshot.source === "txline" && !finishedMatchIds.has(snapshot.matchId)
+        snapshot.source === "txline" && !isFinishedMatchId(snapshot.matchId, finishedMatchIds)
     )
     .sort(
       (a, b) =>
@@ -814,61 +815,6 @@ app.get("/api/replay/backtest", async (_req, res) => {
     snapshotsByMatch.set(snapshot.matchId, existing);
   }
 
-  function settleReplaySignal(
-    signal: NonNullable<ReturnType<typeof buildSignalFromSnapshots>>
-  ) {
-    const match = replayMatches.find((item) => item.id === signal.matchId);
-
-    if (!match || match.status !== "finished") {
-      return "pending";
-    }
-
-    const homeWon = match.homeScore > match.awayScore;
-    const awayWon = match.awayScore > match.homeScore;
-    if (
-      (signal.side === "home" && homeWon) ||
-      (signal.side === "away" && awayWon)
-    ) {
-      return "correct";
-    }
-
-    return "incorrect";
-  }
-
-  function checkScoreReality(
-    signal: NonNullable<ReturnType<typeof buildSignalFromSnapshots>>,
-    resultStatus: "pending" | "correct" | "incorrect"
-  ) {
-    const match = replayMatches.find((item) => item.id === signal.matchId);
-
-    if (!match || match.status !== "finished") {
-      return {
-        finalScore: "Not settled yet",
-        scoreRealityStatus: "WAITING_FOR_FINAL_SCORE",
-        scoreRealityReason:
-          "The match is still pending, so GoalPulse cannot compare the odds move against the final score yet.",
-      };
-    }
-
-    const finalScore = `${match.homeTeam} ${match.homeScore} - ${match.awayScore} ${match.awayTeam}`;
-    const targetWon =
-      (signal.side === "home" && match.homeScore > match.awayScore) ||
-      (signal.side === "away" && match.awayScore > match.homeScore);
-
-    if (targetWon && resultStatus === "correct") {
-      return {
-        finalScore,
-        scoreRealityStatus: "CONFIRMED_BY_SCORE",
-        scoreRealityReason: `${signal.target} was backed by the odds movement and the final score confirmed it: ${finalScore}.`,
-      };
-    }
-
-    return {
-      finalScore,
-      scoreRealityStatus: "REJECTED_BY_SCORE",
-      scoreRealityReason: `${signal.target} was backed by the odds movement, but the final score did not confirm it: ${finalScore}. GoalPulse marks this as score-vs-odds disagreement.`,
-    };
-  }
   function classifyMarketTrap(
     signal: NonNullable<ReturnType<typeof buildSignalFromSnapshots>>,
     resultStatus: "pending" | "correct" | "incorrect"
@@ -950,12 +896,12 @@ app.get("/api/replay/backtest", async (_req, res) => {
     )
     .map((signal, index) => {
       const resultStatus = useRealReplay
-        ? settleReplaySignal(signal)
+        ? settleReplaySignal(signal, replayMatches)
         : signal.side === "away"
           ? "correct"
           : "incorrect";
       const trapAssessment = classifyMarketTrap(signal, resultStatus);
-      const scoreRealityCheck = checkScoreReality(signal, resultStatus);
+      const scoreRealityCheck = checkScoreReality(signal, resultStatus, replayMatches);
 
       return {
         ...signal,
