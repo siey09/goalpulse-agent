@@ -1,5 +1,9 @@
 ﻿import { CheckCircle2, Clock, Database, Flag, ShieldCheck, Trophy } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Card } from "./ui/Card";
+import { StatusBadge } from "./ui/StatusBadge";
+import { EmptyState } from "./ui/EmptyState";
+import { EvidenceStamp } from "./ui/EvidenceStamp";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
@@ -195,24 +199,22 @@ export function ResultsSettlementPanel() {
   }, [matches, signals]);
 
   return (
-    <section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-      <div className="rounded-[24px] border border-white/10 bg-[#15100c] p-4">
+    <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+      <Card className="p-4">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-xs text-stone-500">Final score feed</p>
             <h2 className="text-base font-semibold text-white">TXODDS recent results</h2>
           </div>
-          <Trophy className="h-4 w-4 text-emerald-300" />
+          <Trophy className="h-4 w-4 text-positive" />
         </div>
 
         <div className="space-y-2">
           {finishedMatches.length > 0 ? (
             finishedMatches.map((match) => (
-              <div key={match.id} className="rounded-2xl bg-black/25 p-3">
+              <div key={match.id} className="rounded-xl border border-border bg-surface-3 p-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-200">
-                    {getStatusLabel(match)}
-                  </span>
+                  <StatusBadge label={getStatusLabel(match)} tone="positive" />
                   <span className="text-[10px] text-stone-500">
                     {getClockLabel(match)}
                   </span>
@@ -221,22 +223,22 @@ export function ResultsSettlementPanel() {
                 <div className="space-y-1">
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="font-medium text-white">{match.homeTeam}</span>
-                    <span className="font-semibold text-white">{match.homeScore}</span>
+                    <span className="font-mono font-semibold text-white">{match.homeScore}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="font-medium text-white">{match.awayTeam}</span>
-                    <span className="font-semibold text-white">{match.awayScore}</span>
+                    <span className="font-mono font-semibold text-white">{match.awayScore}</span>
                   </div>
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-                  <div className="rounded-xl bg-black/25 p-2">
+                  <div className="rounded-lg border border-border bg-black/20 p-2">
                     <p className="text-stone-500">Winner</p>
                     <p className="truncate font-semibold text-stone-100">{getWinner(match)}</p>
                   </div>
-                  <div className="rounded-xl bg-black/25 p-2">
+                  <div className="rounded-lg border border-border bg-black/20 p-2">
                     <p className="text-stone-500">TXODDS status</p>
-                    <p className="truncate font-semibold text-stone-100">
+                    <p className="truncate font-mono font-semibold text-stone-100">
                       {match.statusId ? `#${match.statusId}` : "—"}
                     </p>
                   </div>
@@ -244,20 +246,18 @@ export function ResultsSettlementPanel() {
               </div>
             ))
           ) : (
-            <div className="rounded-2xl bg-black/25 p-4 text-sm text-stone-500">
-              No finished matches from the current TxLINE feed yet.
-            </div>
+            <EmptyState reason="No finished matches from the current TxLINE feed yet." />
           )}
         </div>
-      </div>
+      </Card>
 
-      <div className="rounded-[24px] border border-white/10 bg-[#15100c] p-4">
+      <Card className="p-4">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-xs text-stone-500">Post-match audit</p>
             <h2 className="text-base font-semibold text-white">Signal settlement center</h2>
           </div>
-          <ShieldCheck className="h-4 w-4 text-sky-300" />
+          <ShieldCheck className="h-4 w-4 text-info" />
         </div>
 
         <div className="space-y-2">
@@ -266,7 +266,7 @@ export function ResultsSettlementPanel() {
               const scoresContext = signal.evidence?.scoresContext;
 
               return (
-                <div key={signal.id} className="rounded-2xl bg-black/25 p-3">
+                <div key={signal.id} className="rounded-xl border border-border bg-surface-3 p-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-white">
@@ -277,39 +277,34 @@ export function ResultsSettlementPanel() {
                       </p>
                     </div>
 
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                        settlement === "Correct"
-                          ? "bg-emerald-400/10 text-emerald-200"
-                          : "bg-rose-400/10 text-rose-200"
-                      }`}
-                    >
-                      {settlement}
-                    </span>
+                    <StatusBadge
+                      label={settlement}
+                      tone={settlement === "Correct" ? "positive" : "danger"}
+                    />
                   </div>
 
-                  <p className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] leading-5 text-stone-400">
+                  <p className="mt-3 rounded-xl border border-border bg-black/20 px-3 py-2 text-[11px] leading-5 text-stone-400">
                     {getSettlementReason(signal, match)}
                   </p>
 
                   {match && (
                     <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[11px] md:grid-cols-4">
-                      <div className="rounded-xl bg-black/25 p-2">
+                      <div className="rounded-lg border border-border bg-black/20 p-2">
                         <Flag className="mx-auto mb-1 h-3.5 w-3.5 text-stone-500" />
                         <p className="text-stone-500">Final</p>
-                        <p className="font-semibold text-white">{getFinalScore(match)}</p>
+                        <p className="font-mono font-semibold text-white">{getFinalScore(match)}</p>
                       </div>
-                      <div className="rounded-xl bg-black/25 p-2">
+                      <div className="rounded-lg border border-border bg-black/20 p-2">
                         <CheckCircle2 className="mx-auto mb-1 h-3.5 w-3.5 text-stone-500" />
                         <p className="text-stone-500">Winner</p>
                         <p className="truncate font-semibold text-white">{getWinner(match)}</p>
                       </div>
-                      <div className="rounded-xl bg-black/25 p-2">
+                      <div className="rounded-lg border border-border bg-black/20 p-2">
                         <Clock className="mx-auto mb-1 h-3.5 w-3.5 text-stone-500" />
                         <p className="text-stone-500">Status</p>
                         <p className="truncate font-semibold text-white">{getStatusLabel(match)}</p>
                       </div>
-                      <div className="rounded-xl bg-black/25 p-2">
+                      <div className="rounded-lg border border-border bg-black/20 p-2">
                         <Database className="mx-auto mb-1 h-3.5 w-3.5 text-stone-500" />
                         <p className="text-stone-500">Source</p>
                         <p className="truncate font-semibold text-white">
@@ -333,17 +328,22 @@ export function ResultsSettlementPanel() {
                     <AuditRow label="Bookmaker" value={signal.evidence?.bookmaker} />
                     <AuditRow label="Message ID" value={compact(signal.evidence?.messageId)} mono />
                   </div>
+
+                  <EvidenceStamp
+                    rule="SETTLES AGAINST FINAL TXODDS WINNER"
+                    delta={`${signal.oddsChangePct}% move`}
+                    reference={match ? `#${match.id}` : undefined}
+                    tone={settlement === "Correct" ? "positive" : "danger"}
+                  />
                 </div>
               );
             })
           ) : (
-            <div className="rounded-2xl bg-black/25 p-4 text-sm text-stone-500">
-              Finished-match signal settlements will appear once a signal matches a completed fixture.
-            </div>
+            <EmptyState reason="Finished-match signal settlements will appear once a signal matches a completed fixture." />
           )}
         </div>
-      </div>
-    </section>
+      </Card>
+    </div>
   );
 }
 
@@ -357,7 +357,7 @@ function AuditRow({
   mono?: boolean;
 }) {
   return (
-    <div className="rounded-xl bg-black/20 p-2">
+    <div className="rounded-lg border border-border bg-black/20 p-2">
       <p className="text-[10px] uppercase tracking-[0.16em] text-stone-500">{label}</p>
       <p className={`mt-1 break-words text-stone-200 ${mono ? "font-mono text-[10px]" : "text-xs font-semibold"}`}>
         {value || "—"}
