@@ -12,6 +12,12 @@ import { ConfidenceCalibrationPanel } from "./components/ConfidenceCalibrationPa
 import { SignalCorrelationPanel } from "./components/SignalCorrelationPanel";
 import { AppShell } from "./app/AppShell";
 import { DEFAULT_DESTINATION, type DestinationId } from "./app/navigation";
+import { GUIDE_STEPS } from "./app/guideSteps";
+import {
+  clearGuideSpotlight as clearPreviewGuideSpotlight,
+  applyGuideSpotlight as applyPreviewGuideSpotlight,
+  getGuideStepElement,
+} from "./app/guideSpotlight";
 import { CommandCenterPage } from "./features/overview/CommandCenterPage";
 import { SignalsPage } from "./features/signals/SignalsPage";
 import { AgentArenaPage } from "./features/arena/AgentArenaPage";
@@ -220,6 +226,9 @@ function App() {
   const [isSimilarSignalsLoading, setIsSimilarSignalsLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
   const [previewDestination, setPreviewDestination] = useState<DestinationId>(DEFAULT_DESTINATION);
+  const [isPreviewGuideMode, setIsPreviewGuideMode] = useState(false);
+  const [previewGuideStep, setPreviewGuideStep] = useState(0);
+  const [previewGuidePanelPosition, setPreviewGuidePanelPosition] = useState({ top: 16, left: 16 });
   const [searchTerm, setSearchTerm] = useState("");
   const [matchStatusFilter, setMatchStatusFilter] = useState<"all" | Match["status"]>("all");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -931,6 +940,91 @@ function App() {
     setJudgeStep(0);
   }
 
+  function updatePreviewGuidePanelPosition(target: HTMLElement | null) {
+    const panelWidth = 340;
+    const panelHeight = 260;
+    const margin = 18;
+
+    if (!target) {
+      setPreviewGuidePanelPosition({
+        top: margin,
+        left: Math.max(margin, window.innerWidth - panelWidth - margin),
+      });
+      return;
+    }
+
+    const rect = target.getBoundingClientRect();
+    const canPlaceRight = rect.right + margin + panelWidth <= window.innerWidth;
+    const canPlaceLeft = rect.left - margin - panelWidth >= margin;
+
+    const left = canPlaceRight
+      ? rect.right + margin
+      : canPlaceLeft
+        ? rect.left - panelWidth - margin
+        : Math.max(margin, window.innerWidth - panelWidth - margin);
+
+    const centeredTop = rect.top + rect.height / 2 - panelHeight / 2;
+    const top = Math.min(
+      Math.max(margin, centeredTop),
+      Math.max(margin, window.innerHeight - panelHeight - margin)
+    );
+
+    setPreviewGuidePanelPosition({ top, left });
+  }
+
+  // Single controller for the Command Center preview tour: switches
+  // previewDestination when a step targets a different page, then lets
+  // this effect (which reruns after the new page commits) do the actual
+  // scroll/spotlight/panel-position work - one imperative mechanism per
+  // step, no scattered per-component judgeStep===N conditionals.
+  useEffect(() => {
+    if (!isPreviewGuideMode) return;
+
+    const step = GUIDE_STEPS[previewGuideStep];
+    if (!step) return;
+
+    if (step.requiresReplayBacktest && !replayBacktest && !isReplayRunning) {
+      void runReplayBacktest();
+    }
+
+    const timeout = window.setTimeout(() => {
+      const target = getGuideStepElement(step);
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      applyPreviewGuideSpotlight(target);
+      updatePreviewGuidePanelPosition(target);
+    }, 220);
+
+    return () => window.clearTimeout(timeout);
+  }, [isPreviewGuideMode, previewGuideStep, previewDestination, replayBacktest, isReplayRunning]);
+
+  function startPreviewGuideTour() {
+    setIsPreviewGuideMode(true);
+    setPreviewGuideStep(0);
+    setPreviewDestination(GUIDE_STEPS[0].destination);
+  }
+
+  function nextPreviewGuideStep() {
+    const nextIndex = previewGuideStep + 1;
+
+    if (nextIndex >= GUIDE_STEPS.length) {
+      clearPreviewGuideSpotlight();
+      setIsPreviewGuideMode(false);
+      return;
+    }
+
+    const nextGuideStepData = GUIDE_STEPS[nextIndex];
+    setPreviewGuideStep(nextIndex);
+    if (nextGuideStepData.destination !== previewDestination) {
+      setPreviewDestination(nextGuideStepData.destination);
+    }
+  }
+
+  function skipPreviewGuideTour() {
+    clearPreviewGuideSpotlight();
+    setIsPreviewGuideMode(false);
+    setPreviewGuideStep(0);
+  }
+
   function startAgentReplay() {
     setReplayStep(0);
 
@@ -1554,6 +1648,7 @@ function App() {
             health={health}
             correctSignals={stats?.correctSignals ?? 0}
             closedSignals={stats?.closedSignals ?? 0}
+            selectedMatchMarketPressure={selectedMatchMarketPressure}
             matches={filteredMatches}
             matchStatusFilter={matchStatusFilter}
             onChangeMatchStatusFilter={setMatchStatusFilter}
@@ -1614,14 +1709,79 @@ function App() {
         );
     }
 
+    const previewGuideStepData = GUIDE_STEPS[previewGuideStep];
+
     return (
-      <AppShell
-        active={previewDestination}
-        onSelectDestination={setPreviewDestination}
-        {...shellProps}
-      >
-        {destinationContent}
-      </AppShell>
+      <>
+        {isPreviewGuideMode && (
+          <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] transition-opacity duration-500 pointer-events-none" />
+        )}
+
+        <AppShell
+          active={previewDestination}
+          onSelectDestination={setPreviewDestination}
+          {...shellProps}
+        >
+          {destinationContent}
+        </AppShell>
+
+        <button
+          onClick={startPreviewGuideTour}
+          className="fixed bottom-4 right-4 z-[80] rounded-full border border-orange-400/30 bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-orange-500/25 transition hover:bg-orange-400"
+        >
+          Guide
+        </button>
+
+        {isPreviewGuideMode && previewGuideStepData && (
+          <div
+            data-guide-panel="true"
+            className="fixed z-[70] w-[340px] rounded-[26px] border border-orange-400/30 bg-[#15100c]/95 p-4 shadow-2xl shadow-orange-500/20 backdrop-blur-xl ring-1 ring-white/10 transition-[top,left,transform] duration-500"
+            style={{
+              top: previewGuidePanelPosition.top,
+              left: previewGuidePanelPosition.left,
+            }}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.24em] text-orange-200/70">Guided tour</p>
+                <h2 className="mt-1 text-sm font-semibold text-white">GoalPulse guided tour</h2>
+              </div>
+              <span className="rounded-full bg-orange-400/10 px-2.5 py-1 text-[10px] font-semibold text-orange-200">
+                {previewGuideStep + 1}/{GUIDE_STEPS.length}
+              </span>
+            </div>
+
+            <div className="rounded-2xl border border-orange-400/15 bg-black/30 p-3 shadow-inner">
+              <p className="text-sm font-semibold text-white">{previewGuideStepData.title}</p>
+              <p className="mt-1 text-[11px] leading-5 text-stone-400">{previewGuideStepData.detail}</p>
+            </div>
+
+            <div className="mt-3 grid grid-cols-6 gap-1.5">
+              {GUIDE_STEPS.map((step, index) => (
+                <div
+                  key={step.title}
+                  className={`h-1.5 rounded-full ${index <= previewGuideStep ? "bg-orange-400" : "bg-white/10"}`}
+                />
+              ))}
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                onClick={skipPreviewGuideTour}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-medium text-stone-300 transition hover:bg-white/10 hover:text-white"
+              >
+                Skip
+              </button>
+              <button
+                onClick={nextPreviewGuideStep}
+                className="rounded-full border border-orange-400/30 bg-orange-500 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-orange-400"
+              >
+                {previewGuideStep + 1 >= GUIDE_STEPS.length ? "Finish" : "Next"}
+              </button>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 

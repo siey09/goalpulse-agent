@@ -56,4 +56,22 @@ describe("AppShell", () => {
     // "Command Center" legitimately appears twice: the sidebar nav label and the status-bar title.
     expect(screen.getAllByText("Command Center")).toHaveLength(2);
   });
+
+  it("renders the persistent Compliance footer on every destination", () => {
+    render(
+      <AppShell
+        active={DEFAULT_DESTINATION}
+        onSelectDestination={() => {}}
+        title="Command Center"
+        agentStatus="RUNNING"
+        feedMode="LIVE TxLINE"
+        freshnessLabel="2.4s"
+      >
+        <p>page content</p>
+      </AppShell>
+    );
+
+    expect(screen.getByText("Analytics only")).toBeInTheDocument();
+    expect(screen.getByText(/does not place wagers, custody funds/)).toBeInTheDocument();
+  });
 });

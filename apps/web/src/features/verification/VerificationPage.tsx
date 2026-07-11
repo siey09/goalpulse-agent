@@ -43,7 +43,7 @@ export function VerificationPage({ selectedSignal, onchainVerify, onVerify }: Ve
         </div>
       </Card>
 
-      <Card className="p-4">
+      <Card id="guide-verification-receipt" className="p-4">
         <SectionHeader eyebrow="Solana mainnet" title="Verify a Signal" />
         <p className="mb-3 text-xs text-stone-500">
           Select a signal from Signals or Live Markets, then verify it here.

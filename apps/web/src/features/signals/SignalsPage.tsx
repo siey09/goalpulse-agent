@@ -31,7 +31,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
       <SteamMoveDetectionPanel />
       <SignalCorrelationPanel />
 
-      <Card className="p-4">
+      <Card id="guide-outcome-verification" className="p-4">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <p className="text-xs text-stone-500">Post-signal audit</p>

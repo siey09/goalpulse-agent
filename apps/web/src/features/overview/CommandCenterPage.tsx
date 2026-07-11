@@ -61,7 +61,7 @@ export function CommandCenterPage({
   systemHealthLabel,
 }: CommandCenterPageProps) {
   return (
-    <div className="space-y-4">
+    <div id="guide-command-center-overview" className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard
           label="Live fixtures"
@@ -109,7 +109,7 @@ export function CommandCenterPage({
           )}
         </Card>
 
-        <Card className="p-4 xl:col-span-4">
+        <Card id="guide-decision-feed" className="p-4 xl:col-span-4">
           <SectionHeader eyebrow="Autonomous flow" title="Decision Feed" />
           <ol className="space-y-3">
             {decisionFeed.map((step) => (

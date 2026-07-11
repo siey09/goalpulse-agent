@@ -42,7 +42,7 @@ export function ReplayLabPage({
 }: ReplayLabPageProps) {
   return (
     <div className="space-y-4">
-      <Card className="p-4">
+      <Card id="guide-backtest-card" className="p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
             <p className="text-xs text-stone-500">
@@ -195,7 +195,7 @@ export function ReplayLabPage({
               </span>
             </div>
 
-            <div className="mt-3 rounded-lg bg-black/20 p-2">
+            <div id="guide-proof-readiness" className="mt-3 rounded-lg bg-black/20 p-2">
               <div className="flex items-center justify-between gap-3 text-[10px]">
                 <span className="text-stone-500">Proof network</span>
                 <span className="font-medium text-sky-200">{replayBacktest.proof?.network ?? "solana-devnet"}</span>
@@ -217,7 +217,7 @@ export function ReplayLabPage({
           </Card>
 
           {(replayBacktest.events ?? []).length > 0 && (
-            <Card className="border-orange-400/15 bg-orange-400/10 p-3">
+            <Card id="guide-event-correlation" className="border-orange-400/15 bg-orange-400/10 p-3">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] text-orange-200/80">Evidence chain</p>
@@ -247,7 +247,7 @@ export function ReplayLabPage({
           )}
 
           {(replayBacktest.councilVotes ?? []).length > 0 && (
-            <Card className="border-sky-400/15 bg-sky-400/10 p-3">
+            <Card id="guide-oracle-council" className="border-sky-400/15 bg-sky-400/10 p-3">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] text-sky-200/80">Signal review council</p>

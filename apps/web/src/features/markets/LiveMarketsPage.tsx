@@ -51,6 +51,12 @@ export interface LiveMarketsChartReadout {
   };
 }
 
+export interface LiveMarketsMarketPressure {
+  homePressure: number;
+  awayPressure: number;
+  leader: string;
+}
+
 export interface LiveMarketsPageProps {
   selectedMatch?: Match;
   chartData: LiveMarketsChartPoint[];
@@ -65,6 +71,7 @@ export interface LiveMarketsPageProps {
   health: Health | null;
   correctSignals: number;
   closedSignals: number;
+  selectedMatchMarketPressure: LiveMarketsMarketPressure;
 
   matches: Match[];
   matchStatusFilter?: string;
@@ -94,6 +101,7 @@ export function LiveMarketsPage({
   health,
   correctSignals,
   closedSignals,
+  selectedMatchMarketPressure,
   matches,
   matchStatusFilter,
   onChangeMatchStatusFilter,
@@ -103,7 +111,79 @@ export function LiveMarketsPage({
 }: LiveMarketsPageProps) {
   return (
     <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
-      <Card className="overflow-hidden p-4 2xl:col-span-2">
+      <Card id="guide-selected-match" className="overflow-hidden border-0 bg-gradient-to-br from-orange-400 to-[#2a1810] p-4 text-white 2xl:col-span-2">
+        <p className="text-sm text-orange-50/80">Selected match</p>
+        <h2 className="mt-1 text-xl font-semibold leading-tight">
+          {selectedMatch ? `${selectedMatch.homeTeam} vs ${selectedMatch.awayTeam}` : "No match yet"}
+        </h2>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="rounded-2xl bg-[#17100c]/80 p-3">
+            <div className="flex items-center justify-between text-sm text-stone-300">
+              <span>{selectedMatch?.homeTeam ?? "Home"}</span>
+              <span className="text-xl font-semibold text-white">
+                {selectedMatch?.status === "scheduled" ? "—" : selectedMatch?.homeScore ?? 0}
+              </span>
+            </div>
+            <div className="mt-3 flex items-center justify-between text-sm text-stone-300">
+              <span>{selectedMatch?.awayTeam ?? "Away"}</span>
+              <span className="text-xl font-semibold text-white">
+                {selectedMatch?.status === "scheduled" ? "—" : selectedMatch?.awayScore ?? 0}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl bg-white/15 p-2.5">
+              <p className="text-xs text-white/70">{selectedMatch?.status === "live" ? "Clock" : "Timing"}</p>
+              <p className="text-xl font-semibold">{matchClockLabel(selectedMatch)}</p>
+            </div>
+            <div className="rounded-xl bg-white/15 p-2.5">
+              <p className="text-xs text-white/70">Status</p>
+              <p className="text-sm font-semibold">{preciseStatusLabel(selectedMatch)}</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-[#17100c]/75 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] text-white/60">Market pressure</p>
+                <p className="text-sm font-semibold text-white">{selectedMatchMarketPressure.leader}</p>
+              </div>
+              <p className="text-[11px] text-white/60">Momentum weighted</p>
+            </div>
+
+            <div className="space-y-2">
+              <div>
+                <div className="mb-1 flex items-center justify-between text-[11px] text-white/70">
+                  <span>{selectedMatch?.homeTeam ?? "Home"}</span>
+                  <span>{selectedMatchMarketPressure.homePressure}</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/15">
+                  <div
+                    className="h-2 rounded-full bg-orange-200"
+                    style={{ width: `${selectedMatchMarketPressure.homePressure}%` }}
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="mb-1 flex items-center justify-between text-[11px] text-white/70">
+                  <span>{selectedMatch?.awayTeam ?? "Away"}</span>
+                  <span>{selectedMatchMarketPressure.awayPressure}</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/15">
+                  <div
+                    className="h-2 rounded-full bg-emerald-300"
+                    style={{ width: `${selectedMatchMarketPressure.awayPressure}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card id="guide-odds-chart" className="overflow-hidden p-4 2xl:col-span-2">
         <div className="mb-3 flex items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -427,7 +507,7 @@ export function LiveMarketsPage({
         </div>
       </Card>
 
-      <Card className="p-4 2xl:col-span-2">
+      <Card id="guide-market-board" className="p-4 2xl:col-span-2">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <p className="text-xs text-stone-500">Market feed</p>
