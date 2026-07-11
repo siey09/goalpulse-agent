@@ -207,8 +207,21 @@ the App.tsx monolith itself, out of scope for "safe" splitting.
 Verified live against production data: lazy-loading works cleanly
 across all 9 destinations, Arena→drawer and Archive→drawer click-
 throughs both confirmed with real data, default page unaffected, zero
-console errors. Build/lint/test clean (43 tests). Committed `1cd1148`.
-**Holding for user review before pushing/merging.**
+console errors. Build/lint/test clean (43 tests).
+
+✅ **Merged to `main` 2026-07-11** (was branch
+`feature/phase6-arena-archive-wiring`, fast-forward merge `9a5ff2b`).
+Post-merge verification on `main` and directly against
+goalpulse-agent.vercel.app (fresh tab, no cached state): default page
+unaffected with zero console errors; `?preview=command-center` →
+Agent Arena → clicking a position opens the drawer with correct real
+data (confirmed network fetched a separate `AgentArenaPage-*.js`
+chunk, not part of the main bundle); `?preview=command-center` →
+Archive → clicking a row opens the drawer with the expected honest
+fallbacks for fields archive entries don't carry; `/health` shows both
+streams connected. Build/lint/test clean on `main`. **This closes out
+every currently-scoped item in the Command Center Frontend Redesign —
+no open work remains unless the user requests something new.**
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
