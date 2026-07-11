@@ -93,8 +93,9 @@ page at goalpulse-agent.vercel.app renders unaffected with zero
 console errors, and `?preview=command-center` is live and working in
 production too.
 
-🔄 **Phase 4 (Signal Audit Drawer) implemented, branch
-`feature/signal-audit-drawer` off `main`:** built the reusable
+✅ **Phase 4 (Signal Audit Drawer) merged to `main` 2026-07-11**
+(was branch `feature/signal-audit-drawer`, fast-forward merge
+`0072903`, no divergence). Built the reusable
 `components/signals/SignalAuditDrawer.tsx` from the blueprint spec — a
 right-side slide-in drawer covering identity, opening/current odds +
 implied probability, odds-compression % and the separate
@@ -111,12 +112,14 @@ the backend already sends. Wired into Signals, Replay Lab, and Live
 Markets chart signal markers (new `onClick` on `ReferenceDot`); Agent
 Arena positions and Archive rows deliberately left unwired per user
 decision — fast-follow only if time remains, since both touch
-components untouched by the redesign so far. Verified live against
-production data at human pace across all three entry points,
-including probability-shift math, real per-signal Arena
-traded/rejected/not-evaluated states, and honest fallbacks when data
-is genuinely unavailable. Build/lint/test clean (31 tests). Committed
-`a742474`. **Holding for user review before pushing/merging.**
+components untouched by the redesign so far. Verified live twice
+(once pre-merge on a local dev server against production data, once
+post-merge directly against goalpulse-agent.vercel.app) — drawer opens
+with correct real data, zero console errors, default page unaffected,
+`/health` shows both streams connected. Build/lint/test clean
+(31 tests) on `main`, pushed. **Next: fast-follow candidates (Agent
+Arena / Archive wiring) only if time remains, otherwise open — awaiting
+user's call given the 2026-07-19 deadline.**
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
