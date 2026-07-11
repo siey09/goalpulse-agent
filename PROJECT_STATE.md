@@ -1936,6 +1936,19 @@ eats into savings on tiny frames); real event payloads during live match
 action should show savings closer to TxLINE's claimed 70-80%. **No action
 needed — do not re-investigate.**
 
+## Pending polish items — not started
+
+Queued for later, batched together before deciding what (if anything)
+to build — not fixed yet, no code changes made.
+
+- **Accuracy badge first-impression risk (flagged 2026-07-11 during a
+  fresh "judge walkthrough" QA pass).** The "Accuracy" badge in the
+  top status strip shows a large, prominent percentage (e.g. "14%")
+  with the honest small-sample caveat ("n=X closed — too small to be
+  meaningful") displayed in small text right below it. A judge
+  skimming quickly could form a negative first impression from the
+  large number before reading the caveat below it.
+
 ## Known limitations (documented, deliberately not fixed)
 
 - ~~Stale-finished-match repolling~~ **Fixed 2026-07-09** — see
