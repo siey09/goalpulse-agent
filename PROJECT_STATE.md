@@ -178,10 +178,37 @@ automation's keyboard input goes to the page DOM, not the browser
 chrome. User independently verified the other three breakpoints via
 their own real Chrome DevTools responsive mode and confirmed it looks
 correct before authorizing the merge. Build/lint/test clean
-(37 tests). Agent Arena/Archive drawer wiring remains explicitly out
-of scope (see above). **This closes out the Command Center Frontend
-Redesign's actively-tracked work — no open items remain unless the
-user requests something new.**
+(37 tests).
+
+🔄 **Phase 6 (code splitting) + Agent Arena/Archive drawer wiring
+implemented, branch `feature/phase6-arena-archive-wiring` off `main`:**
+user reopened both previously-closed fast-follow items. Agent Arena:
+`ArenaPanel` gained an optional `onSelectSignalId` prop, threaded
+through `AgentArenaPage`, resolving against App.tsx's live `signals`
+array (same pattern as the Live Markets chart markers). Archive:
+`SignalArchivePanel` gained an optional `onSelectSignal` prop passing
+a full mapped signal (not just an id, since archive entries routinely
+outlive the live in-memory array they'd otherwise need lookup
+against) via a new `archiveEntryToSignal()` mapper that only sets
+fields the permanent archive actually carries — the drawer's existing
+honest fallbacks handle the rest (verified live: an archived signal
+correctly showed "--"/"Not reported separately" for genuinely-missing
+fields alongside the real ones). Both props optional, both components
+still used unmodified on the untouched default page — one minor
+non-functional side effect there: the rows had to become `<button>`s
+to support the click wiring, so they now show a hover highlight on
+the default page too even though nothing handles a click there.
+Phase 6: the 9 destination pages are now `React.lazy` behind a
+`Suspense` boundary — 9 real separate chunks produced (0.17KB-19KB).
+Main chunk barely shrank (800KB to 751KB) since the bulk is
+`App.tsx`'s own default-page code and shared self-fetching panels used
+by both default and preview; splitting further would mean touching
+the App.tsx monolith itself, out of scope for "safe" splitting.
+Verified live against production data: lazy-loading works cleanly
+across all 9 destinations, Arena→drawer and Archive→drawer click-
+throughs both confirmed with real data, default page unaffected, zero
+console errors. Build/lint/test clean (43 tests). Committed `1cd1148`.
+**Holding for user review before pushing/merging.**
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
