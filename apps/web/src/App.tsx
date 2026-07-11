@@ -28,7 +28,16 @@ import { ReplayLabPage } from "./features/replay/ReplayLabPage";
 import { VerificationPage } from "./features/verification/VerificationPage";
 import { SystemHealthPage } from "./features/health/SystemHealthPage";
 import { VerificationReceipt } from "./components/VerificationReceipt";
-import type { Odds, Match, AgentSignal, OnChainVerifyData, ReplayBacktest, Health } from "./types";
+import { SignalAuditDrawer } from "./components/signals/SignalAuditDrawer";
+import type {
+  Odds,
+  Match,
+  AgentSignal,
+  OnChainVerifyData,
+  ReplayBacktest,
+  Health,
+  SimilarSignalsResult,
+} from "./types";
 import {
   formatNumber,
   formatPercent,
@@ -79,24 +88,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-
-type SimilarSignalEntry = {
-  matchId?: string;
-  signalType?: string;
-  severity?: string;
-  oddsChangePct?: number;
-  fieldPressureScore?: number;
-  resultStatus?: "correct" | "incorrect";
-  archivedAt?: string;
-};
-
-type SimilarSignalsResult = {
-  count: number;
-  correctCount: number;
-  incorrectCount: number;
-  accuracyPct: number;
-  signals: SimilarSignalEntry[];
-};
 
 type AgentRun = {
   id?: string;
@@ -1279,6 +1270,11 @@ function App() {
     () => matches.find((match) => match.id === selectedSignal?.matchId),
     [matches, selectedSignal]
   );
+  const selectedSignalProofHash = useMemo(() => {
+    if (!selectedSignal?.id || !replayBacktest?.signals) return undefined;
+    const wasInReplayRun = replayBacktest.signals.some((signal) => signal.id === selectedSignal.id);
+    return wasInReplayRun ? replayBacktest.proof?.hash : undefined;
+  }, [selectedSignal, replayBacktest]);
   const selectedMatchMarketPressure = useMemo(() => {
     if (!selectedMatch) {
       return {
@@ -1655,6 +1651,7 @@ function App() {
             matchStatusCounts={matchStatusCounts}
             selectedMatchId={selectedMatchId}
             onSelectMatch={setSelectedMatchId}
+            onSelectSignalId={(signalId) => setSelectedSignal(signals.find((signal) => signal.id === signalId) ?? null)}
           />
         );
         break;
@@ -1724,6 +1721,17 @@ function App() {
         >
           {destinationContent}
         </AppShell>
+
+        <SignalAuditDrawer
+          signal={selectedSignal}
+          match={selectedSignalMatch}
+          onClose={() => setSelectedSignal(null)}
+          onchainVerify={onchainVerify}
+          onVerify={runOnchainVerify}
+          similarSignals={similarSignals}
+          isSimilarSignalsLoading={isSimilarSignalsLoading}
+          proofHash={selectedSignalProofHash}
+        />
 
         <button
           onClick={startPreviewGuideTour}

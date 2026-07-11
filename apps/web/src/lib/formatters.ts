@@ -178,3 +178,19 @@ export function getThresholdLabel(signal?: AgentSignal | null) {
 export function getSignalOutcome(signal?: AgentSignal | null) {
   return (signal?.resultStatus ?? "pending").toUpperCase();
 }
+
+export function impliedProbabilityPct(odds?: number) {
+  if (odds === undefined || Number.isNaN(odds) || odds <= 0) return "—";
+  return `${((1 / odds) * 100).toFixed(1)}%`;
+}
+
+export function formatProbabilityPointShift(value?: number) {
+  if (value === undefined || Number.isNaN(value)) return "Not reported separately";
+  return `${value.toFixed(2)} pp`;
+}
+
+export function reliabilityTone(reliability?: string) {
+  if (reliability === "RELIABLE") return "border-emerald-400/20 bg-emerald-400/10 text-emerald-200";
+  if (reliability === "UNRELIABLE" || reliability === "SUSPENDED") return "border-red-400/20 bg-red-400/10 text-red-200";
+  return "border-white/10 bg-white/5 text-stone-400";
+}

@@ -50,6 +50,7 @@ const baseProps = {
   matchStatusCounts: { all: 1, live: 1, scheduled: 0, finished: 0 },
   selectedMatchId: "m1",
   onSelectMatch: vi.fn(),
+  onSelectSignalId: vi.fn(),
 };
 
 describe("LiveMarketsPage", () => {

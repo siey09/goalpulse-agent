@@ -79,6 +79,7 @@ export interface LiveMarketsPageProps {
   matchStatusCounts: { all: number; live: number; scheduled: number; finished: number };
   selectedMatchId: string;
   onSelectMatch: (matchId: string) => void;
+  onSelectSignalId: (signalId: string) => void;
 }
 
 /**
@@ -108,6 +109,7 @@ export function LiveMarketsPage({
   matchStatusCounts,
   selectedMatchId,
   onSelectMatch,
+  onSelectSignalId,
 }: LiveMarketsPageProps) {
   return (
     <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
@@ -448,6 +450,8 @@ export function LiveMarketsPage({
                       strokeWidth={2}
                       fill={markerStyle.fill}
                       label={{ value: "Signal", position: "top", fill: "#fed7aa", fontSize: 10 }}
+                      onClick={() => onSelectSignalId(marker.id)}
+                      style={{ cursor: "pointer" }}
                     />
                   );
                 })}

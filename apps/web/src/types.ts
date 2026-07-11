@@ -34,6 +34,7 @@ export type AgentSignal = {
   oddsBefore?: number;
   oddsAfter?: number;
   oddsChangePct?: number;
+  probabilityPointShiftPct?: number;
   momentumScore?: number;
   confidence?: number;
   confidenceScore?: number;
@@ -55,6 +56,13 @@ export type AgentSignal = {
     scoresContext?: {
       sequence?: number;
       fieldPressureScore?: number;
+      minute?: number;
+      homeScore?: number;
+      awayScore?: number;
+      scoreline?: string;
+      pressureLevel?: "NONE" | "SAFE" | "ATTACK" | "DANGER" | "HIGH_DANGER";
+      reliability?: "RELIABLE" | "UNRELIABLE" | "SUSPENDED" | "UNKNOWN";
+      reliabilityReason?: string;
     };
   };
   discordAlertStatus?: "sent" | "failed" | "not_configured";
@@ -132,4 +140,22 @@ export type Health = {
     totalReconnects?: number;
     lastError?: string | null;
   };
+};
+
+export type SimilarSignalEntry = {
+  matchId?: string;
+  signalType?: string;
+  severity?: string;
+  oddsChangePct?: number;
+  fieldPressureScore?: number;
+  resultStatus?: "correct" | "incorrect";
+  archivedAt?: string;
+};
+
+export type SimilarSignalsResult = {
+  count: number;
+  correctCount: number;
+  incorrectCount: number;
+  accuracyPct: number;
+  signals: SimilarSignalEntry[];
 };
