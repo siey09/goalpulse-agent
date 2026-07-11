@@ -26,6 +26,50 @@ describe("AppSidebar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Market Maker" }));
     expect(onSelect).toHaveBeenCalledWith("market-maker");
   });
+
+  it("does not render the mobile nav sheet by default", () => {
+    render(<AppSidebar active={DEFAULT_DESTINATION} onSelect={() => {}} />);
+    expect(screen.queryByLabelText("Close menu")).not.toBeInTheDocument();
+  });
+
+  it("renders the mobile nav sheet when open, and selecting a destination both navigates and closes it", () => {
+    const onSelect = vi.fn();
+    const onCloseMobileNav = vi.fn();
+    render(
+      <AppSidebar
+        active={DEFAULT_DESTINATION}
+        onSelect={onSelect}
+        isMobileNavOpen
+        onCloseMobileNav={onCloseMobileNav}
+      />
+    );
+
+    expect(screen.getByLabelText("Close menu")).toBeInTheDocument();
+    // "Market Maker" now appears twice: the always-rendered desktop/tablet rail and the mobile sheet.
+    const marketMakerButtons = screen.getAllByRole("button", { name: "Market Maker" });
+    expect(marketMakerButtons).toHaveLength(2);
+
+    fireEvent.click(marketMakerButtons[marketMakerButtons.length - 1]);
+    expect(onSelect).toHaveBeenCalledWith("market-maker");
+    expect(onCloseMobileNav).toHaveBeenCalled();
+  });
+
+  it("closes the mobile nav sheet when the backdrop is clicked", () => {
+    const onCloseMobileNav = vi.fn();
+    const { container } = render(
+      <AppSidebar
+        active={DEFAULT_DESTINATION}
+        onSelect={() => {}}
+        isMobileNavOpen
+        onCloseMobileNav={onCloseMobileNav}
+      />
+    );
+
+    const backdrop = container.querySelector(".bg-black\\/60");
+    expect(backdrop).not.toBeNull();
+    fireEvent.click(backdrop!);
+    expect(onCloseMobileNav).toHaveBeenCalled();
+  });
 });
 
 describe("TopStatusBar", () => {
@@ -34,6 +78,25 @@ describe("TopStatusBar", () => {
     expect(screen.getByText("Command Center")).toBeInTheDocument();
     expect(screen.getByText("RUNNING")).toBeInTheDocument();
     expect(screen.getByText("LIVE TxLINE")).toBeInTheDocument();
+  });
+
+  it("does not render a mobile nav toggle when onOpenMobileNav is omitted", () => {
+    render(<TopStatusBar title="Command Center" agentStatus="RUNNING" feedMode="LIVE TxLINE" />);
+    expect(screen.queryByLabelText("Open navigation menu")).not.toBeInTheDocument();
+  });
+
+  it("renders a mobile nav toggle that calls onOpenMobileNav when clicked", () => {
+    const onOpenMobileNav = vi.fn();
+    render(
+      <TopStatusBar
+        title="Command Center"
+        agentStatus="RUNNING"
+        feedMode="LIVE TxLINE"
+        onOpenMobileNav={onOpenMobileNav}
+      />
+    );
+    fireEvent.click(screen.getByLabelText("Open navigation menu"));
+    expect(onOpenMobileNav).toHaveBeenCalled();
   });
 });
 
@@ -73,5 +136,31 @@ describe("AppShell", () => {
 
     expect(screen.getByText("Analytics only")).toBeInTheDocument();
     expect(screen.getByText(/does not place wagers, custody funds/)).toBeInTheDocument();
+  });
+
+  it("opens the mobile nav sheet via the hamburger and closes it via a destination select", () => {
+    const onSelectDestination = vi.fn();
+    render(
+      <AppShell
+        active={DEFAULT_DESTINATION}
+        onSelectDestination={onSelectDestination}
+        title="Command Center"
+        agentStatus="RUNNING"
+        feedMode="LIVE TxLINE"
+      >
+        <p>page content</p>
+      </AppShell>
+    );
+
+    expect(screen.queryByLabelText("Close menu")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Open navigation menu"));
+    expect(screen.getByLabelText("Close menu")).toBeInTheDocument();
+
+    const signalsButtons = screen.getAllByRole("button", { name: "Signals" });
+    fireEvent.click(signalsButtons[signalsButtons.length - 1]);
+
+    expect(onSelectDestination).toHaveBeenCalledWith("signals");
+    expect(screen.queryByLabelText("Close menu")).not.toBeInTheDocument();
   });
 });

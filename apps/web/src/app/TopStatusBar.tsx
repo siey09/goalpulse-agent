@@ -1,3 +1,4 @@
+import { Menu } from "lucide-react";
 import { StatusBadge, type StatusTone } from "../components/ui/StatusBadge";
 
 export type AgentStatus = "RUNNING" | "DEGRADED" | "RECONNECTING" | "STOPPED";
@@ -17,6 +18,8 @@ export interface TopStatusBarProps {
   /** Human-readable freshness, e.g. "2.4s ago" - caller formats, this component just displays. */
   freshnessLabel?: string;
   lastDecisionLabel?: string;
+  /** Shows a hamburger button (mobile only, <768px) that opens the nav sheet. */
+  onOpenMobileNav?: () => void;
 }
 
 /**
@@ -30,10 +33,23 @@ export function TopStatusBar({
   feedMode,
   freshnessLabel,
   lastDecisionLabel,
+  onOpenMobileNav,
 }: TopStatusBarProps) {
   return (
     <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface-1/95 px-6 py-3 backdrop-blur">
-      <h1 className="text-lg font-bold text-white">{title}</h1>
+      <div className="flex items-center gap-3">
+        {onOpenMobileNav && (
+          <button
+            type="button"
+            onClick={onOpenMobileNav}
+            aria-label="Open navigation menu"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/8 text-stone-300 transition hover:bg-white/12 hover:text-white md:hidden"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        )}
+        <h1 className="text-lg font-bold text-white">{title}</h1>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge label={agentStatus} tone={AGENT_STATUS_TONE[agentStatus]} withDot />
         <StatusBadge label={feedMode} tone={feedMode === "LIVE TxLINE" ? "accent" : "info"} />
