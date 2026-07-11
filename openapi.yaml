@@ -580,14 +580,16 @@ paths:
                           connected: { type: boolean }
                           staleForMs: { type: number, nullable: true }
                           totalReconnects: { type: number }
-                        required: [connected, staleForMs, totalReconnects]
+                          status: { type: string, enum: [STREAMING, STALE, RECONNECTING, STOPPED] }
+                        required: [connected, staleForMs, totalReconnects, status]
                       liveOddsStream:
                         type: object
                         properties:
                           connected: { type: boolean }
                           staleForMs: { type: number, nullable: true }
                           totalReconnects: { type: number }
-                        required: [connected, staleForMs, totalReconnects]
+                          status: { type: string, enum: [STREAMING, STALE, RECONNECTING, STOPPED] }
+                        required: [connected, staleForMs, totalReconnects, status]
                       duplicatesDropped:
                         type: object
                         properties:

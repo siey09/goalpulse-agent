@@ -8,6 +8,7 @@ import { processAgentCycle } from "./agent";
 import { fetchRecentTxLineResults } from "./services/txlineClient";
 import { getLiveStreamState, startLiveStreamMonitor } from "./services/txlineStream";
 import { getLiveOddsStreamState, startLiveOddsStreamMonitor } from "./services/txlineOddsStream";
+import { deriveStreamStatus } from "./services/sseStreamMonitor";
 import { validateStatOnChain } from "./services/onchainValidation";
 import { loadSnapshot, saveSnapshot } from "./services/persistence";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
@@ -104,6 +105,8 @@ app.get("/api/metrics", (_req, res) => {
   const lastRun = store.agentRuns[0];
   const liveStream = getLiveStreamState();
   const liveOddsStream = getLiveOddsStreamState();
+  const isFeedEnabled = !config.useSimulatedFeed && Boolean(config.txlineApiKey);
+  const now = Date.now();
 
   const staleForMs = (state: { lastEventAt: string | null }) =>
     state.lastEventAt ? Date.now() - new Date(state.lastEventAt).getTime() : null;
@@ -123,11 +126,13 @@ app.get("/api/metrics", (_req, res) => {
         connected: liveStream.connected,
         staleForMs: staleForMs(liveStream),
         totalReconnects: liveStream.totalReconnects,
+        status: deriveStreamStatus(liveStream, isFeedEnabled, now),
       },
       liveOddsStream: {
         connected: liveOddsStream.connected,
         staleForMs: staleForMs(liveOddsStream),
         totalReconnects: liveOddsStream.totalReconnects,
+        status: deriveStreamStatus(liveOddsStream, isFeedEnabled, now),
       },
       duplicatesDropped: store.duplicatesDropped,
     },
