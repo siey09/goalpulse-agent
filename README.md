@@ -10,8 +10,9 @@ GoalPulse is analytics-only. It does not place wagers, custody funds, execute tr
 up-to-date, session-by-session detail on what shipped, what's in
 progress, and what's deliberately deferred, `PROJECT_STATE.md` at the
 repo root is the authoritative reference — it is updated after every
-milestone. As of 2026-07-11: 268 automated backend unit tests across
-23 files, 26 API endpoints (documented interactively at `/api/docs`).
+milestone. As of 2026-07-11: 276 automated backend unit tests across
+22 files, 27 API endpoints (26 routes plus `/api/docs`, documented
+interactively there).
 
 ## Live Links
 
@@ -123,8 +124,11 @@ Beyond code bugs, two real production deployment incidents were found and resolv
 - Draw-side (three-way 1X2) signal generation, settlement, and steam-move detection
 - Longshot-odds confidence penalty, calibrated from real archived settlement data
 - SSE stream connectivity status (`STREAMING`/`STALE`/`RECONNECTING`/`STOPPED`) via `GET /api/metrics`
-- CI (GitHub Actions), pinned dependencies, MIT license
-- 268 automated backend unit tests across 23 files
+- Kelly Criterion risk-limit rejection with an explicit reason code, not just a silent stake clamp
+- Probability-point-shift reporting, separate from raw odds compression
+- CI (GitHub Actions), pinned dependencies, MIT license, explicit CORS origin allowlist
+- Upsert-based idempotency on the permanent archive tables (signal_archive, match_archive)
+- 276 automated backend unit tests across 22 files
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer

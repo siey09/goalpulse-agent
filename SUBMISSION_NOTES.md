@@ -135,6 +135,30 @@ A stricter companion to the existing cross-match signal correlation (item 6): `G
 
 The historical hit-rate data from `GET /api/signal-performance` (item 7) had zero dashboard visibility until now — one of several capabilities this session built that existed only as backend routes. `apps/web/src/components/SignalPerformancePanel.tsx` surfaces it directly: one card per signal type, sorted by settled count, color-coded by an accuracy threshold. Confirmed against real production data before shipping: WATCH 88% (52 settled), MOMENTUM_SHIFT 87% (23 settled), SHARP_MOVE only 33% (27 settled) — left fully visible as an honest track record rather than only surfacing favorable numbers.
 
+## Major Features Added 2026-07-10 to 2026-07-11
+
+Beyond the 14 items above, a further round of features closed out the remaining dashboard-visibility gaps, added three new self-audit/discovery capabilities, and closed out a full external technical review (6 "P0" items, a longer P1 list across three risk tiers, a 20-item Mandatory Test Plan, and a 15-item Definition of Done checklist).
+
+**Dashboard visibility for existing backend features**: three panels — Confidence Calibration (`ConfidenceCalibrationPanel.tsx`), Steam Move Detection (`SteamMoveDetectionPanel.tsx`, live-polled every 5s), and Signal Correlation (`SignalCorrelationPanel.tsx`) — gave three previously backend-only capabilities a real dashboard surface, all verified live in production with real data.
+
+**Historical Pattern Match**: `GET /api/archive/similar-signals` finds the archive's most similar past signals to a given target (same `signalType`, ranked by odds-compression and field-pressure distance, capped per other match to avoid one match dominating the result), surfaced in the signal detail modal.
+
+**Verification Depth Score**: a plain-label status badge (never a fabricated percentage) in the Outcome Audit Layer, always the result of a real live Solana on-chain check, never inferred.
+
+**Meta-agent recommendation and Skeptic Check**: `ArenaPanel.tsx` now ranks the three Arena agents by ROI% (not raw net units, which unfairly favored Kelly Criterion's variable staking) with a minimum sample size before declaring a leader, and audits that leader for real match-concentration risk (flagging when ≥50% of its settled sample comes from one real match) — a real, calibrated finding: production data showed the declared leader's settled positions were 100% concentrated in a single match at the time this was built.
+
+**Draw-side signals**: the signal engine now evaluates all three 1X2 outcomes (home/draw/away), not just home/away, end to end through detection, settlement, and the Arena (Contrarian deliberately skips draw signals — no principled "opposite" exists in a three-outcome market).
+
+**Risk-limit rejection**: Kelly Criterion now rejects a paper position outright, with an explicit `risk_limit_exceeded` reason code, when its raw stake sizing exceeds the maximum bankroll fraction — previously it only silently clamped the stake. Verified live in production with real rejections firing.
+
+**Probability-point shift reporting**: signals now report a de-vigged implied-probability-point shift as a genuinely separate number from raw percentage odds compression, reflecting the confirmed fact that TxLINE's feed is already de-vigged at the source.
+
+**Production hardening**: GitHub Actions CI (backend+frontend, parallel jobs), pinned dependency versions, an explicit CORS origin allowlist, an MIT LICENSE, upsert-based idempotency on the permanent archive tables (closing a real restart-timing duplicate-row race found and fixed in production data), and a new `GET /api/metrics` endpoint (uptime, decision latency, stream staleness, duplicate-drop counters).
+
+**Replay-path settlement bugs found and fixed**: the `/api/replay/backtest` route had its own separate, duplicate settlement implementation, missing a draw-outcome branch and unable to resolve a totals signal's matchId back to its real fixture — both fixed by extracting a single shared, tested `logic/replaySettlement.ts` module.
+
+**Full external technical review closed out**: 6 P0 items (2 confirmed false premises given the single-source feed, 2 confirmed already-addressed, 2 confirmed real and fixed — a trap-detection labeling rename to avoid overclaiming certainty), then a full P1 backlog sequenced into three risk tiers (all shipped), then a 20-item Mandatory Test Plan / 15-item Definition of Done audit that found and fixed 4 real gaps (the replay settlement bugs, the risk-limit rejection mechanism, the probability-point-shift reporting, and this document's own staleness). Every item independently verified against real code and live production data, not assumed.
+
 ## Bugs Found and Fixed During Live Verification
 
 **Bug 1 — Undocumented StatusId 100.** While verifying production against real matches, the agent could not close out signals for a finished match (Colombia vs Ghana stayed `"live"` at minute 90). Investigation of the raw TxLINE Scores feed showed a `game_finalised` action carrying `StatusId: 100`, a status code not documented in the official TXODDS Scores Product API doc (v1.0, which only lists StatusId 1-18). The status mapping in `txlineClient.ts` was updated to treat `StatusId 100` as `finished`, redeployed, and reverified live: the match correctly flipped to `finished` and both pending signals were immediately evaluated as `correct`, confirmed by the 100% accuracy result above.
@@ -155,7 +179,7 @@ Beyond code bugs, two real production deployment incidents were investigated and
 
 ## Automated Test Coverage and Security Audit
 
-- **181 automated unit tests across 18 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection between home/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian/Kelly Criterion position logic and variable-stake ROI math, the retroactive backtest orchestration against archived signals, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's session-windowing/cluster-filtering logic and its pattern-matched variant, the composite confidence score's weighting/renormalization, and the signal-type performance aggregation. Test files are excluded from the production TypeScript build output.
+- **276 automated unit tests across 22 files** (Vitest, up from 24 at initial verification) cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection across home/draw/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic, in both the live and replay-path code — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian/Kelly Criterion position logic (including risk-limit rejection) and variable-stake ROI math, the retroactive backtest orchestration against archived signals, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's backend-deduplicated session-windowing/cluster-filtering logic and its pattern-matched variant, the composite confidence score's weighting/renormalization and longshot penalty, the signal-type performance aggregation, the historical pattern match's similarity ranking, the event-latency aggregation, and the shared SSE stream monitor's connect/reconnect/backoff/status-derivation logic. Test files are excluded from the production TypeScript build output.
 - **Git history security audit**: searched the full commit history for accidentally committed secrets (API tokens, wallet keys, webhook URLs) and confirmed none were ever committed. Only `.env.example` (a template with no real values) was ever tracked; `.env.local` and `.secrets/` are gitignored throughout.
 
 ## Production Readiness Features (Added After Core Verification)
@@ -258,7 +282,17 @@ GoalPulse uses:
 - Signal correlation: detects cross-match signal clusters within a short time window
 - Composite confidence score (0-100) on every signal, blending magnitude, field pressure, and freshness tightness
 - Historical hit-rate per signal type from the permanent archive, now visible on the dashboard's Signal Performance panel
-- 181 automated unit tests
+- Confidence-calibration, Steam Move Detection, and Signal Correlation dashboard panels (full dashboard visibility for previously backend-only features)
+- Historical Pattern Match: nearest-neighbor similar past signals surfaced in the signal detail modal
+- Verification Depth Score: plain-label on-chain verification status badge, never inferred
+- Meta-agent recommendation and Skeptic Check: ROI-normalized agent ranking with a real match-concentration audit
+- Draw-side (three-way) signal evaluation across detection, settlement, and the Arena
+- Kelly Criterion risk-limit rejection with an explicit reason code, not just a silent stake clamp
+- Probability-point-shift reporting, separate from raw odds compression
+- Permanent match archive (`match_archive`), a second insert-only Supabase table alongside the signal archive
+- Second live push-stream monitor (odds side) with derived connectivity status labels
+- CI (GitHub Actions), pinned dependencies, explicit CORS allowlist, MIT license, upsert-based archive idempotency, `/api/metrics`
+- 276 automated unit tests
 
 ## Outcome Audit Layer
 
@@ -297,6 +331,9 @@ The frontend is built with React, TypeScript, Vite, Tailwind CSS, and Recharts. 
 - GET /api/signal-correlation/patterns (pattern-matched cross-match clusters)
 - GET /api/signal-performance (historical hit-rate per signal type)
 - GET /api/signal-performance/by-confidence (accuracy bucketed by composite confidence score)
+- GET /api/signal-performance/event-latency (event-to-market reaction latency stats per severity tier)
+- GET /api/archive/similar-signals (nearest-neighbor similar past signals for a given target signal)
+- GET /api/metrics (uptime, decision latency, stream staleness, duplicate-drop counters)
 - GET /api/replay/backtest (council vote, trap classification, SHA-256 proof hash)
 - GET /api/onchain/validate-stat (real on-chain Merkle proof validation via Solana)
 - GET /api/live/odds-stream (Server-Sent Events, live)
@@ -304,26 +341,21 @@ The frontend is built with React, TypeScript, Vite, Tailwind CSS, and Recharts. 
 - GET /api/docs (interactive Swagger UI documenting every endpoint)
 - POST /api/agent/run-once (requires X-API-Key header, rate-limited 10/min)
 
+27 endpoints total (26 routes plus /api/docs).
+
 ## Demo Flow
 
-1. Open the deployed frontend.
-2. Show backend health endpoint, including `liveStream.connected: true`.
-3. Show the Market Board with precise status and clock, and the "updated Xs ago" freshness indicator.
-4. Show odds movement chart with the color-coded Market Verdict bar.
-5. Show Signal Intelligence Panel.
-6. Explain TXODDS field context and Field Pressure Index.
-7. Show reliability filter.
-8. Show Results Settlement Audit.
-9. Show score breakdown rows.
-10. Show the simulated P&L card (net units, ROI%, severity breakdown).
-11. Show replay mode and evidence chain.
-12. Run the Outcome Audit: show the council vote, trap classification, and the SHA-256 proof hash.
-13. Click "Verify on Solana" and show the real on-chain Merkle proof result with the Solana Explorer link.
-14. Show the Colombia vs Ghana case study: SHARP_MOVE and MOMENTUM_SHIFT signals, both confirmed correct after final settlement.
-15. Show the Verified Case Studies panel and the small-sample disclaimer next to the live accuracy number.
-16. Show GET /api/docs — the interactive Swagger UI documenting every endpoint, including the API key requirement and rate limits.
-17. Mention production readiness: API key authentication, rate limiting, external uptime monitoring, and Supabase persistence verified surviving a real Render restart.
-18. End with analytics-only compliance boundary.
+The dashboard now includes an in-app 22-step Guided Tour (`judgeDemoSteps` in `App.tsx`) that walks a judge through every panel with spotlighting, superseding a fixed manual script. The authoritative, current demo script — with concrete spoken lines — is `DEMO_CHECKLIST.md`'s "Recommended Live Path" section; its "Final Demo Order" summary (target 4-6 minutes):
+
+1. Opening problem statement.
+2. Production app + `/health` check.
+3. Guided Tour — fast pass through all 22 steps (Market Board, Odds Chart, Signal Intelligence, Field Pressure, Reliability, Results Settlement, Replay Mode, In-Play Market Maker, Steam Move Detection, Agent vs Agent Arena with Meta-agent/Skeptic Check, Outcome Audit council/proof hash, Signal Archive, Signal Performance, Confidence Calibration, Signal Correlation).
+4. Agent vs Agent Arena deep dive: three agents, rejection reasons (including risk-limit rejection and draw-signal handling), tamper-evident SHA-256 ledger, real Solana verification.
+5. Signal detail deep dive: click a signal to show Historical Pattern Match ("similar past signals") and Verification Depth Score.
+6. Signal Correlation deep dive, with an honest empty-state fallback line since that panel is the most likely to show sparse data live.
+7. Compliance boundary close.
+
+Also worth showing if time remains: `GET /api/docs` (interactive Swagger UI, all 27 endpoints), `GET /api/metrics` (uptime/latency/stream-staleness), the CI badge and LICENSE in the repo, and the Verified Case Studies panel with its small-sample disclaimer.
 
 ## Safety and Compliance
 
@@ -341,3 +373,4 @@ GoalPulse is a sports analytics and market intelligence tool only. It does not p
 - API key authentication, rate limiting, and Supabase persistence verified live in production on 2026-07-07, including a real manual Render restart that confirmed the store correctly recovered older historical data from Supabase instead of resetting to empty.
 - Interactive OpenAPI/Swagger documentation live at /api/docs.
 - External uptime monitoring configured via UptimeRobot, pinging /health every 5 minutes.
+- Full external technical review (P0 + P1 + Mandatory Test Plan/DoD) closed out and independently verified live in production on 2026-07-11 — see `PROJECT_STATE.md` for the complete, current record. `PROJECT_STATE.md` is the authoritative up-to-date reference; this document reflects the state of the project as of that closure.
