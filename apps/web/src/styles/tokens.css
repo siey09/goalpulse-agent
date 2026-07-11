@@ -1,0 +1,22 @@
+/*
+ * Command Center design tokens (Phase 1 scaffolding).
+ * Registered as Tailwind v4 theme colors so they're usable as
+ * bg-canvas, text-accent, border-border, etc. Not wired into any
+ * existing page yet - additive only, imported once from index.css.
+ */
+@theme {
+  --color-canvas: #090b0d;
+  --color-surface-1: #111417;
+  --color-surface-2: #15191d;
+  --color-surface-3: #1b2025;
+  --color-border: rgba(255, 255, 255, 0.08);
+
+  --color-accent: #f97316;
+  --color-accent-soft: #fb923c;
+
+  --color-positive: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-info: #38bdf8;
+  --color-proof: #a78bfa;
+}
