@@ -117,9 +117,42 @@ components untouched by the redesign so far. Verified live twice
 post-merge directly against goalpulse-agent.vercel.app) — drawer opens
 with correct real data, zero console errors, default page unaffected,
 `/health` shows both streams connected. Build/lint/test clean
-(31 tests) on `main`, pushed. **Next: fast-follow candidates (Agent
-Arena / Archive wiring) only if time remains, otherwise open — awaiting
-user's call given the 2026-07-19 deadline.**
+(31 tests) on `main`, pushed.
+
+✅ **Command Center adopted as the official demo path 2026-07-11** —
+explicit user decision: stays behind `?preview=command-center` rather
+than flipping the app's default (lower risk; already fully working end
+to end through that URL). `DEMO_CHECKLIST.md` and `SUBMISSION_NOTES.md`
+updated with a prominent callout pointing the judge demo at
+`https://goalpulse-agent.vercel.app/?preview=command-center`, not the
+bare production URL. Agent Arena / Archive drawer wiring explicitly
+**closed as out of scope** for this redesign (user call, given the
+2026-07-19 deadline) — not a fast-follow, just not happening unless
+separately requested later.
+
+✅ **Phase 7 (final regression pass on the preview experience)
+2026-07-11:** all 9 destinations + the Guided Tour + the Signal Audit
+Drawer verified live at 1440px — zero horizontal overflow, zero
+console errors, all 36 sampled `/api/*` + `/health` network requests
+returned 200. **Known tooling limitation surfaced during this pass:**
+the browser automation `resize_window` tool does not actually change
+`window.innerWidth` in this environment (confirmed on two separate
+fresh tabs — stayed pinned at 1440 regardless of requested size), so
+1024px/390px could not be verified with live pixel measurements this
+way. Fell back to a code-level audit instead: `AppShell.tsx` uses
+`min-w-0 flex-1` throughout, so nothing forces an actual horizontal
+scrollbar at any width. But `AppSidebar.tsx` is a **hard-coded
+`w-[248px]`, `shrink-0`, with zero responsive/collapse behavior at any
+breakpoint** — at 1024px that leaves a workable ~776px content area
+(low risk), but at a true 390px mobile width it leaves only ~142px for
+the entire main content column, which would render severely cramped
+(not off-screen-overflowing, just visually broken) rather than
+gracefully adapting. This is pre-existing Phase 1 architecture, not
+something introduced in Phases 2-4 — flagging as a known gap rather
+than fixing silently, since building real mobile responsiveness
+(collapsible/hamburger sidebar) is a real feature addition, not a
+regression-pass fix, and this project has always been a
+laptop-presented judge demo, not a phone-presented one.
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
