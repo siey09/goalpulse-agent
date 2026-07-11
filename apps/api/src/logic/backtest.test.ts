@@ -36,7 +36,7 @@ describe("computeBacktestScoreboards", () => {
         id: "signal-1",
         resultStatus: "correct",
         oddsAfter: 2.0,
-        confidenceScore: 100,
+        confidenceScore: 60,
       }),
       makeSignal({
         id: "signal-2",
@@ -62,15 +62,15 @@ describe("computeBacktestScoreboards", () => {
     expect(momentumFollower.roiPercent).toBe(0);
     expect(momentumFollower.winRatePct).toBe(50);
 
-    // Kelly Criterion: signal-1 (odds=2.0, confidence=100) stakes 2.0,
-    // wins 2.0. signal-2 (odds=1.5, confidence=20) stakes 0.9, loses 0.9.
-    // netUnits = 2.0 + (-0.9) = 1.1; totalStaked = 2.0 + 0.9 = 2.9;
-    // roiPercent = round((1.1 / 2.9) * 100) = 37.93.
+    // Kelly Criterion: signal-1 (odds=2.0, confidence=60) stakes 1.8,
+    // wins 1.8. signal-2 (odds=1.5, confidence=20) stakes 0.9, loses 0.9.
+    // netUnits = 1.8 + (-0.9) = 0.9; totalStaked = 1.8 + 0.9 = 2.7;
+    // roiPercent = round((0.9 / 2.7) * 100) = 33.33.
     expect(kellyCriterion.settledCount).toBe(2);
-    expect(kellyCriterion.positions[0].stakeUnits).toBe(2.0);
+    expect(kellyCriterion.positions[0].stakeUnits).toBe(1.8);
     expect(kellyCriterion.positions[1].stakeUnits).toBe(0.9);
-    expect(kellyCriterion.netUnits).toBe(1.1);
-    expect(kellyCriterion.roiPercent).toBe(37.93);
+    expect(kellyCriterion.netUnits).toBe(0.9);
+    expect(kellyCriterion.roiPercent).toBe(33.33);
     expect(kellyCriterion.winRatePct).toBe(50);
   });
 

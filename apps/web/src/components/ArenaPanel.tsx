@@ -36,7 +36,12 @@ type ArenaRejection = {
   agentId: ArenaAgentId;
   signalId: string;
   matchId: string;
-  reason: "totals_signal" | "not_market_only_move" | "no_original_snapshot" | "draw_signal";
+  reason:
+    | "totals_signal"
+    | "not_market_only_move"
+    | "no_original_snapshot"
+    | "draw_signal"
+    | "risk_limit_exceeded";
   reasonText: string;
 };
 

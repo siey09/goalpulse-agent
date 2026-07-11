@@ -173,6 +173,20 @@ export function getRejectionReason(
     };
   }
 
+  if (agentId === "kelly_criterion") {
+    if (exceedsKellyRiskLimit(signal.oddsAfter, signal.confidenceScore ?? 0)) {
+      return {
+        agentId,
+        signalId: signal.id,
+        matchId: signal.matchId,
+        reason: "risk_limit_exceeded",
+        reasonText:
+          "Risk limit exceeded — Kelly Criterion's raw stake sizing exceeded the maximum bankroll fraction.",
+      };
+    }
+    return null;
+  }
+
   if (agentId !== "contrarian") return null;
 
   if (signal.side === "draw") {
@@ -220,7 +234,7 @@ export function getRejectionReason(
  * fractions) then scaled by KELLY_BANKROLL_UNITS so stakes land in a
  * range comparable to the other agents' flat 1-unit bets.
  */
-export function calculateKellyStake(oddsTaken: number, confidenceScore: number): number {
+function computeRawKellyFraction(oddsTaken: number, confidenceScore: number): number {
   if (oddsTaken <= 1) return 0;
 
   const marketImpliedProb = 1 / oddsTaken;
@@ -231,9 +245,31 @@ export function calculateKellyStake(oddsTaken: number, confidenceScore: number):
   const p = ourProbEstimate;
   const q = 1 - p;
 
-  const kellyFraction = clamp((b * p - q) / b, 0, MAX_STAKE_FRACTION);
+  return (b * p - q) / b;
+}
+
+export function calculateKellyStake(oddsTaken: number, confidenceScore: number): number {
+  const kellyFraction = clamp(
+    computeRawKellyFraction(oddsTaken, confidenceScore),
+    0,
+    MAX_STAKE_FRACTION
+  );
 
   return round(kellyFraction * KELLY_BANKROLL_UNITS);
+}
+
+/**
+ * Real risk-limit check (P1 Mandatory Test Plan Gap 2), distinct from
+ * calculateKellyStake's existing clamp: previously, a raw Kelly fraction
+ * beyond MAX_STAKE_FRACTION was silently resized down to the cap and a
+ * paper position was still created - there was no path anywhere that
+ * actually rejected a position for exceeding a risk threshold. This
+ * checks the same raw (uncapped) fraction calculateKellyStake computes
+ * internally, so the two functions can never disagree about what the
+ * "true" desired stake was before capping.
+ */
+export function exceedsKellyRiskLimit(oddsTaken: number, confidenceScore: number): boolean {
+  return computeRawKellyFraction(oddsTaken, confidenceScore) > MAX_STAKE_FRACTION;
 }
 
 /**
@@ -243,6 +279,7 @@ export function calculateKellyStake(oddsTaken: number, confidenceScore: number):
  */
 export function buildKellyCriterionPosition(signal: AgentSignal): ArenaPosition | null {
   if (isTotalsSignal(signal)) return null;
+  if (exceedsKellyRiskLimit(signal.oddsAfter, signal.confidenceScore ?? 0)) return null;
 
   const stakeUnits = calculateKellyStake(signal.oddsAfter, signal.confidenceScore ?? 0);
 

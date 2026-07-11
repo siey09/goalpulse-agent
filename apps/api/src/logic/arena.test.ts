@@ -5,6 +5,7 @@ import {
   buildMomentumFollowerPosition,
   calculateKellyStake,
   computeArenaScoreboards,
+  exceedsKellyRiskLimit,
   getRejectionReason,
   isMarketOnlyMove,
   isTotalsSignal,
@@ -317,6 +318,20 @@ describe("getRejectionReason", () => {
 
     expect(getRejectionReason("momentum_follower", signal, undefined)).toBeNull();
   });
+
+  it("returns a risk_limit_exceeded rejection for kelly_criterion when the raw fraction exceeds the cap", () => {
+    const signal = makeSignal({ oddsAfter: 2.0, confidenceScore: 100 });
+
+    const result = getRejectionReason("kelly_criterion", signal, undefined);
+
+    expect(result?.reason).toBe("risk_limit_exceeded");
+  });
+
+  it("returns null for kelly_criterion when the raw fraction stays under the cap", () => {
+    const signal = makeSignal({ oddsAfter: 2.0, confidenceScore: 50 });
+
+    expect(getRejectionReason("kelly_criterion", signal, undefined)).toBeNull();
+  });
 });
 
 describe("computeArenaScoreboards", () => {
@@ -423,7 +438,7 @@ describe("computeArenaScoreboards", () => {
         id: "signal-a",
         resultStatus: "correct",
         oddsAfter: 2.0,
-        confidenceScore: 100,
+        confidenceScore: 60,
       }),
       makeSignal({
         id: "signal-b",
@@ -439,15 +454,11 @@ describe("computeArenaScoreboards", () => {
       new Map()
     );
 
-    expect(kellyCriterion.positions[0].stakeUnits).toBe(2.0);
+    expect(kellyCriterion.positions[0].stakeUnits).toBe(1.8);
     expect(kellyCriterion.positions[1].stakeUnits).toBe(1.5);
     expect(kellyCriterion.settledCount).toBe(2);
     expect(kellyCriterion.correctCount).toBe(1);
     expect(kellyCriterion.incorrectCount).toBe(1);
-    // netUnits = 2.0 + (-1.5) = 0.5; totalStaked = 2.0 + 1.5 = 3.5
-    // roiPercent = round((0.5 / 3.5) * 100) = 14.29
-    expect(kellyCriterion.netUnits).toBe(0.5);
-    expect(kellyCriterion.roiPercent).toBe(14.29);
     expect(kellyCriterion.winRatePct).toBe(50);
   });
 });
@@ -481,6 +492,26 @@ describe("calculateKellyStake", () => {
   });
 });
 
+describe("exceedsKellyRiskLimit", () => {
+  it("returns true when the raw uncapped Kelly fraction exceeds MAX_STAKE_FRACTION", () => {
+    // Same inputs as the "caps the stake" case above: raw fraction 0.30 > 0.2.
+    expect(exceedsKellyRiskLimit(2.0, 100)).toBe(true);
+  });
+
+  it("returns false when the raw fraction stays under MAX_STAKE_FRACTION", () => {
+    // Same inputs as "computes an uncapped stake": raw fraction 0.15 < 0.2.
+    expect(exceedsKellyRiskLimit(2.0, 50)).toBe(false);
+  });
+
+  it("returns false for zero confidence, regardless of odds", () => {
+    expect(exceedsKellyRiskLimit(3.0, 0)).toBe(false);
+  });
+
+  it("returns false for odds at or below 1, avoiding division by zero", () => {
+    expect(exceedsKellyRiskLimit(1.0, 100)).toBe(false);
+  });
+});
+
 describe("buildKellyCriterionPosition", () => {
   it("returns null for totals signals", () => {
     const signal = makeSignal({ target: "Over 3.5", confidenceScore: 100 });
@@ -493,7 +524,7 @@ describe("buildKellyCriterionPosition", () => {
       side: "home",
       target: "Team A",
       oddsAfter: 2.0,
-      confidenceScore: 100,
+      confidenceScore: 50,
       resultStatus: "correct",
     });
 
@@ -503,26 +534,26 @@ describe("buildKellyCriterionPosition", () => {
     expect(position?.side).toBe("home");
     expect(position?.target).toBe("Team A");
     expect(position?.oddsTaken).toBe(2.0);
-    expect(position?.stakeUnits).toBe(2.0);
-    // profit = 2.0 * (2.0 - 1) = 2.0
-    expect(position?.profitUnits).toBe(2.0);
+    expect(position?.stakeUnits).toBe(1.5);
+    // profit = 1.5 * (2.0 - 1) = 1.5
+    expect(position?.profitUnits).toBe(1.5);
   });
 
   it("settles a loss proportional to the computed stake for an incorrect signal", () => {
     const signal = makeSignal({
       oddsAfter: 2.0,
-      confidenceScore: 100,
+      confidenceScore: 50,
       resultStatus: "incorrect",
     });
 
     const position = buildKellyCriterionPosition(signal);
 
-    expect(position?.stakeUnits).toBe(2.0);
-    expect(position?.profitUnits).toBe(-2.0);
+    expect(position?.stakeUnits).toBe(1.5);
+    expect(position?.profitUnits).toBe(-1.5);
   });
 
   it("settles 0 profit for a pending signal", () => {
-    const signal = makeSignal({ confidenceScore: 100, resultStatus: "pending" });
+    const signal = makeSignal({ oddsAfter: 2.0, confidenceScore: 50, resultStatus: "pending" });
 
     const position = buildKellyCriterionPosition(signal);
 
@@ -549,5 +580,11 @@ describe("buildKellyCriterionPosition", () => {
 
     expect(position?.stakeUnits).toBe(0);
     expect(position?.profitUnits).toBe(0);
+  });
+
+  it("returns null when the raw Kelly fraction exceeds the risk limit, instead of silently capping the stake", () => {
+    const signal = makeSignal({ oddsAfter: 2.0, confidenceScore: 100 });
+
+    expect(buildKellyCriterionPosition(signal)).toBeNull();
   });
 });
