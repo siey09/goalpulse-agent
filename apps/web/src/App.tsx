@@ -10,6 +10,9 @@ import { SignalArchivePanel } from "./components/SignalArchivePanel";
 import { SignalPerformancePanel } from "./components/SignalPerformancePanel";
 import { ConfidenceCalibrationPanel } from "./components/ConfidenceCalibrationPanel";
 import { SignalCorrelationPanel } from "./components/SignalCorrelationPanel";
+import { AppShell } from "./app/AppShell";
+import { DEFAULT_DESTINATION } from "./app/navigation";
+import { CommandCenterPage } from "./features/overview/CommandCenterPage";
 import {
   Activity,
   BarChart3,
@@ -1816,6 +1819,55 @@ function App() {
   const MIN_MEANINGFUL_ACCURACY_SAMPLE = 5;
   const hasMeaningfulAccuracySample =
     (stats?.closedSignals ?? 0) >= MIN_MEANINGFUL_ACCURACY_SAMPLE;
+
+  // Command Center redesign, Phase 2 preview only. Gated behind an explicit,
+  // undocumented query param so the default page (everything below) is
+  // completely unaffected - this exists purely so the new page can be
+  // reviewed against real live data before Phase 3 makes it the real
+  // default. Reuses the exact state already fetched above; no new requests.
+  const isCommandCenterPreview =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("preview") === "command-center";
+
+  if (isCommandCenterPreview) {
+    const latestSignal = signals[0];
+
+    return (
+      <AppShell
+        active={DEFAULT_DESTINATION}
+        onSelectDestination={() => {}}
+        title="Autonomous World Cup Market Intelligence"
+        agentStatus={health?.ok ? "RUNNING" : "DEGRADED"}
+        feedMode="LIVE TxLINE"
+        freshnessLabel={dataFreshnessLabel(selectedMatch?.lastUpdated) ?? undefined}
+        lastDecisionLabel={agentTimeline[2]?.title}
+      >
+        <CommandCenterPage
+          kpis={{
+            liveFixtures: matchStatusCounts.live,
+            feedFreshnessLabel: dataFreshnessLabel(selectedMatch?.lastUpdated) ?? "—",
+            signalsInWindow: stats?.signalsGenerated ?? 0,
+            openSimulatedPositions: pnl?.openPositions ?? 0,
+          }}
+          selectedFixtureLabel={
+            selectedMatch ? `${selectedMatch.homeTeam} vs ${selectedMatch.awayTeam}` : "No match selected"
+          }
+          chartData={chartData.map((point) => ({ name: point.name, home: point.home, away: point.away }))}
+          decisionFeed={agentTimeline}
+          latestSignal={
+            latestSignal
+              ? {
+                  severityLabel: (latestSignal.severity ?? "LOW").toUpperCase(),
+                  target: getSignalTarget(latestSignal),
+                  priceMoveLabel: formatOddsChange(latestSignal.oddsChangePct),
+                }
+              : null
+          }
+          systemHealthLabel={health?.liveStream?.connected ? "Streams connected" : "Stream issue"}
+        />
+      </AppShell>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#0b0806] p-3 text-stone-100">
