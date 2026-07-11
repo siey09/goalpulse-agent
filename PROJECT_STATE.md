@@ -32,16 +32,18 @@ explicit user instruction: close out remaining setup work, then prioritize
 judge-facing demo completeness over further backend depth, given the
 July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 
-🔄 In Progress: user chose to continue through the full remaining PDF
-list (P1-1 → P1-7 → P1-16 → revisit P1-4/P1-5/P1-8/P1-19 → 20
-mandatory tests → 15-item Definition of Done), one item at a time, same
-investigate→brainstorm→spec→plan→implement→review→verify-live gate
-throughout. Everything through P1-16 is done and pushed: Tier 1, Tier
-2, P1-3, P1-2, P1-1, P1-7, and P1-16 all reviewed/approved/pushed/
-verified live as of 2026-07-11. The P1-4/P1-5/P1-8/P1-19 revisits are
-also done (investigation-only, all four confirmed, zero code changes).
-Next up: the 20 mandatory tests and the 15-item Definition of Done
-checklist (see "RESUME POINT" further below for full detail).
+🔄 In Progress — LIKELY SESSION HANDOFF POINT (user may be switching
+tools/sessions here, 2026-07-11): everything through the
+P1-4/P1-5/P1-8/P1-19 revisits is done and pushed (Tier 1, Tier 2, P1-3,
+P1-2, P1-1, P1-7, P1-16, revisits — all reviewed/approved/pushed/
+verified live). The 20 Mandatory Tests + 15-item Definition of Done
+investigation pass is ALSO complete — see "RESUME POINT" further below
+for the full verbatim lists, every verdict, and **4 real gaps found
+that are reported to the user but NOT YET FIXED, awaiting their
+decision on priority/scope.** A fresh session/tool should read that
+full section before doing anything else — do not re-run the
+investigation, the findings are already real and current as of
+2026-07-11.
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
@@ -1073,13 +1075,105 @@ tier breakdown:
   "P1-4/P1-5/P1-8/P1-19 revisited 2026-07-11" entry above for the full
   verdict on all four (all confirmed, zero code changes needed).
 
-**Still fully pending, not started at all:** the 20 mandatory tests from
-the PDF's Mandatory Test Plan (map each to either a real applicable test
-or mark not-applicable with reasoning — several test for a
-multi-bookmaker system already confirmed not to apply here) and the
-15-item Definition of Done checklist (PASS/FAIL/NOT-APPLICABLE with
-reasoning per item, update this file with final status once done). Both
-come after all three tiers, per the user's explicit ordering.
+**🔄 20 Mandatory Tests + 15-item Definition of Done — investigation
+pass complete 2026-07-11, findings reported to user, AWAITING USER
+DECISION on 4 real gaps before any fix is implemented. Full exact
+verbatim text of both lists (as pasted by the user from the PDF) is
+preserved below for reference by any future session/tool — do not
+re-derive or guess these from memory.**
+
+### Mandatory Test Plan (verbatim, PDF page 12)
+
+```
+1. Same fixture and selection, different bookmaker: must not create a movement pair.
+2. Same fixture and bookmaker, different line value: must not create a movement pair.
+3. Same fixture and bookmaker, different market type: must not create a movement pair.
+4. Same canonical market key over time: must create the correct movement.
+5. One extreme bookmaker outlier: must not create a consensus signal.
+6. Consensus with four bookmakers and 75% agreement: may create a qualifying signal.
+7. De-vig calculation: probabilities must sum to approximately 1.0.
+8. Raw compression and probability-point shift: must be reported separately.
+9. Historical tick: must not contain score events later than the tick timestamp.
+10. Replay determinism: same input must produce the same ordered decisions and results.
+11. Final fixture state change: must not alter earlier historical decisions.
+12. Duplicate TxLINE sequence: must be ignored exactly once.
+13. Stale odds after a new score event: signal or position must be rejected.
+14. Risk limit exceeded: paper position must be rejected with an explicit reason code.
+15. Agent restart: persisted state must reload without duplicating open or settled positions.
+16. Local SHA-256 fingerprint: must remain separate from Solana verification status.
+17. Solana verification failure: must not be reported as verified.
+18. Draw-side movement: must be evaluated as a valid three-way selection.
+19. Backend correlation endpoint: repeated totals lines from one base match must be deduplicated.
+20. End-to-end replay: ingestion to signal to risk to paper execution to settlement without manual intervention.
+```
+
+### Definition of Done (verbatim, PDF page 13)
+
+```
+1. No movement signal can compare different bookmakers or market identities.
+2. The primary movement model uses de-vigged consensus probability.
+3. The system reports raw price compression and probability movement separately.
+4. Historical replay contains no future score or state leakage.
+5. Live mode and replay mode use the same strategy and risk engine.
+6. Draw is supported in the three-way market model.
+7. Every signal contains deterministic inputs, thresholds, formulas, and reason codes.
+8. Every rejected signal contains a precise rejection reason.
+9. Every executed signal creates a paper position and later a settlement record.
+10. Local audit fingerprint and Solana validation are clearly separated.
+11. No label claims a proven trap, manipulation, or smart money without evidence.
+12. The agent can complete a replay without human intervention.
+13. The demo visibly shows TxLINE data, sequence, timestamps, data freshness, and latency.
+14. The public repository has passing CI, pinned dependencies, and a license.
+15. The README states current limitations honestly.
+```
+
+### Verdicts (investigated against real code and live production data, not assumed)
+
+**Tests 1-3** (cross-bookmaker/line/market pairing): N/A. Verified live via `GET /api/signals` — 100 live signals, exactly one `evidence.bookmaker` value (`TXLineStablePriceDemargined`). `matchId`-scoped comparison (`findPreviousSnapshot(matchId)` in `store.ts`) structurally prevents cross-market pairing since totals signals use a distinct `-totals-<line>` matchId suffix.
+
+**Test 4**: PASS — existing `signalEngine.test.ts` coverage.
+
+**Tests 5-6** (outlier/consensus-agreement): N/A — no multi-bookmaker data exists to test against.
+
+**Test 7 / DoD 2** (de-vig sums to ~1.0): PASS, and a real finding along the way — **TxLINE's feed is de-vigged at the source, not by this codebase.** Verified with real numbers: `1/homeOdds + 1/awayOdds + 1/drawOdds` = 0.9988-1.0001 across two different live matches (fixtures 18213979 and 18237038). Zero de-vig computation exists anywhere in this repo (confirmed by grep) — the "Demargined" in the bookmaker name is TxLINE's own upstream de-margining, passed through as-is.
+
+**Test 9 / DoD 4** (no future score leakage): PASS — already verified during the 2026-07-11 P0-3 triage.
+
+**Test 10** (replay determinism): PASS with one exception — see Gap 1 below. `signalEngine.ts` itself has zero `Date.now()`/`Math.random()` calls (P0-3 finding), but the *replay-specific settlement path* in `server.ts` has a real bug (Gap 1).
+
+**Test 11**: PASS — P0-3: settlement runs strictly after detection, never feeds back into severity/confidence.
+
+**Test 12** (duplicate TxLINE sequence ignored once): PASS — `snapshot.id` is built directly from TxLINE's own `MessageId` (`txlineClient.ts` lines 1066-1068/1120-1122: `` `txline-${match.id}-${odds.Ts}-${odds.MessageId}` ``), and `store.ts`'s `snapshotAlreadyExists` dedupes on this exact id.
+
+**Test 13** (stale odds after score event rejected): PASS — signals are purely price-compression-driven from freshly-polled data each cycle; a stale (unchanged) price produces 0% compression, below the 4% floor, and structurally cannot fire a signal.
+
+**Test 15 / restart dedup**: PASS — Arena positions are computed fresh from `store.signals` at request time every call, never persisted independently, so there is no "duplicate position" risk structurally. Signal-level in-memory dedup already investigated and confirmed solid during P1-18.
+
+**Test 16 / DoD 10** (SHA-256 vs Solana separated): PASS — fixed directly during the 2026-07-11 P0-5 triage (`arena.proof.note` split into two honest, separate claims).
+
+**Test 17** (Solana failure never reported as verified): PASS — `services/onchainValidation.ts` returns `available: false` on every failure path (bad response, exception, etc.); `isValid` is only ever set from a genuine on-chain check when `available: true`. Confirmed by reading the file directly.
+
+**Test 19**: PASS — P1-3, verified live in production the same day.
+
+**Test 20 / DoD 12** (end-to-end replay, no manual intervention): PASS with one exception — see Gap 1. `GET /api/replay/backtest` (`server.ts` line 739 onward) runs ingestion → signal detection → council audit → Arena positions → settlement in one autonomous request/response cycle.
+
+**DoD 1, 4, 5, 7, 9, 11, 13, 14**: PASS — same evidence as the corresponding numbered tests above (DoD 1↔Tests 1-3, DoD 4↔Test 9/11, DoD 5↔both paths call `buildSignalFromSnapshots`, DoD 7↔`signalEngine.ts` inspection, DoD 9↔Arena/settlement pipeline confirmed, DoD 11↔`OUTCOME_REJECTED_MOVE` rename from the P0 triage, DoD 13↔`GET /api/metrics`/`/health`/Guided Tour, DoD 14↔Tier 1's P1-9/P1-10/P1-12).
+
+### 4 real gaps found — reported to user, NONE fixed yet, awaiting decision on priority/scope
+
+**Gap 1 — Draw settlement missing from the replay path (affects Tests 10, 18, 20, DoD 6).**
+P1-1 added draw settlement to `store.ts`'s live-cycle `evaluatePendingSignalsForFinishedMatches`, but `server.ts`'s `/api/replay/backtest` route has a **separate, duplicate settlement implementation** that P1-1 did not touch: `settleReplaySignal` (lines 817-836) and `checkScoreReality` (lines 838+) both only check `side === "home"`/`"away"` win conditions. A draw signal replayed through this endpoint always settles `"incorrect"` even on a real drawn final score, and `checkScoreReality`'s `CONFIRMED_BY_SCORE` branch has the identical gap. Straightforward fix, same pattern as P1-1's `store.ts` change (add a `signal.side === "draw" && match.homeScore === match.awayScore` clause to both functions). Note: a third `side === "away" ? "correct" : "incorrect"` check at line 954 is inside the synthetic/pinned demo-dataset fallback path (`useRealReplay` false branch) — not real settlement logic, deliberately not flagged as a bug.
+
+**Gap 2 — No "risk limit exceeded → rejected" mechanism (Test 14, partially DoD 8).**
+The only risk-sizing control anywhere is Kelly Criterion's `MAX_STAKE_FRACTION` (`logic/arena.ts`) — it **clamps** the stake to at most 20% of bankroll, it does not **reject** the position. No code path anywhere rejects a paper position outright for exceeding a risk threshold with an explicit reason code. The existing P1-6 rejection-reason mechanism only covers `totals_signal`/`not_market_only_move`/`no_original_snapshot`/`draw_signal` — none risk-limit-based. DoD 8 ("every rejected signal contains a precise reason") is true for the rejections that exist, not true for a risk-limit rejection that doesn't exist.
+
+**Gap 3 — No raw-compression-vs-probability-shift separate reporting (Test 8, DoD 3).**
+Now that Test 7 confirms the underlying odds are genuinely de-vigged, computing a probability-point shift (e.g. `1/oddsBefore - 1/oddsAfter`) would be straightforward — but `AgentSignal` only ever carries `oddsChangePct` (raw percentage compression). No probability-point-shift field exists anywhere in the signal, the archive, or any API response.
+
+**Gap 4 — `README.md` is badly stale (DoD 15, indirectly DoD 13).**
+Still describes pre-session state: "24 automated unit tests" (actual count is 253 as of P1-16), and only 6 "beyond the core loop" features listed when dozens have shipped this session (Arena's 3rd strategy, Signal Correlation, Confidence Calibration, draw-side signals, the P1-2 longshot penalty, P1-18 idempotency, CI, P1-16 stream status, etc.). Last synced 2026-07-10, predates the entire day-of P0/P1 remediation arc (Tier 1 through P1-16 plus the P1-4/P1-5/P1-8/P1-19 revisits).
+
+**Exact next action for a future session/tool:** present these 4 gaps to the user (already done once in the original session, response pending at time of writing) and get their decision on priority/scope for each before writing any fix — same investigate→brainstorm→spec→plan→implement→review→verify-live gate as every other item this session. Do not silently patch any of these without that conversation happening first, even though Gap 1 in particular is a small, well-understood fix.
 
 📋 Next Steps: implement Tier 1 (see above), report back, wait for
 review before Tier 2. All four "future ideas" candidates shipped
