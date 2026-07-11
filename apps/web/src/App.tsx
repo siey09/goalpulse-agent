@@ -17,7 +17,34 @@ import { SignalsPage } from "./features/signals/SignalsPage";
 import { AgentArenaPage } from "./features/arena/AgentArenaPage";
 import { MarketMakerPage } from "./features/market-maker/MarketMakerPage";
 import { ArchivePage } from "./features/archive/ArchivePage";
-import { EmptyState } from "./components/ui/EmptyState";
+import { LiveMarketsPage } from "./features/markets/LiveMarketsPage";
+import { ReplayLabPage } from "./features/replay/ReplayLabPage";
+import { VerificationPage } from "./features/verification/VerificationPage";
+import { SystemHealthPage } from "./features/health/SystemHealthPage";
+import { VerificationReceipt } from "./components/VerificationReceipt";
+import type { Odds, Match, AgentSignal, OnChainVerifyData, ReplayBacktest, Health } from "./types";
+import {
+  formatNumber,
+  formatPercent,
+  formatOdds,
+  formatTime,
+  severityMarkerStyle,
+  getOdds,
+  severityStyle,
+  preciseStatusLabel,
+  matchClockLabel,
+  dataFreshnessLabel,
+  matchStatusTone,
+  signalTypeLabel,
+  marketTypeLabel,
+  discordAlertBadge,
+  getSignalType,
+  getSignalTarget,
+  formatOddsChange,
+  getThresholdLabel,
+  getSignalOutcome,
+} from "./lib/formatters";
+import { getOnchainVerifyTarget } from "./lib/verification";
 import {
   Activity,
   BarChart3,
@@ -46,76 +73,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-
-type Odds = {
-  homeOdds?: number;
-  drawOdds?: number;
-  awayOdds?: number;
-};
-
-type Match = {
-  id: string;
-  homeTeam?: string;
-  awayTeam?: string;
-  homeScore?: number;
-  awayScore?: number;
-  minute?: number;
-  status?: string;
-  statusId?: number;
-  statusLabel?: string;
-  clockSeconds?: number;
-  clockLabel?: string;
-  lastUpdated?: string;
-  market?: Odds;
-  odds?: Odds;
-};
-
-type AgentSignal = {
-  id?: string;
-  matchId?: string;
-  match?: string;
-  team?: string;
-  target?: string;
-  side?: string;
-  type?: string;
-  signalType?: string;
-  severity?: string;
-  oddsBefore?: number;
-  oddsAfter?: number;
-  oddsChangePct?: number;
-  momentumScore?: number;
-  confidence?: number;
-  confidenceScore?: number;
-  explanation?: string;
-  reason?: string;
-  createdAt?: string;
-  resultStatus?: string;
-  trapStatus?: string;
-  trapScore?: number;
-  trapReason?: string;
-  reversalRisk?: string;
-  reversalReason?: string;
-  finalScore?: string;
-  scoreRealityStatus?: string;
-  scoreRealityReason?: string;
-  evidence?: {
-    marketType?: string;
-    fixtureId?: string;
-    scoresContext?: {
-      sequence?: number;
-      fieldPressureScore?: number;
-    };
-  };
-  discordAlertStatus?: "sent" | "failed" | "not_configured";
-};
-
-type OnChainVerifyData = {
-  available: boolean;
-  reason?: string;
-  isValid?: boolean;
-  provenStat?: { key: number; value: number; period: number };
-  dailyScoresPda?: string;
-};
 
 type SimilarSignalEntry = {
   matchId?: string;
@@ -163,71 +120,6 @@ type OddsSnapshot = {
   awayOdds?: number;
   market?: Odds;
 };
-type ReplayBacktest = {
-  datasetId?: string;
-  mode?: string;
-  status?: string;
-  summary?: {
-    snapshotsProcessed?: number;
-    signalsDetected?: number;
-    correctSignals?: number;
-    incorrectSignals?: number;
-    accuracyPct?: number;
-    smartMoneyTraps?: number;
-    confirmedTraps?: number;
-    possibleTraps?: number;
-  };
-  timeline?: {
-    step?: string;
-    detail?: string;
-  }[];
-  events?: {
-    id?: string;
-    matchId?: string;
-    minute?: number;
-    team?: string;
-    type?: string;
-    description?: string;
-    createdAt?: string;
-  }[];
-  signals?: AgentSignal[];
-  councilVotes?: {
-    signalId?: string;
-    matchId?: string;
-    target?: string;
-    decision?: string;
-    approvals?: number;
-    totalAgents?: number;
-    votes?: {
-      agent?: string;
-      vote?: string;
-      reason?: string;
-    }[];
-  }[];
-  proof?: {
-    type?: string;
-    hash?: string;
-    network?: string;
-    anchoringStatus?: string;
-    walletConfigured?: boolean;
-    transactionSignature?: string | null;
-    explorerUrl?: string | null;
-    note?: string;
-  };
-};
-
-type Health = {
-  ok?: boolean;
-  agentIntervalMs?: number;
-  useSimulatedFeed?: boolean;
-  liveStream?: {
-    connected?: boolean;
-    lastEventAt?: string | null;
-    totalEventsReceived?: number;
-    totalReconnects?: number;
-    lastError?: string | null;
-  };
-};
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
@@ -258,34 +150,6 @@ function asArray<T>(payload: unknown, keys: string[] = []): T[] {
   return [];
 }
 
-function formatNumber(value?: number) {
-  if (value === undefined || Number.isNaN(value)) return "0";
-  return value.toLocaleString();
-}
-
-function formatPercent(value?: number) {
-  if (value === undefined || Number.isNaN(value)) return "0%";
-  return `${Math.round(value)}%`;
-}
-
-function formatOdds(value?: number) {
-  if (value === undefined || Number.isNaN(value)) return "--";
-  return value.toFixed(2);
-}
-
-function formatTime(value?: string) {
-  if (!value) return "Waiting";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "Waiting";
-
-  return date.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function findNearestSnapshot(
   history: OddsSnapshot[],
   targetTimestamp?: string
@@ -310,156 +174,6 @@ function findNearestSnapshot(
   }
 
   return closest;
-}
-
-function severityMarkerStyle(severity?: string) {
-  if (severity === "HIGH") return { fill: "#f87171", radius: 7 };
-  if (severity === "MEDIUM") return { fill: "#fbbf24", radius: 5.5 };
-  return { fill: "#94a3b8", radius: 4 };
-}
-
-function getOdds(match?: Match) {
-  return match?.market ?? match?.odds ?? {};
-}
-
-function severityStyle(severity?: string) {
-  const value = (severity ?? "LOW").toUpperCase();
-
-  if (value === "HIGH") return "bg-red-500/15 text-red-200 border-red-400/20";
-  if (value === "MEDIUM") return "bg-orange-500/15 text-orange-200 border-orange-400/20";
-
-  return "bg-emerald-500/15 text-emerald-200 border-emerald-400/20";
-}
-
-function statusLabel(status?: string) {
-  if (!status) return "WAITING";
-  return status.toUpperCase();
-}
-
-function preciseStatusLabel(match?: Match) {
-  const rawLabel = match?.statusLabel?.trim();
-  const normalizedLabel = rawLabel?.toLowerCase();
-
-  if (rawLabel && normalizedLabel !== "scheduled") {
-    return rawLabel.toUpperCase();
-  }
-
-  if (match?.status === "scheduled") return "PRE-MATCH";
-  if (match?.status === "live") return "LIVE";
-  if (match?.status === "finished") return "FINISHED";
-
-  return statusLabel(match?.status);
-}
-
-function matchClockLabel(match?: Match) {
-  if (!match) return "—";
-
-  if (match.status === "scheduled") {
-    return match.statusLabel ?? "Pre-match";
-  }
-
-  if (match.status === "finished") {
-    const finishedLabel = match.statusLabel?.trim();
-    return finishedLabel && finishedLabel.toLowerCase() !== "scheduled"
-      ? finishedLabel
-      : "Final";
-  }
-
-  return match.clockLabel ?? `${match.minute ?? 0}'`;
-}
-
-function dataFreshnessLabel(lastUpdated?: string) {
-  if (!lastUpdated) return null;
-
-  const updatedMs = new Date(lastUpdated).getTime();
-
-  if (Number.isNaN(updatedMs)) return null;
-
-  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - updatedMs) / 1000));
-
-  if (elapsedSeconds < 60) {
-    return `updated ${elapsedSeconds}s ago`;
-  }
-
-  if (elapsedSeconds < 3600) {
-    return `updated ${Math.floor(elapsedSeconds / 60)}m ago`;
-  }
-
-  return `updated ${Math.floor(elapsedSeconds / 3600)}h ago`;
-}
-
-function matchStatusTone(match?: Match) {
-  const label = `${match?.statusLabel ?? ""}`.toLowerCase();
-
-  if (label.includes("suspended") || label.includes("interrupted")) {
-    return "bg-amber-400/15 text-amber-200";
-  }
-
-  if (label.includes("cancelled") || label.includes("abandoned")) {
-    return "bg-rose-400/15 text-rose-200";
-  }
-
-  if (match?.status === "live") {
-    return "bg-emerald-400/15 text-emerald-200";
-  }
-
-  if (match?.status === "scheduled") {
-    return "bg-sky-400/15 text-sky-200";
-  }
-
-  if (match?.status === "finished") {
-    return "bg-stone-400/15 text-stone-300";
-  }
-
-  return "bg-white/8 text-stone-300";
-}
-function signalTypeLabel(type?: string) {
-  return (type ?? "WATCH").replaceAll("_", " ");
-}
-
-function marketTypeLabel(marketType?: string) {
-  if (marketType === "OVERUNDER_PARTICIPANT_GOALS") return "Over/Under";
-  if (marketType === "1X2_PARTICIPANT_RESULT") return "1X2";
-  return undefined;
-}
-
-function discordAlertBadge(status?: "sent" | "failed" | "not_configured") {
-  if (status === "sent") {
-    return { label: "🔔 Alert sent", className: "border-emerald-400/20 bg-emerald-400/10 text-emerald-200" };
-  }
-  if (status === "failed") {
-    return { label: "⚠ Alert failed", className: "border-amber-400/20 bg-amber-400/10 text-amber-200" };
-  }
-  if (status === "not_configured") {
-    return { label: "Alerts off", className: "border-white/10 bg-white/5 text-stone-400" };
-  }
-  return undefined;
-}
-
-function getSignalType(signal?: AgentSignal | null) {
-  return signal?.type ?? signal?.signalType ?? "WATCH";
-}
-
-function getSignalTarget(signal?: AgentSignal | null) {
-  return signal?.team ?? signal?.target ?? signal?.side ?? "Market side";
-}
-
-function formatOddsChange(value?: number) {
-  if (value === undefined || Number.isNaN(value)) return "Calculated by engine";
-  return `${value.toFixed(2)}%`;
-}
-
-function getThresholdLabel(signal?: AgentSignal | null) {
-  const severity = (signal?.severity ?? "LOW").toUpperCase();
-
-  if (severity === "HIGH") return "Sharp movement threshold crossed: >= 15%";
-  if (severity === "MEDIUM") return "Momentum shift threshold crossed: >= 8%";
-
-  return "Watch threshold crossed: >= 4%";
-}
-
-function getSignalOutcome(signal?: AgentSignal | null) {
-  return (signal?.resultStatus ?? "pending").toUpperCase();
 }
 
 function DetailRow({
@@ -990,46 +704,6 @@ function App() {
     } finally {
       setIsReplayRunning(false);
     }
-  }
-  function getOnchainVerifyTarget(signal: AgentSignal | null) {
-    const fixtureId = signal?.evidence?.fixtureId;
-    const sequence = signal?.evidence?.scoresContext?.sequence;
-
-    if (!fixtureId || !sequence) return null;
-
-    return { fixtureId, sequence };
-  }
-
-  function getVerificationDepth(
-    signal: AgentSignal | null,
-    verifyState: Record<string, { loading: boolean; data: OnChainVerifyData | null }>
-  ): { label: string; tone: "neutral" | "warn" | "danger" | "success" } | null {
-    const target = getOnchainVerifyTarget(signal);
-    if (!target) return null;
-
-    const key = `${target.fixtureId}-${target.sequence}`;
-    const entry = verifyState[key];
-
-    if (entry?.loading) {
-      return { label: "Checking on-chain...", tone: "neutral" };
-    }
-
-    if (!entry?.data) {
-      return { label: "Not yet verified", tone: "neutral" };
-    }
-
-    if (!entry.data.available) {
-      return {
-        label: `Verification unavailable — ${entry.data.reason ?? "unknown reason"}`,
-        tone: "warn",
-      };
-    }
-
-    if (!entry.data.isValid) {
-      return { label: "Verification FAILED", tone: "danger" };
-    }
-
-    return { label: "On-chain verified", tone: "success" };
   }
 
   async function runOnchainVerify(signal: AgentSignal | null) {
@@ -1851,7 +1525,9 @@ function App() {
 
     switch (previewDestination) {
       case "signals":
-        destinationContent = <SignalsPage />;
+        destinationContent = (
+          <SignalsPage outcomeVerificationItems={outcomeVerificationItems} onSelectSignal={setSelectedSignal} />
+        );
         break;
       case "agent-arena":
         destinationContent = <AgentArenaPage />;
@@ -1863,12 +1539,51 @@ function App() {
         destinationContent = <ArchivePage />;
         break;
       case "live-markets":
-      case "replay-lab":
-      case "verification":
-      case "system-health":
         destinationContent = (
-          <EmptyState reason={`${previewDestination} is not composed yet - still using the default page below for this destination's real content. Phase 3 continues here.`} />
+          <LiveMarketsPage
+            selectedMatch={selectedMatch}
+            chartData={chartData}
+            chartSignalMarkers={chartSignalMarkers}
+            chartReadout={chartReadout}
+            isReplayStreamMode={isReplayStreamMode}
+            onToggleReplayStreamMode={() => setIsReplayStreamMode((current) => !current)}
+            isOddsStreamLive={isOddsStreamLive}
+            oddsStreamLastUpdate={oddsStreamLastUpdate}
+            replayStreamProgress={replayStreamProgress}
+            streamProgressPercent={streamProgressPercent}
+            health={health}
+            correctSignals={stats?.correctSignals ?? 0}
+            closedSignals={stats?.closedSignals ?? 0}
+            matches={filteredMatches}
+            matchStatusFilter={matchStatusFilter}
+            onChangeMatchStatusFilter={setMatchStatusFilter}
+            matchStatusCounts={matchStatusCounts}
+            selectedMatchId={selectedMatchId}
+            onSelectMatch={setSelectedMatchId}
+          />
         );
+        break;
+      case "replay-lab":
+        destinationContent = (
+          <ReplayLabPage
+            replayBacktest={replayBacktest}
+            pnl={pnl}
+            isReplayRunning={isReplayRunning}
+            onRunAudit={runReplayBacktest}
+            selectedSignal={selectedSignal}
+            onSelectSignal={setSelectedSignal}
+            onchainVerify={onchainVerify}
+            onVerify={runOnchainVerify}
+          />
+        );
+        break;
+      case "verification":
+        destinationContent = (
+          <VerificationPage selectedSignal={selectedSignal} onchainVerify={onchainVerify} onVerify={runOnchainVerify} />
+        );
+        break;
+      case "system-health":
+        destinationContent = <SystemHealthPage health={health} />;
         break;
       case "command-center":
       default:
@@ -3437,101 +3152,11 @@ function App() {
                       Hash: {replayBacktest.proof?.hash ?? "pending"}
                     </p>
 
-                    {(() => {
-                      const target = getOnchainVerifyTarget(selectedSignal);
-                      const verifyKey = target ? `${target.fixtureId}-${target.sequence}` : null;
-                      const verifyEntry = (verifyKey && onchainVerify[verifyKey]) || {
-                        loading: false,
-                        data: null,
-                      };
-
-                      return (
-                        <>
-                          {(() => {
-                            const depth = getVerificationDepth(selectedSignal, onchainVerify);
-                            if (!depth) return null;
-
-                            const toneClass =
-                              depth.tone === "success"
-                                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-                                : depth.tone === "danger"
-                                  ? "border-red-400/30 bg-red-400/10 text-red-200"
-                                  : depth.tone === "warn"
-                                    ? "border-orange-400/30 bg-orange-400/10 text-orange-200"
-                                    : "border-white/10 bg-white/5 text-stone-400";
-
-                            return (
-                              <span
-                                className={`mb-2 inline-block rounded-full border px-2.5 py-1 text-[10px] font-semibold ${toneClass}`}
-                              >
-                                {depth.label}
-                              </span>
-                            );
-                          })()}
-                          <button
-                            type="button"
-                            onClick={() => runOnchainVerify(selectedSignal)}
-                            disabled={verifyEntry.loading || !target}
-                            className="mt-2 w-full rounded-lg bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-sky-200 transition hover:bg-sky-400/20 disabled:opacity-50"
-                          >
-                            {verifyEntry.loading
-                              ? "Verifying on Solana…"
-                              : target
-                                ? `Verify ${selectedSignal?.match ?? "this signal"} on Solana ⛓`
-                                : "Verify on Solana ⛓"}
-                          </button>
-                          {!target && (
-                            <p className="mt-1.5 text-[10px] leading-4 text-stone-500">
-                              {selectedSignal
-                                ? "This signal has no TXODDS sequence data to verify."
-                                : "Select a signal above to verify it on Solana."}
-                            </p>
-                          )}
-
-                          {verifyEntry.data && (
-                            <div className="mt-2 rounded-lg bg-black/30 p-2 text-[10px]">
-                              {verifyEntry.data.available ? (
-                                <>
-                                  <div className="flex items-center justify-between gap-2">
-                                    <span className="text-stone-500">On-chain result</span>
-                                    <span
-                                      className={`font-semibold ${
-                                        verifyEntry.data.isValid
-                                          ? "text-emerald-300"
-                                          : "text-red-300"
-                                      }`}
-                                    >
-                                      {verifyEntry.data.isValid ? "PROOF VALID" : "PROOF FAILED"}
-                                    </span>
-                                  </div>
-                                  {verifyEntry.data.provenStat && (
-                                    <p className="mt-1 text-stone-500">
-                                      Proven stat: key {verifyEntry.data.provenStat.key}, value{" "}
-                                      {verifyEntry.data.provenStat.value}, period{" "}
-                                      {verifyEntry.data.provenStat.period}
-                                    </p>
-                                  )}
-                                  {verifyEntry.data.dailyScoresPda && (
-                                    <a
-                                      href={`https://explorer.solana.com/address/${verifyEntry.data.dailyScoresPda}`}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="mt-1 block truncate text-sky-300 underline"
-                                    >
-                                      View PDA on Solana Explorer ↗
-                                    </a>
-                                  )}
-                                </>
-                              ) : (
-                                <p className="text-stone-500">
-                                  {verifyEntry.data.reason ?? "On-chain validation unavailable."}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
+                    <VerificationReceipt
+                      selectedSignal={selectedSignal}
+                      onchainVerify={onchainVerify}
+                      onVerify={runOnchainVerify}
+                    />
                   </div>
                 </div>
                 {(replayBacktest.events ?? []).length > 0 && (

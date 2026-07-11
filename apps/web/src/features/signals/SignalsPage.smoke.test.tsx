@@ -15,6 +15,8 @@ describe("SignalsPage", () => {
   });
 
   it("renders without throwing", () => {
-    expect(() => render(<SignalsPage />)).not.toThrow();
+    expect(() =>
+      render(<SignalsPage outcomeVerificationItems={[]} onSelectSignal={() => {}} />)
+    ).not.toThrow();
   });
 });
