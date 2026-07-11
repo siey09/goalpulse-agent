@@ -67,31 +67,31 @@ record.
 this 4-gap Mandatory Test Plan pass) is complete as of 2026-07-11.
 Nothing outstanding from that review.**
 
-🔄 **Command Center Frontend Redesign (2026-07-11-ish, branch
-`feature/command-center-redesign`, `main` untouched):** phased
-restructure from the single-scroll `App.tsx` into a 9-destination
-Command Center (Operations/Strategy/Trust nav groups), gated behind
-`?preview=command-center` the whole way so the default page is
+✅ **Command Center Frontend Redesign merged to `main` 2026-07-11**
+(was branch `feature/command-center-redesign`, fast-forward merge
+`0a12247`, no divergence to resolve). Phased restructure from the
+single-scroll `App.tsx` into a 9-destination Command Center
+(Operations/Strategy/Trust nav groups), gated behind
+`?preview=command-center` the whole way so the default page stayed
 provably unaffected through every phase. Phase 1 (design tokens + UI
 primitives + Vitest harness), Phase 2 (Command Center page, additive),
 Phase 3a (Signals/Agent Arena/Market Maker/Archive pages, additive),
 Phase 3b (Live Markets/Replay Lab/Verification/System Health pages;
 first non-additive App.tsx refactor — extracted shared
 `VerificationReceipt` so Verification and Replay Lab share one live
-verify state) — all pushed and independently reviewed.
-✅ **Guided Tour rework pushed** — new single-source-of-truth
-`GUIDE_STEPS` (`app/guideSteps.ts`) + one imperative spotlight
-mechanism (`app/guideSpotlight.ts`) drive a 22-step tour across the
-Command Center destinations, replacing the old default page's
-two-array (`judgeDemoSteps`/`guideTargets`) + 4-scattered-conditional
-pattern for this new surface only — the old tour is untouched and
-still works standalone. Verified live against production data at
-human pace, all 22 steps land on the right destination/card,
-replay-lab steps correctly auto-trigger the backtest. Two content
+verify state), Guided Tour rework (new single-source-of-truth
+`GUIDE_STEPS`/`guideSpotlight.ts` drive a 22-step tour across the
+Command Center destinations for this new surface, replacing the old
+default page's two-array/4-scattered-conditional pattern — the old
+tour itself is untouched and still works standalone). Two content
 gaps fixed along the way: added the "Selected match"/market-pressure
 card to Live Markets, and made the Compliance footer a persistent
-`AppShell` element (was default-page-only before). Pushed
-`5befcc5`. **Holding for user review before merging to `main`.**
+`AppShell` element (was default-page-only before). Post-merge:
+build/lint/test clean on `main`, pushed, production verified —
+`/health` shows both streams connected/zero reconnects, the default
+page at goalpulse-agent.vercel.app renders unaffected with zero
+console errors, and `?preview=command-center` is live and working in
+production too. **Next: Phase 4 (Signal Audit Drawer).**
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
