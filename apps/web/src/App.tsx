@@ -1489,7 +1489,9 @@ function App() {
   }
 
   const selectedMatch = useMemo(
-    () => matches.find((match) => match.id === selectedMatchId) ?? matches[0],
+    () =>
+      matches.find((match) => match.id === selectedMatchId) ??
+      (selectedMatchId ? undefined : matches[0]),
     [matches, selectedMatchId]
   );
 
@@ -2734,73 +2736,72 @@ function App() {
               </div>
 
               <div className="space-y-2">
-                {filteredMatches.length > 0 ? (
-                  filteredMatches.map((match) => {
-                    const odds = getOdds(match);
-
-                    return (
-                      <button
-                        key={match.id}
-                        onClick={() => setSelectedMatchId(match.id)}
-                        className={`w-full rounded-xl border p-2.5 text-left transition ${
-                          selectedMatchId === match.id
-                            ? "border-orange-400/30 bg-orange-400/10"
-                            : "border-white/8 bg-black/20 hover:bg-white/6"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${matchStatusTone(match)}`}>
-                            {preciseStatusLabel(match)}
-                          </span>
-                          <span className="text-right text-xs text-stone-500">
-                            <span className="block">{matchClockLabel(match)}</span>
-                            {dataFreshnessLabel(match.lastUpdated) && (
-                              <span className="block text-[9px] text-stone-600">
-                                {dataFreshnessLabel(match.lastUpdated)}
-                              </span>
-                            )}
-                          </span>
-                        </div>
-
-                        <div className="mt-2 flex items-center justify-between">
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium text-white">{match.homeTeam}</p>
-                            <p className="text-sm font-medium text-white">{match.awayTeam}</p>
-                          </div>
-                          <div className="space-y-1 text-right text-lg font-semibold">
-                            <p>{match.status === "scheduled" ? "—" : match.homeScore ?? 0}</p>
-                            <p>{match.status === "scheduled" ? "—" : match.awayScore ?? 0}</p>
-                          </div>
-                        </div>
-
-                        <div className="mt-2 grid grid-cols-3 gap-1.5 text-center text-[10px]">
-                          <div className="rounded-lg bg-black/25 px-2 py-1.5">
-                            <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Home" : "Home"}</p>
-                            <p className="font-semibold text-orange-200">
-                              {formatOdds(odds.homeOdds)}
-                            </p>
-                          </div>
-                          <div className="rounded-lg bg-black/25 px-2 py-1.5">
-                            <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Draw" : "Draw"}</p>
-                            <p className="font-semibold text-stone-200">
-                              {formatOdds(odds.drawOdds)}
-                            </p>
-                          </div>
-                          <div className="rounded-lg bg-black/25 px-2 py-1.5">
-                            <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Away" : "Away"}</p>
-                            <p className="font-semibold text-emerald-200">
-                              {formatOdds(odds.awayOdds)}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })
-                ) : (
+                {filteredMatches.length === 0 && (
                   <div className="rounded-2xl bg-black/25 p-4 text-sm text-stone-500">
                     No matches found
                   </div>
                 )}
+                {filteredMatches.map((match) => {
+                  const odds = getOdds(match);
+
+                  return (
+                    <button
+                      key={match.id}
+                      onClick={() => setSelectedMatchId(match.id)}
+                      className={`w-full rounded-xl border p-2.5 text-left transition ${
+                        selectedMatchId === match.id
+                          ? "border-orange-400/30 bg-orange-400/10"
+                          : "border-white/8 bg-black/20 hover:bg-white/6"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${matchStatusTone(match)}`}>
+                          {preciseStatusLabel(match)}
+                        </span>
+                        <span className="text-right text-xs text-stone-500">
+                          <span className="block">{matchClockLabel(match)}</span>
+                          {dataFreshnessLabel(match.lastUpdated) && (
+                            <span className="block text-[9px] text-stone-600">
+                              {dataFreshnessLabel(match.lastUpdated)}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-white">{match.homeTeam}</p>
+                          <p className="text-sm font-medium text-white">{match.awayTeam}</p>
+                        </div>
+                        <div className="space-y-1 text-right text-lg font-semibold">
+                          <p>{match.status === "scheduled" ? "—" : match.homeScore ?? 0}</p>
+                          <p>{match.status === "scheduled" ? "—" : match.awayScore ?? 0}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 grid grid-cols-3 gap-1.5 text-center text-[10px]">
+                        <div className="rounded-lg bg-black/25 px-2 py-1.5">
+                          <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Home" : "Home"}</p>
+                          <p className="font-semibold text-orange-200">
+                            {formatOdds(odds.homeOdds)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-black/25 px-2 py-1.5">
+                          <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Draw" : "Draw"}</p>
+                          <p className="font-semibold text-stone-200">
+                            {formatOdds(odds.drawOdds)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-black/25 px-2 py-1.5">
+                          <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Away" : "Away"}</p>
+                          <p className="font-semibold text-emerald-200">
+                            {formatOdds(odds.awayOdds)}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           <div className="2xl:col-span-2">
