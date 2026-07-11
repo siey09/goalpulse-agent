@@ -1511,8 +1511,9 @@ paths:
       description: >
         Replays stored real TxLINE odds snapshots (or, if too few are
         available, a fixed historical demo dataset) through the same signal
-        engine, then runs a three-agent council vote, Smart Money Trap
-        classification, and a SHA-256 proof hash over the full result set.
+        engine, then runs a three-agent council vote, Failed Continuation and
+        Market Overreaction Detection, and a SHA-256 proof hash over the full
+        result set.
       responses:
         '200':
           description: Replay/backtest result.

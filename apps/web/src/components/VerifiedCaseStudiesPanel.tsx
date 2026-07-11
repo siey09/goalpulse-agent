@@ -67,7 +67,7 @@ function CaseStudyCard({ caseStudy }: { caseStudy: PinnedCaseStudy }) {
         <div className="mb-3 rounded-xl border border-red-400/20 bg-red-400/10 p-3">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[10px] uppercase tracking-[0.2em] text-red-200/70">
-              Smart Money Trap Detector
+              Failed Continuation Detector
             </p>
             <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-red-100">
               Trap score {caseStudy.trapScore ?? 0}

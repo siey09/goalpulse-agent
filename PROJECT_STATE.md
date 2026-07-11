@@ -1474,7 +1474,9 @@ merge to `main` → push. Continue this pattern for new work.
 - Core signal engine: odds-compression detection (LOW ≥4%, MEDIUM ≥8%, HIGH
   ≥15%), TXODDS Scores enrichment, field pressure index, reliability filter
 - Final-score audit / settlement (`evaluatePendingSignalsForFinishedMatches`)
-- Outcome Audit Layer: 3-agent council vote, Smart Money Trap classification,
+- Outcome Audit Layer: 3-agent council vote, Failed Continuation and Market
+  Overreaction Detection (UI: "Failed Continuation Detector"/"Assessment";
+  field names `trapStatus`/`trapScore`/`smartMoneyTraps` unchanged),
   SHA-256 proof hash (`GET /api/replay/backtest`)
 - Live TxLINE push-stream monitor (`txlineStream.ts`, additive to polling)
 - Real on-chain Merkle proof validation against TxLINE's `Txoracle` Solana

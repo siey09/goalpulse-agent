@@ -1077,7 +1077,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
           detail: `${correctSignals} confirmed and ${incorrectSignals} rejected signal(s)`,
         },
         {
-          step: "Smart money traps detected",
+          step: "Failed continuation patterns detected",
           detail: `${confirmedTraps} rejected move(s) and ${possibleTraps} possible trap(s) found from rejected market moves`,
         },
         {

@@ -507,7 +507,7 @@ function App() {
     {
       role: "assistant",
       content:
-        "Ask me about the latest signal, smart money traps, reversal radar, score reality checks, or the outcome audit.",
+        "Ask me about the latest signal, failed continuation patterns, reversal radar, score reality checks, or the outcome audit.",
     },
   ]);
   const [isJudgeMode, setIsJudgeMode] = useState(false);
@@ -735,7 +735,7 @@ function App() {
           return "The Outcome Audit has not been run yet. Click Run audit to replay stored TxLINE odds snapshots and verify what happened.";
         }
 
-        return `Outcome Audit processed ${summary.signalsDetected ?? 0} signal(s), found ${summary.smartMoneyTraps ?? 0} smart money trap pattern(s), with ${summary.confirmedTraps ?? 0} rejected and ${summary.possibleTraps ?? 0} possible.`;
+        return `Outcome Audit processed ${summary.signalsDetected ?? 0} signal(s), found ${summary.smartMoneyTraps ?? 0} failed continuation pattern(s), with ${summary.confirmedTraps ?? 0} rejected and ${summary.possibleTraps ?? 0} possible.`;
       }
 
       if (
@@ -900,10 +900,10 @@ function App() {
             ? ` — proven stat key ${chatVerifyData.provenStat.key}, value ${chatVerifyData.provenStat.value}`
             : "";
 
-          return `On-chain verification: ${chatVerifyData.isValid ? "PROOF VALID" : "PROOF FAILED"}${statDetail}. GoalPulse posts a SHA-256 proof hash to Solana devnet so signal evidence is independently checkable.`;
+          return `On-chain verification: ${chatVerifyData.isValid ? "PROOF VALID" : "PROOF FAILED"}${statDetail}, via a real Solana mainnet Merkle proof check. Separately, GoalPulse's local SHA-256 audit fingerprint has its own Solana devnet anchoring readiness flag, pending wallet configuration — not yet live.`;
         }
 
-        return `GoalPulse posts a SHA-256 proof hash of the outcome audit to Solana devnet for tamper-evident, independently-verifiable evidence. Run "Verify on Solana" from the Outcome Audit section to check a specific signal.`;
+        return `Run "Verify on Solana" from the Outcome Audit section for a real, independently-verifiable Solana mainnet Merkle proof check on a specific signal. Separately, GoalPulse's local SHA-256 audit fingerprint has its own Solana devnet anchoring readiness flag, pending wallet configuration — not yet live.`;
       }
 
       if (
@@ -913,7 +913,7 @@ function App() {
         normalizedQuestion.includes("what technology") ||
         normalizedQuestion.includes("built with")
       ) {
-        return "GoalPulse is built on: live TxLINE market data (real-time odds + TXODDS Scores field context), a Node/Express + TypeScript backend running a 5-second autonomous agent cycle, a React + TypeScript frontend, and Solana devnet for tamper-evident on-chain proof verification. Backend runs on Render, frontend on Vercel.";
+        return "GoalPulse is built on: live TxLINE market data (real-time odds + TXODDS Scores field context), a Node/Express + TypeScript backend running a 5-second autonomous agent cycle, a React + TypeScript frontend, and Solana mainnet for real on-chain Merkle proof verification (separate from the local SHA-256 audit fingerprint). Backend runs on Render, frontend on Vercel.";
       }
 
       if (normalizedQuestion.includes("latest")) {
@@ -928,7 +928,7 @@ function App() {
         return "GoalPulse is analytics only. It explains odds movement, trap risk, reversal risk, and score reality checks. It does not recommend bets.";
       }
 
-      return "I can help with: latest signal, smart money traps, market reversal radar, score reality checks, the Outcome Audit, Agent Arena (Momentum Follower/Contrarian/Kelly Criterion), Market Maker spreads, the Signal Archive, Signal Performance, Confidence Calibration, Steam Move Detection, Signal Correlation, on-chain verification, or the tech stack. Ask me about any of these.";
+      return "I can help with: latest signal, failed continuation patterns, market reversal radar, score reality checks, the Outcome Audit, Agent Arena (Momentum Follower/Contrarian/Kelly Criterion), Market Maker spreads, the Signal Archive, Signal Performance, Confidence Calibration, Steam Move Detection, Signal Correlation, on-chain verification, or the tech stack. Ask me about any of these.";
     } catch (error) {
       console.error("Analyst chat reply failed", error);
       return "I couldn't reach that data right now — try again in a moment.";
@@ -3239,7 +3239,7 @@ function App() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-[10px] uppercase tracking-[0.2em] text-red-200/70">
-                          Smart Money Trap Detector
+                          Failed Continuation Detector
                         </p>
                         <p className="mt-1 text-sm font-semibold text-white">
                           {replayBacktest.summary?.smartMoneyTraps ?? 0} trap pattern(s) detected
@@ -3771,7 +3771,7 @@ function App() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.2em] text-red-200/70">
-                      Smart Money Trap Assessment
+                      Failed Continuation Assessment
                     </p>
                     <h3 className="mt-1 text-sm font-semibold text-white">
                       {selectedSignal.trapStatus.replaceAll("_", " ")}
