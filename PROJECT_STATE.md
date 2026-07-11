@@ -1949,6 +1949,14 @@ to build — not fixed yet, no code changes made.
   skimming quickly could form a negative first impression from the
   large number before reading the caveat below it.
 
+- **Residual "traps" wording in the chat input placeholder (flagged
+  2026-07-11).** `App.tsx:1878`'s analyst-chat input still reads
+  `"Ask about traps, reversals, score checks..."` — a leftover from
+  before the "Smart Money Trap" → "Failed Continuation and Market
+  Overreaction Detection" rename. Missed by the earlier grep sweep
+  since it says "traps," not "trap(s)," the pattern that sweep
+  targeted.
+
 ## Known limitations (documented, deliberately not fixed)
 
 - ~~Stale-finished-match repolling~~ **Fixed 2026-07-09** — see
