@@ -154,6 +154,35 @@ than fixing silently, since building real mobile responsiveness
 regression-pass fix, and this project has always been a
 laptop-presented judge demo, not a phone-presented one.
 
+✅ **Phase 5 (responsive AppSidebar) merged to `main` 2026-07-11**
+(was branch `feature/responsive-sidebar`, fast-forward merge
+`16a72d0`). Fixes exactly the gap Phase 7 flagged, matching the
+blueprint's `RESPONSIVE REQUIREMENTS` section directly — Tailwind's
+default `md`(768)/`xl`(1280) breakpoints line up with the spec's own
+tablet/desktop cutoffs, no custom config needed. `>=1280px`: unchanged
+full labeled rail. `768-1279px`: icon-only rail (72px), one icon per
+destination, `aria-label`+`title` tooltips, 44px minimum touch
+targets. `<768px`: rail hidden, a hamburger in `TopStatusBar` opens a
+full-screen slide-in menu sheet (same overlay pattern as the Guided
+Tour/Signal Audit Drawer) with full labels and the existing 3-group
+structure — menu sheet chosen over bottom nav since 9 destinations
+across 3 groups don't fit a bottom bar at a real touch target without
+cramming or flattening the groups. `AppShell` owns the sheet's
+open/closed state. Verified live at 1440px (zero overflow, zero
+console errors, nav intact) both pre-merge and post-merge in
+production; **1024/768/390px could not be verified with live pixel
+measurements in this environment** — `resize_window` doesn't actually
+change the viewport here, no dedicated device-emulation tool exists,
+and DevTools' own responsive-mode toggle can't be reached because the
+automation's keyboard input goes to the page DOM, not the browser
+chrome. User independently verified the other three breakpoints via
+their own real Chrome DevTools responsive mode and confirmed it looks
+correct before authorizing the merge. Build/lint/test clean
+(37 tests). Agent Arena/Archive drawer wiring remains explicitly out
+of scope (see above). **This closes out the Command Center Frontend
+Redesign's actively-tracked work — no open items remain unless the
+user requests something new.**
+
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
 are confirmed live in production with real data. Auto-deploy on push to
