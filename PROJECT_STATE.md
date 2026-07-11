@@ -91,7 +91,32 @@ build/lint/test clean on `main`, pushed, production verified —
 `/health` shows both streams connected/zero reconnects, the default
 page at goalpulse-agent.vercel.app renders unaffected with zero
 console errors, and `?preview=command-center` is live and working in
-production too. **Next: Phase 4 (Signal Audit Drawer).**
+production too.
+
+🔄 **Phase 4 (Signal Audit Drawer) implemented, branch
+`feature/signal-audit-drawer` off `main`:** built the reusable
+`components/signals/SignalAuditDrawer.tsx` from the blueprint spec — a
+right-side slide-in drawer covering identity, opening/current odds +
+implied probability, odds-compression % and the separate
+percentage-point probability shift, deterministic threshold, field/
+score context (honest fallback when absent), per-strategy Agent Arena
+decisions (self-fetched `/api/arena`, filtered by `signalId`), local
+SHA-256 audit fingerprint, and the same live Solana/Merkle validation
+via the existing `VerificationReceipt`. Closed two real gaps found
+during investigation: Signals/Replay Lab already called
+`setSelectedSignal` on click with nothing rendering in preview mode
+(dead clicks), and the frontend `AgentSignal` type was missing
+`probabilityPointShiftPct` and most of `evidence.scoresContext` that
+the backend already sends. Wired into Signals, Replay Lab, and Live
+Markets chart signal markers (new `onClick` on `ReferenceDot`); Agent
+Arena positions and Archive rows deliberately left unwired per user
+decision — fast-follow only if time remains, since both touch
+components untouched by the redesign so far. Verified live against
+production data at human pace across all three entry points,
+including probability-shift math, real per-signal Arena
+traded/rejected/not-evaluated states, and honest fallbacks when data
+is genuinely unavailable. Build/lint/test clean (31 tests). Committed
+`a742474`. **Holding for user review before pushing/merging.**
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
