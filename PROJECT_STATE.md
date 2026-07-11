@@ -1941,21 +1941,79 @@ needed — do not re-investigate.**
 Queued for later, batched together before deciding what (if anything)
 to build — not fixed yet, no code changes made.
 
-- **Accuracy badge first-impression risk (flagged 2026-07-11 during a
-  fresh "judge walkthrough" QA pass).** The "Accuracy" badge in the
-  top status strip shows a large, prominent percentage (e.g. "14%")
-  with the honest small-sample caveat ("n=X closed — too small to be
-  meaningful") displayed in small text right below it. A judge
-  skimming quickly could form a negative first impression from the
-  large number before reading the caveat below it.
+**✅ First batch (6 items) fixed 2026-07-11, including both items
+originally logged here (Accuracy badge, chat placeholder "traps"
+wording)** — see "First-impression UI polish pass" below for the
+full record. Two new residuals found during that pass and
+deliberately left unfixed (out of scope for that batch), queued here
+instead:
 
-- **Residual "traps" wording in the chat input placeholder (flagged
-  2026-07-11).** `App.tsx:1878`'s analyst-chat input still reads
-  `"Ask about traps, reversals, score checks..."` — a leftover from
-  before the "Smart Money Trap" → "Failed Continuation and Market
-  Overreaction Detection" rename. Missed by the earlier grep sweep
-  since it says "traps," not "trap(s)," the pattern that sweep
-  targeted.
+- **Chat panel's own intro description still says "trap detector"**
+  (found 2026-07-11 while verifying the chat placeholder fix). The
+  "Ask the audit agent" description text — a different string from
+  the placeholder already fixed — still reads "...TxLine replay
+  audit, trap detector, reversal radar...". Missed by both the
+  original Smart Money Trap rename sweep and this pass's own scope
+  (only the placeholder was in scope).
+- **Results Settlement / recent-results panel showed
+  "SCHEDULED/scheduled" for two matches that had just finished
+  seconds earlier** (found 2026-07-11 during live verification of
+  item 6 below). Could be a simple staleness artifact (that panel's
+  own poll hadn't caught up yet) or a related-but-distinct version of
+  the same `statusLabel`-trust bug just fixed in `matchClockLabel` —
+  not diagnosed, since it's a different component (not `App.tsx`'s
+  Market Board) and out of scope for that pass.
+
+### First-impression UI polish pass (6 items, 2026-07-11)
+
+Investigated and fixed as a bounded batch, using frontend-design
+principles applied to an *existing* app (explicitly not a redesign).
+Presentation/copy/hierarchy only — no signal logic, thresholds,
+calculations, API contracts, or settlement behavior touched.
+
+1. **Accuracy badge hierarchy.** Caveat text was `text-[8px]` (the
+   smallest text anywhere in the UI) below a bold, alarmingly
+   color-coded percentage. Added a minimum-sample threshold (`>= 5`
+   settled, matching the Arena meta-agent recommendation's own
+   precedent) below which the badge uses neutral styling instead of
+   a red/amber/emerald verdict; bumped the caveat to a legible size
+   so "too small to be meaningful" reads at the same glance as the
+   number.
+2. **Chat placeholder.** `"Ask about traps, reversals, score
+   checks..."` → `"Ask about failed continuation patterns,
+   reversals, score checks..."`.
+3. **Confidence Calibration.** Investigated live data first: the
+   25/50/75 buckets have 60/86/46 settled signals each — genuinely
+   substantial, not small samples, so a "small sample" caveat would
+   have been dishonest. Likelier explanation: `signal_archive` rows
+   are frozen snapshots, and today's longshot-confidence-penalty fix
+   (P1-2) only affects signals scored *after* it shipped, so this
+   data mostly predates it. Added an honest caveat saying exactly
+   that instead of fabricating a small-sample excuse.
+4. **Signal Correlation "duplicate" clusters.** Verified live that
+   clusters sharing the same match pair are genuinely distinct
+   (recurring across totally different real times — 08:52 AM vs.
+   09:10 AM vs. 05:20 PM, etc.). Cards only showed relative duration,
+   never absolute time. Added a formatted "Detected HH:MM" timestamp
+   per card.
+5. **"Trap score" → "Reversal score."** Renamed in all 4 spots that
+   used it (signal detail modal, chat prose, Failed Continuation
+   Detector card's signal list, case-study cards) — not just the one
+   instance originally flagged, to avoid recreating the exact
+   inconsistency the earlier Smart Money Trap rename left behind.
+   `trapScore` the field is unchanged.
+6. **Market Board "scheduled" on finished matches.** `matchClockLabel()`
+   trusted `match.statusLabel` blindly for finished matches. Verified
+   live: 2 of 7 finished matches had `statusLabel` frozen at
+   `"scheduled"` from before they finished (finished matches are
+   never re-fetched, so a stale label sticks forever). Now ignores a
+   `"scheduled"` `statusLabel` on a finished match, falling back to
+   `"Final"` — same defensive pattern `preciseStatusLabel()` already
+   used.
+
+Verified live in a local dev browser against production data (all 6
+confirmed correct via page-text extraction), zero console errors.
+Lint/build clean. Commit `8c95775`, awaiting push.
 
 ## Known limitations (documented, deliberately not fixed)
 
