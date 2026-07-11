@@ -35,6 +35,7 @@ import {
   summarizeConfidenceScorePerformance,
   summarizeSignalTypePerformance,
 } from "./logic/signalPerformance";
+import { summarizeEventLatency } from "./logic/eventLatency";
 import { computeBacktestScoreboards } from "./logic/backtest";
 import {
   parseArchiveFilters,
@@ -610,6 +611,18 @@ app.get("/api/signal-performance/by-confidence", async (_req, res) => {
     summary: {
       settledSignalsScanned: result.data.length,
       bucketsReported: performance.length,
+    },
+  });
+});
+
+app.get("/api/signal-performance/event-latency", async (_req, res) => {
+  const result = await getArchivedSignals({ event: "created" }, { page: 1, pageSize: 500 });
+  const latency = summarizeEventLatency(result.data);
+
+  res.json({
+    data: latency,
+    summary: {
+      createdSignalsScanned: result.data.length,
     },
   });
 });

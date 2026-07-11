@@ -1356,6 +1356,57 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /api/signal-performance/event-latency:
+    get:
+      summary: Event-to-signal timing gap (proxy metric, not a true reaction-latency pipeline)
+      description: >
+        Aggregates the gap between whichever TXODDS Scores event ended up
+        attached to a created archived signal (evidence.scoresContext.timestamp)
+        and that signal's own triggering odds tick (evidence.currentTimestamp) -
+        the same per-signal gap scoresContextFreshness.ts already uses (with
+        Math.abs()) to score confidenceScore, aggregated here instead.
+        Explicitly NOT the real "event received -> market first moved ->
+        adjustment completed -> expected vs observed shift" pipeline, which
+        would require a raw field-event stream and a raw odds-tick stream
+        correlated in sequence plus a calibrated expected-shift baseline -
+        confirmed too large to build for this item (2026-07-11
+        investigation). A real fraction of gaps are negative (the event
+        timestamp technically after the tick) - a feed-polling artifact
+        between the two independently-polled feeds, not the market
+        reacting before the event; reported honestly via
+        negativeGapCount/negativeGapPct, never filtered out. Entries
+        missing either timestamp are excluded from the sample. Fail-open:
+        returns 200 with data: null if Supabase is unconfigured/unreachable
+        or no qualifying entries exist, inherited from the existing
+        GET /api/archive endpoint's own fail-open behavior.
+      responses:
+        '200':
+          description: Event-to-signal gap percentile stats, plus a scan summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    nullable: true
+                    properties:
+                      sampledCount: { type: number }
+                      medianGapMs: { type: number }
+                      p25GapMs: { type: number }
+                      p75GapMs: { type: number }
+                      negativeGapCount: { type: number }
+                      negativeGapPct: { type: number }
+                    required: [sampledCount, medianGapMs, p25GapMs, p75GapMs, negativeGapCount, negativeGapPct]
+                  summary:
+                    type: object
+                    properties:
+                      createdSignalsScanned: { type: number }
+                    required: [createdSignalsScanned]
+                required: [data, summary]
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /api/arena/backtest:
     get:
       summary: Retroactive Arena backtest against the full archived signal history
