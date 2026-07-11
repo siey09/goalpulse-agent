@@ -705,7 +705,7 @@ function App() {
 
       if (normalizedQuestion.includes("trap") || normalizedQuestion.includes("suspicious")) {
         if (!topTrap) {
-          return "I do not see a confirmed trap pattern yet. Run the Outcome Audit first so I can inspect rejected market moves.";
+          return "I do not see an outcome-rejected move pattern yet. Run the Outcome Audit first so I can inspect rejected market moves.";
         }
 
         return `Top suspicious move: ${topTrap.match ?? topTrap.matchId ?? "Unknown match"} · ${getSignalTarget(topTrap)}. Trap score ${topTrap.trapScore ?? 0}. ${topTrap.trapReason ?? "The odds movement was rejected by the final result."}`;

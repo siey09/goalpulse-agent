@@ -1,5 +1,7 @@
 ﻿# GoalPulse Agent
 
+[![CI](https://github.com/siey09/goalpulse-agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/siey09/goalpulse-agent/actions/workflows/ci.yml)
+
 GoalPulse Agent is an autonomous TxLINE-powered sports market intelligence dashboard built for the TxLINE Trading Tools and Agents track.
 
 It monitors live football match markets, detects meaningful odds movement, enriches each signal with TXODDS Scores event context, and explains whether a market move is field-backed or market-only.
@@ -10,9 +12,12 @@ GoalPulse is analytics-only. It does not place wagers, custody funds, execute tr
 up-to-date, session-by-session detail on what shipped, what's in
 progress, and what's deliberately deferred, `PROJECT_STATE.md` at the
 repo root is the authoritative reference — it is updated after every
-milestone. As of 2026-07-11: 276 automated backend unit tests across
-22 files, 27 API endpoints (26 routes plus `/api/docs`, documented
-interactively there).
+milestone. **The test/file/endpoint counts below are a point-in-time
+snapshot, not a live value** — the CI badge above always reflects
+whether the current `main` actually passes; run `npm run test` in
+`apps/api` for the exact current count. Snapshot as of 2026-07-11: 276
+automated backend unit tests across 22 files, 27 API endpoints (26
+routes plus `/api/docs`, documented interactively there).
 
 ## Live Links
 
@@ -128,7 +133,7 @@ Beyond code bugs, two real production deployment incidents were found and resolv
 - Probability-point-shift reporting, separate from raw odds compression
 - CI (GitHub Actions), pinned dependencies, MIT license, explicit CORS origin allowlist
 - Upsert-based idempotency on the permanent archive tables (signal_archive, match_archive)
-- 276 automated backend unit tests across 22 files
+- Automated backend unit tests (276 as of 2026-07-11 — see the CI badge/`npm run test` for the current count)
 - React dashboard for live monitoring and judge presentation
 
 ## Scores Intelligence Layer

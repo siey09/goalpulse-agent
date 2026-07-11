@@ -1078,7 +1078,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
         },
         {
           step: "Smart money traps detected",
-          detail: `${confirmedTraps} confirmed trap(s) and ${possibleTraps} possible trap(s) found from rejected market moves`,
+          detail: `${confirmedTraps} rejected move(s) and ${possibleTraps} possible trap(s) found from rejected market moves`,
         },
         {
           step: "Proof hash generated",
