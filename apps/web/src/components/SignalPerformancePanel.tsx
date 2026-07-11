@@ -12,6 +12,15 @@ type SignalTypePerformance = {
   accuracyPct: number;
 };
 
+type EventLatencySummary = {
+  sampledCount: number;
+  medianGapMs: number;
+  p25GapMs: number;
+  p75GapMs: number;
+  negativeGapCount: number;
+  negativeGapPct: number;
+};
+
 function accuracyClass(accuracyPct: number) {
   if (accuracyPct >= 70) return "text-emerald-300";
   if (accuracyPct >= 50) return "text-amber-300";
@@ -21,6 +30,8 @@ function accuracyClass(accuracyPct: number) {
 export function SignalPerformancePanel() {
   const [performance, setPerformance] = useState<SignalTypePerformance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [eventLatency, setEventLatency] = useState<EventLatencySummary | null>(null);
+  const [isLatencyLoading, setIsLatencyLoading] = useState(true);
 
   useEffect(() => {
     let isActive = true;
@@ -49,6 +60,35 @@ export function SignalPerformancePanel() {
     }
 
     loadPerformance();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadEventLatency() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/signal-performance/event-latency`);
+
+        if (!response.ok) throw new Error("Unable to load event latency");
+
+        const payload = await response.json();
+
+        if (!isActive) return;
+
+        setEventLatency(payload.data ?? null);
+        setIsLatencyLoading(false);
+      } catch (error) {
+        console.error("Failed to load event latency", error);
+        if (!isActive) return;
+        setIsLatencyLoading(false);
+      }
+    }
+
+    loadEventLatency();
 
     return () => {
       isActive = false;
@@ -95,6 +135,40 @@ export function SignalPerformancePanel() {
               </p>
             </div>
           ))
+        )}
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+          Event-to-signal latency (proxy metric)
+        </p>
+        {isLatencyLoading ? (
+          <p className="mt-2 text-sm text-stone-400">Loading...</p>
+        ) : !eventLatency ? (
+          <p className="mt-2 text-sm text-stone-400">
+            No signals with both timestamps yet.
+          </p>
+        ) : (
+          <>
+            <p className="mt-2 text-sm text-stone-300">
+              Median gap between a signal's attached TXODDS event and its
+              triggering odds tick:{" "}
+              <span className="font-semibold text-white">
+                {(eventLatency.medianGapMs / 1000).toFixed(1)}s
+              </span>{" "}
+              (p25 {(eventLatency.p25GapMs / 1000).toFixed(1)}s, p75{" "}
+              {(eventLatency.p75GapMs / 1000).toFixed(1)}s, n=
+              {eventLatency.sampledCount}).
+            </p>
+            <p className="mt-2 text-xs text-stone-500">
+              Not a true "market reaction time" - this is the gap between
+              whichever event ended up attached to a signal and that
+              signal's own tick. {eventLatency.negativeGapPct}% of samples
+              show a negative gap, a feed-polling artifact between TXODDS
+              Scores and TxLINE odds (two independently-polled feeds), not
+              the market reacting before the event.
+            </p>
+          </>
         )}
       </div>
     </div>
