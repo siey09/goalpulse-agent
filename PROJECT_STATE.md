@@ -36,10 +36,11 @@ July 19 deadline and the tournament narrowing to ~4 matches after July 11.
 list (P1-1 → P1-7 → P1-16 → revisit P1-4/P1-5/P1-8/P1-19 → 20
 mandatory tests → 15-item Definition of Done), one item at a time, same
 investigate→brainstorm→spec→plan→implement→review→verify-live gate
-throughout. P1-1 implemented 2026-07-11 (see "RESUME POINT" further
-below) — 242 tests, awaiting user review before push. Tier 1, Tier 2,
-P1-3, and P1-2 all reviewed/approved/pushed/verified live as of
-2026-07-11.
+throughout. P1-1 and P1-7 both implemented 2026-07-11 (see "RESUME
+POINT" further below) — 247 tests, awaiting user review before push.
+Next up: P1-16, user-flagged as the biggest remaining item — scope and
+flag risk before starting. Tier 1, Tier 2, P1-3, and P1-2 all
+reviewed/approved/pushed/verified live as of 2026-07-11.
 
 **Vercel deploy pipeline fixed 2026-07-09** (see "Vercel deploy incident"
 below) — both the Signal Archive and Signal Performance dashboard panels
@@ -934,6 +935,54 @@ tier breakdown:
   user finds or waits for a real draw signal live in production to
   confirm, then explicitly approves before push and before starting
   P1-7.
+
+  **✅ P1-7 implemented 2026-07-11, awaiting user review before push —
+  reframed after data investigation, same pattern as P1-2.** The
+  original ask (a 4-stage "event received → market first moved →
+  adjustment completed → expected vs observed shift" pipeline) needs
+  infrastructure that doesn't exist — a raw field-event stream and a
+  raw odds-tick stream correlated in sequence (closer to
+  `steamDetection.ts` than `signalEngine.ts`'s single-tick comparison),
+  plus a real-data-calibrated expected-shift baseline. Comparable
+  scope to P1-1, likely larger given the calibration step. **User
+  chose the smaller, already-available proxy metric instead.**
+
+  New `logic/eventLatency.ts`'s `summarizeEventLatency` aggregates the
+  gap `scoresContextFreshness.ts` already computes per-signal (with
+  `Math.abs()`) between `evidence.scoresContext.timestamp` and
+  `evidence.currentTimestamp` into percentile stats
+  (`medianGapMs`/`p25GapMs`/`p75GapMs`). **Investigated against real
+  archive data first:** of 633 `created`-event archived signals, 314
+  (50%) have both timestamps; median gap 3.6s; **102/314 (32%) show a
+  negative gap** — not the market reacting before the event, but a
+  polling-alignment artifact between the two independently-polled
+  feeds (TXODDS Scores, TxLINE odds). Reported honestly via
+  `negativeGapCount`/`negativeGapPct`, never filtered out. Every place
+  this appears (code comment, `openapi.yaml`, frontend copy) states
+  plainly that this is a proxy for event-to-signal gap, not the real
+  "market reaction time" pipeline.
+
+  New `GET /api/signal-performance/event-latency` (same family as the
+  existing `/api/signal-performance` endpoints), new section in
+  `SignalPerformancePanel.tsx` showing the stats with the negative-gap
+  caveat as visible text, not a tooltip.
+
+  5 commits on `main`: `1730c79` (spec), `0f6eb25` (plan), `1e88a83`
+  (logic + tests), `5d1f241` (route + openapi.yaml), `cbe2caf`
+  (frontend). Backend: 247 tests pass (up from 242 at P1-1 close),
+  clean build. Frontend: clean build, verified live in a local dev
+  browser — renders the expected empty state (local has no Supabase
+  credentials, confirmed via `.env`, so the archive-reading endpoint
+  correctly fails open to `data: null`), zero console errors. Real
+  data confirmation depends on production, which has the actual
+  Supabase-backed archive.
+
+  **Exact next action:** same gate as every prior item — report diff,
+  user reviews and verifies live in production (where real archived
+  data exists), then explicitly approves before push and before
+  starting P1-16. **P1-16 is the user-flagged biggest remaining item —
+  must scope it carefully and flag realistic effort/risk before
+  starting, per their explicit instruction.**
 
 - **Revisit now in scope (previously skip-listed):** P1-4, P1-5, P1-8,
   P1-19 — will each be investigated individually when reached, not
