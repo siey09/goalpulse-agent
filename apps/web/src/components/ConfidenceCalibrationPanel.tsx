@@ -85,27 +85,35 @@ export function ConfidenceCalibrationPanel() {
             Not enough settled, confidence-scored signals yet.
           </div>
         ) : (
-          buckets.map((entry) => (
-            <div key={entry.bucket} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
-                  Confidence {entry.bucket}
-                </span>
-                <span className={`text-sm font-semibold ${accuracyTextClass(entry.accuracyPct)}`}>
-                  {entry.accuracyPct}%
-                </span>
+          <>
+            {buckets.map((entry) => (
+              <div key={entry.bucket} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                    Confidence {entry.bucket}
+                  </span>
+                  <span className={`text-sm font-semibold ${accuracyTextClass(entry.accuracyPct)}`}>
+                    {entry.accuracyPct}%
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-white/15">
+                  <div
+                    className={`h-2 rounded-full ${accuracyBarClass(entry.accuracyPct)}`}
+                    style={{ width: `${entry.accuracyPct}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-stone-500">
+                  {entry.correctCount} / {entry.settledCount} correct
+                </p>
               </div>
-              <div className="h-2 rounded-full bg-white/15">
-                <div
-                  className={`h-2 rounded-full ${accuracyBarClass(entry.accuracyPct)}`}
-                  style={{ width: `${entry.accuracyPct}%` }}
-                />
-              </div>
-              <p className="mt-1 text-xs text-stone-500">
-                {entry.correctCount} / {entry.settledCount} correct
-              </p>
-            </div>
-          ))
+            ))}
+            <p className="rounded-xl border border-white/5 bg-black/10 p-3 text-[11px] leading-5 text-stone-500">
+              Early data — not yet monotonic across buckets. Confidence scoring was
+              recalibrated today to reduce longshot-odds overconfidence; these
+              settled signals mostly predate that change, so expect this to
+              sharpen as new signals settle under the updated model.
+            </p>
+          </>
         )}
       </div>
     </div>

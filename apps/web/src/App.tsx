@@ -351,7 +351,10 @@ function matchClockLabel(match?: Match) {
   }
 
   if (match.status === "finished") {
-    return match.statusLabel ?? "Final";
+    const finishedLabel = match.statusLabel?.trim();
+    return finishedLabel && finishedLabel.toLowerCase() !== "scheduled"
+      ? finishedLabel
+      : "Final";
   }
 
   return match.clockLabel ?? `${match.minute ?? 0}'`;
@@ -708,7 +711,7 @@ function App() {
           return "I do not see an outcome-rejected move pattern yet. Run the Outcome Audit first so I can inspect rejected market moves.";
         }
 
-        return `Top suspicious move: ${topTrap.match ?? topTrap.matchId ?? "Unknown match"} · ${getSignalTarget(topTrap)}. Trap score ${topTrap.trapScore ?? 0}. ${topTrap.trapReason ?? "The odds movement was rejected by the final result."}`;
+        return `Top suspicious move: ${topTrap.match ?? topTrap.matchId ?? "Unknown match"} · ${getSignalTarget(topTrap)}. Reversal score ${topTrap.trapScore ?? 0}. ${topTrap.trapReason ?? "The odds movement was rejected by the final result."}`;
       }
 
       if (normalizedQuestion.includes("reversal")) {
@@ -1807,6 +1810,13 @@ function App() {
     ];
   }, [runs, signals, matches.length, stats]);
 
+  // Same minimum-sample-size precedent as the Arena's meta-agent recommendation
+  // (settledCount >= 5 before declaring a leader) - below this, an accuracy
+  // percentage isn't meaningful enough to color-code as good/bad.
+  const MIN_MEANINGFUL_ACCURACY_SAMPLE = 5;
+  const hasMeaningfulAccuracySample =
+    (stats?.closedSignals ?? 0) >= MIN_MEANINGFUL_ACCURACY_SAMPLE;
+
   return (
     <main className="min-h-screen bg-[#0b0806] p-3 text-stone-100">
       <button
@@ -1875,7 +1885,7 @@ function App() {
                 onKeyDown={(event) => {
                   if (event.key === "Enter") sendAnalystMessage();
                 }}
-                placeholder="Ask about traps, reversals, score checks..."
+                placeholder="Ask about failed continuation patterns, reversals, score checks..."
                 disabled={isAnalystReplying}
                 className="min-w-0 flex-1 rounded-full border border-white/10 bg-black/30 px-3 py-2 text-xs text-white outline-none placeholder:text-stone-500 focus:border-sky-400/40 disabled:opacity-50"
               />
@@ -2216,7 +2226,7 @@ function App() {
 
                     <div
                       className={`flex min-w-[104px] items-center gap-2.5 rounded-2xl border px-3.5 py-2.5 transition-all hover:scale-[1.03] ${
-                        (stats?.closedSignals ?? 0) === 0
+                        !hasMeaningfulAccuracySample
                           ? "border-stone-500/20 bg-gradient-to-br from-stone-500/10 to-transparent hover:border-stone-400/40"
                           : (stats?.strategyAccuracy ?? 0) >= 60
                             ? "border-emerald-400/20 bg-gradient-to-br from-emerald-400/10 to-transparent hover:border-emerald-400/40"
@@ -2227,7 +2237,7 @@ function App() {
                     >
                       <div
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
-                          (stats?.closedSignals ?? 0) === 0
+                          !hasMeaningfulAccuracySample
                             ? "bg-stone-500/15"
                             : (stats?.strategyAccuracy ?? 0) >= 60
                               ? "bg-emerald-400/15"
@@ -2238,7 +2248,7 @@ function App() {
                       >
                         <Target
                           className={`h-4 w-4 ${
-                            (stats?.closedSignals ?? 0) === 0
+                            !hasMeaningfulAccuracySample
                               ? "text-stone-400"
                               : (stats?.strategyAccuracy ?? 0) >= 60
                                 ? "text-emerald-300"
@@ -2253,11 +2263,13 @@ function App() {
                         {(stats?.closedSignals ?? 0) > 0 ? (
                           <p
                             className={`text-xl font-bold tabular-nums ${
-                              (stats?.strategyAccuracy ?? 0) >= 60
-                                ? "text-emerald-300"
-                                : (stats?.strategyAccuracy ?? 0) >= 40
-                                  ? "text-amber-300"
-                                  : "text-red-300"
+                              !hasMeaningfulAccuracySample
+                                ? "text-stone-300"
+                                : (stats?.strategyAccuracy ?? 0) >= 60
+                                  ? "text-emerald-300"
+                                  : (stats?.strategyAccuracy ?? 0) >= 40
+                                    ? "text-amber-300"
+                                    : "text-red-300"
                             }`}
                           >
                             {formatPercent(stats?.strategyAccuracy)}
@@ -2268,9 +2280,11 @@ function App() {
                         <button
                           type="button"
                           onClick={scrollToCaseStudies}
-                          className="mt-1 block text-left text-[8px] leading-tight text-stone-500 underline decoration-dotted hover:text-stone-300"
+                          className="mt-1 block text-left text-[10px] font-semibold leading-tight text-stone-300 underline decoration-dotted hover:text-stone-100"
                         >
-                          n={stats?.closedSignals ?? 0} closed — too small to be meaningful · See verified case studies
+                          {hasMeaningfulAccuracySample
+                            ? `n=${stats?.closedSignals ?? 0} closed · See verified case studies`
+                            : `n=${stats?.closedSignals ?? 0} closed — too small to be meaningful yet`}
                         </button>
                       </div>
                     </div>
@@ -3277,7 +3291,7 @@ function App() {
                                 #{index + 1} · {signal.match ?? signal.matchId ?? "Unknown match"} · {getSignalTarget(signal)}
                               </p>
                               <span className="shrink-0 rounded-full bg-red-400/10 px-2 py-0.5 text-[10px] font-semibold text-red-100">
-                                Trap score {signal.trapScore ?? 0}
+                                Reversal score {signal.trapScore ?? 0}
                               </span>
                             </div>
                             <p className="mt-1 text-[10px] font-semibold text-purple-200">
@@ -3779,7 +3793,7 @@ function App() {
                     </h3>
                   </div>
                   <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-red-100">
-                    Trap score {selectedSignal.trapScore ?? 0}
+                    Reversal score {selectedSignal.trapScore ?? 0}
                   </span>
                 </div>
 

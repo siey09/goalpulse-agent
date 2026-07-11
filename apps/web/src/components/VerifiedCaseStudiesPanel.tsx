@@ -70,7 +70,7 @@ function CaseStudyCard({ caseStudy }: { caseStudy: PinnedCaseStudy }) {
               Failed Continuation Detector
             </p>
             <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-red-100">
-              Trap score {caseStudy.trapScore ?? 0}
+              Reversal score {caseStudy.trapScore ?? 0}
             </span>
           </div>
           <p className="mt-1 text-[11px] font-semibold text-purple-200">

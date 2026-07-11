@@ -25,6 +25,12 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+function formatClusterTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 function severityClass(severity: PatternCluster["severity"]) {
   if (severity === "HIGH") return "border-red-400/20 bg-red-400/10 text-red-200";
   if (severity === "MEDIUM") return "border-amber-400/20 bg-amber-400/10 text-amber-200";
@@ -106,7 +112,10 @@ export function SignalCorrelationPanel() {
                 </span>
               </div>
               <p className="text-xs text-stone-400">
-                {cluster.signalCount} signals over {formatDuration(cluster.spanMs)}
+                {cluster.signalCount} signals over {formatDuration(cluster.spanMs)} ·{" "}
+                <span className="font-semibold text-stone-300">
+                  Detected {formatClusterTime(cluster.windowStart)}
+                </span>
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {cluster.matchIds.map((id) => (
