@@ -10,6 +10,31 @@ way around.
 
 ## ⏸ SESSION HANDOFF (updated after every milestone — see status below)
 
+✅ **Command Center overview's Strategy Leader and Verification cards
+wired to real data 2026-07-12** (was branch
+`feature/command-center-overview-wiring`, fast-forward merge `8ada009`).
+User did a full manual click-through of all 9 destinations post-merge
+("check mo isa isa lahat") and asked to fix the one honest gap found:
+both cards had shown a "Not available in this Phase 2 preview" stub
+since Phase 2 — Phase 3 (the destinations that stub explicitly promised)
+has existed for a while, so it was overdue. Extracted
+`getMetaAgentRecommendation()` and the Arena types out of
+`ArenaPanel.tsx` into a new `apps/web/src/lib/arena.ts` so
+`CommandCenterPage` can self-fetch `/api/arena` (same endpoint/cadence
+as ArenaPanel) and compute the identical recommendation — the overview
+card can never disagree with the full Agent Arena page since they share
+the same logic, not a second implementation. Verification card reuses
+that same response's `proof.verifiableStat`/`hash` fields rather than
+adding a new endpoint or fabricating a metric. Updated
+`CommandCenterPage.smoke.test.tsx` to mock `fetch` and assert the real
+rendered values. 45 tests (up from 43), clean build. Verified live in
+production: Strategy Leader showed "Momentum Follower -67.36% ROI · 39
+settled" — matching Agent Arena's own numbers exactly — and
+Verification showed "Live stat ready to verify" with a real truncated
+hash; zero console errors. Notably, both cards' self-fetch resolved
+correctly even while the main dashboard's central poll was still
+mid-flight, confirming the independent-fetch design works as intended.
+
 ✅ **Command Center made the default experience, URL split retired
 2026-07-12** (was branch `feature/command-center-as-default`,
 fast-forward merge `4be2e48`). User flagged real confusion after the
