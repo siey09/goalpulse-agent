@@ -14,12 +14,11 @@ export function baseMatchId(matchId: string): string {
 }
 
 /**
- * Real bug found during the 2026-07-11 Mandatory Test Plan investigation:
- * GET /api/replay/backtest's finished-vs-live snapshot bucketing compared
- * raw matchId against a set of base fixture ids, so a totals snapshot
- * (matchId `<fixtureId>-totals-<line>`) never matched even when its real
- * fixture had finished - every totals signal in real replay stayed
- * permanently "pending".
+ * GET /api/replay/backtest's finished-vs-live snapshot bucketing must
+ * compare against base fixture ids, not raw matchId - otherwise a totals
+ * snapshot (matchId `<fixtureId>-totals-<line>`) never matches even when
+ * its real fixture has finished, leaving totals signals permanently
+ * "pending" in replay.
  */
 export function isFinishedMatchId(matchId: string, finishedMatchIds: Set<string>): boolean {
   return finishedMatchIds.has(baseMatchId(matchId));
@@ -30,12 +29,10 @@ function findReplayMatch(matchId: string, replayMatches: Match[]): Match | undef
 }
 
 /**
- * Real bug found during the same investigation: this settlement logic
- * (extracted unchanged in behavior from GET /api/replay/backtest, except
- * for the two fixes below) only checked home/away win conditions - a
- * draw signal replayed here always settled "incorrect" even on a real
- * drawn final score, since store.ts's own settlement (fixed in P1-1)
- * lives in a completely separate function that this route never called.
+ * Must evaluate a draw outcome, not just home/away win conditions - a
+ * draw signal replayed here would otherwise always settle "incorrect"
+ * even on a real drawn final score, since this is a separate function
+ * from store.ts's own live-path settlement.
  */
 export function settleReplaySignal(
   signal: AgentSignal,

@@ -26,12 +26,12 @@ function calculateCompressionPct(previousOdds: number, currentOdds: number) {
 }
 
 /**
- * Mandatory Test Plan Gap 3: raw compression (calculateCompressionPct
- * above) and de-vigged implied-probability movement must be reported
- * separately, not conflated. TxLINE's feed is already de-vigged at the
- * source (verified 2026-07-11: implied probabilities sum to ~1.0 in
- * real live data), so this is a direct 1/odds conversion, not a new
- * de-vig calculation. Same sign convention as calculateCompressionPct:
+ * Raw compression (calculateCompressionPct above) and de-vigged
+ * implied-probability movement are reported separately, not conflated.
+ * TxLINE's feed is already de-vigged at the source (implied
+ * probabilities sum to ~1.0 in real live data), so this is a direct
+ * 1/odds conversion, not a new de-vig calculation. Same sign convention
+ * as calculateCompressionPct:
  * positive means the move strengthened this side (shorter odds, higher
  * implied probability), matching oddsChangePct's own positive direction
  * for the identical move.
@@ -63,15 +63,10 @@ function calculateMomentumScore(
 const MAGNITUDE_REFERENCE_PCT = 15;
 
 /**
- * Both values are derived from real signal_archive data (2026-07-11
- * investigation, 294 settled signals), not invented - but the sample
- * is modest and CONCENTRATED: only 49 settled 1X2 signals total,
- * spread across just 3 real matches, with one match's "team trailing
- * late, never comes back" narrative dominating the incorrect bucket.
- * With ~4 matches left before the July 19 deadline, there is limited
- * remaining data to re-validate this against. Treat these as
- * provisional, not authoritative - re-check against a larger sample
- * if this project continues past the tournament.
+ * Both values are derived from real signal_archive data, not invented -
+ * but the sample is modest and concentrated across few real matches, so
+ * treat these as provisional, not authoritative. Re-check against a
+ * larger sample as more archived signals settle.
  *
  * LONGSHOT_ODDS_THRESHOLD: accuracy breaks at the same decimal-odds
  * level (3.0) independently in both markets - 1X2 60%->0% at the

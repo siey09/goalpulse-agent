@@ -10,8 +10,8 @@ export interface ArchivePageProps {
 
 /**
  * Archive table first (the primary evidence), then aggregate
- * performance/calibration, then pinned case studies last - per the
- * blueprint: "Case studies are featured records, not the only evidence."
+ * performance/calibration, then pinned case studies last - case studies
+ * are featured records, not the only evidence.
  */
 export function ArchivePage({ onSelectSignal }: ArchivePageProps = {}) {
   return (

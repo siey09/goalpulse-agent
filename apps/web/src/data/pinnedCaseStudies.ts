@@ -62,7 +62,7 @@ export type PinnedCaseStudy = {
 };
 
 export const PINNED_CASE_STUDIES_PROVENANCE =
-  "Captured verbatim from live production /api/signals responses on 2026-07-04/2026-07-05 during manual verification, before the in-memory store reset on a later Render restart. This is a faithful copy of real API output, not a reconstruction from memory.";
+  "Captured verbatim from live production /api/signals responses, before an in-memory store reset. This is a faithful copy of real API output, not a reconstruction from memory.";
 
 export const PINNED_CASE_STUDIES: PinnedCaseStudy[] = [
   {

@@ -12,11 +12,10 @@ export interface EventLatencySummary {
 /**
  * Proxy metric only - NOT the real "event received -> market first
  * moved -> adjustment completed -> expected vs observed shift"
- * pipeline (P1-7's literal ask). That would require a raw field-event
- * stream and a raw odds-tick stream, correlated and scanned in
- * sequence (closer to steamDetection.ts's approach than a single-tick
- * comparison), plus a real-data-calibrated expected-shift baseline -
- * confirmed too large to build now (2026-07-11 investigation).
+ * pipeline. That would require a raw field-event stream and a raw
+ * odds-tick stream, correlated and scanned in sequence (closer to
+ * steamDetection.ts's approach than a single-tick comparison), plus a
+ * real-data-calibrated expected-shift baseline.
  *
  * This instead aggregates the gap scoresContextFreshness.ts already
  * computes per-signal (with Math.abs(), for the same reason as here)
@@ -26,8 +25,7 @@ export interface EventLatencySummary {
  * negative - the event timestamp technically after the tick. This is
  * NOT the market reacting before the event; TXODDS Scores and TxLINE
  * odds are two independently-polled feeds that don't align perfectly
- * in time. Real archive data at investigation time: 102/314 (32%)
- * negative. Reported honestly via negativeGapCount/negativeGapPct,
+ * in time. Reported honestly via negativeGapCount/negativeGapPct,
  * never filtered out.
  */
 export function summarizeEventLatency(entries: ArchiveEntry[]): EventLatencySummary | null {

@@ -17,8 +17,8 @@ export type StreamStatus = "STREAMING" | "STALE" | "RECONNECTING" | "STOPPED";
  * writes state, never changes connect/reconnect/backoff behavior. Scoped
  * to these two SSE monitors only, deliberately NOT extended to the
  * polling agent loop (no circuit breaker) or unified into a single
- * app-wide state machine - both confirmed as real regression risk to
- * signal generation this close to the tournament ending (see P1-16 spec).
+ * app-wide state machine - the polling loop is the source of truth for
+ * signal generation and any change there is a real regression risk.
  *
  * isEnabled must be passed in (mirrors the exact condition start() uses
  * to no-op) because state alone can't distinguish "feed disabled" from

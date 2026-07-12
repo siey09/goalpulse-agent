@@ -23,9 +23,9 @@ export interface TopStatusBarProps {
 }
 
 /**
- * Sticky top status strip. Presentational only in Phase 1 - not wired to
- * real polling/stream state yet; that happens once Phase 2 composes this
- * into the actual Command Center page.
+ * Sticky top status strip showing live agent status, feed mode, and
+ * freshness - driven by the Command Center page's own polling/stream
+ * state.
  */
 export function TopStatusBar({
   title,

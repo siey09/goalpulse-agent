@@ -22,9 +22,8 @@ function getClient(): SupabaseClient | null {
  * table. Fail-open: no-ops if Supabase is not configured, and a delivery
  * failure is logged but never thrown - archiving must never break the agent
  * cycle that calls it. Uses upsert/ignoreDuplicates (not a plain insert) so
- * a restart-timing duplicate (see P1-18 in
- * docs/superpowers/specs/2026-07-11-p1-tier2-design.md) is silently
- * absorbed rather than logged as a spurious error. Requires the matching
+ * a restart-timing duplicate is silently absorbed rather than logged as a
+ * spurious error. Requires the matching
  * unique constraint on (signal_id, event) to exist in Supabase; behaves
  * like a plain insert (no dedup) until that constraint is added.
  */
@@ -67,10 +66,7 @@ export async function archiveSignal(
  * archiveSignal: no-ops if Supabase is not configured, logs but never
  * throws on a delivery failure. Uses upsert/ignoreDuplicates (not a plain
  * insert) so a restart-timing duplicate is silently absorbed instead of
- * creating a second row - a deliberate change from this table's original
- * 2026-07-10 design, which accepted duplicate rows as expected behavior
- * (see P1-18 in docs/superpowers/specs/2026-07-11-p1-tier2-design.md).
- * Requires the matching unique constraint on (match_id) to exist in
+ * creating a second row. Requires the matching unique constraint on (match_id) to exist in
  * Supabase; behaves like a plain insert (no dedup) until that constraint
  * is added.
  */

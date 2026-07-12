@@ -4,7 +4,7 @@ import { createSseStreamMonitor } from "./sseStreamMonitor";
  * Live connectivity state for TxLINE's native Server-Sent Events stream
  * (/api/scores/stream). This is additive to, and independent from, the
  * existing 5-second polling loop in agent.ts. The polling loop remains the
- * source of truth for signal generation (it is tested and verified live).
+ * source of truth for signal generation.
  *
  * This monitor proves genuine push-based, real-time connectivity to TxLINE's
  * own streaming infrastructure (rather than just periodic REST polling) and

@@ -14,8 +14,7 @@ export interface SignalTypePerformance {
  * A totals signal's matchId is `<fixtureId>-totals-<line>` (see
  * isTotalsMatchId in archive.ts) - six different total-goals lines for
  * the same real match would otherwise count as six "distinct matches,"
- * understating concentration exactly as found during the SHARP_MOVE
- * accuracy investigation (2026-07-09).
+ * understating how concentrated the sample actually is.
  */
 function baseMatchId(matchId: string): string {
   return matchId.split("-totals-")[0];
@@ -82,14 +81,13 @@ function confidenceBucket(score: number): ConfidenceBucketPerformance["bucket"] 
 const BUCKET_ORDER: ConfidenceBucketPerformance["bucket"][] = ["0-25", "25-50", "50-75", "75-100"];
 
 /**
- * confidenceScore (item #7) was designed to be more informative than raw
+ * confidenceScore is designed to be more informative than raw
  * severity/signalType - it blends field pressure and freshness into the
- * score - but nothing measured whether it actually predicts accuracy
- * better. Entries without a confidenceScore (all archived signals as of
- * 2026-07-09, which predate item #7 in the pipeline) are excluded
- * entirely - they carry no bucketed-accuracy information. Buckets with
- * zero settled entries are omitted, not returned with a 0%/NaN
- * placeholder.
+ * score - so this buckets settled signals by that score to measure
+ * whether it actually predicts accuracy. Entries without a
+ * confidenceScore are excluded entirely - they carry no
+ * bucketed-accuracy information. Buckets with zero settled entries are
+ * omitted, not returned with a 0%/NaN placeholder.
  */
 export function summarizeConfidenceScorePerformance(
   entries: ArchiveEntry[]

@@ -77,13 +77,12 @@ function NavButton({
 }
 
 /**
- * Responsive per the redesign blueprint: full labeled rail >=1280px
- * (unchanged desktop look), icon-only rail 768-1279px (tablet -
- * collapsible navigation per spec), and a hamburger-triggered
- * full-screen menu sheet below 768px (mobile - blueprint offers bottom
- * nav or menu sheet; a sheet was chosen since 9 destinations across 3
- * groups don't fit a bottom bar at a real 44px touch target without
- * cramming or flattening the groups).
+ * Responsive: full labeled rail >=1280px, icon-only rail 768-1279px
+ * (tablet - collapsible navigation), and a hamburger-triggered
+ * full-screen menu sheet below 768px (mobile). A sheet was chosen over
+ * a bottom nav since 9 destinations across 3 groups don't fit a bottom
+ * bar at a real 44px touch target without cramming or flattening the
+ * groups.
  *
  * The 1px amber rail along the outer edge and the active-item tick mark
  * are the console's "power strip" cue - a fixed reference line the rest

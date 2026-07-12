@@ -55,11 +55,9 @@ import type { OddsSnapshot } from "./types";
 
 const app = express();
 
-// Confirmed via production Render logs (2026-07-07): external requests
-// consistently show exactly 2 proxy hops in X-Forwarded-For — a Cloudflare
-// edge IP followed by Render's internal load balancer IP — before the real
-// client IP. See docs/superpowers/specs/2026-07-07-rate-limiting-design.md,
-// "Prerequisite fix", for the Phase 1/Phase 2 history of this value.
+// Render production traffic consistently shows exactly 2 proxy hops in
+// X-Forwarded-For — a Cloudflare edge IP followed by Render's internal
+// load balancer IP — before the real client IP.
 app.set("trust proxy", 2);
 
 const ALLOWED_CORS_ORIGINS = [

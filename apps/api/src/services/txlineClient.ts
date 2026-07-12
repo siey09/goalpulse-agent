@@ -889,10 +889,10 @@ function is1x2Odds(item: TxLineOddsSnapshot): boolean {
 }
 
 /**
- * Full-match (not per-half) Over/Under Total Goals market. Confirmed live
- * against real TxLINE data: SuperOddsType "OVERUNDER_PARTICIPANT_GOALS" with
- * an empty MarketPeriod is the full-match version (MarketPeriod "half=1"/
- * "half=2" are first/second-half-only lines, intentionally excluded here).
+ * Full-match (not per-half) Over/Under Total Goals market. SuperOddsType
+ * "OVERUNDER_PARTICIPANT_GOALS" with an empty MarketPeriod is the
+ * full-match version (MarketPeriod "half=1"/"half=2" are first/
+ * second-half-only lines, intentionally excluded here).
  */
 function isTotalsOdds(item: TxLineOddsSnapshot): boolean {
   return (

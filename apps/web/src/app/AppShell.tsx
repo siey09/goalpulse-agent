@@ -12,10 +12,10 @@ export interface AppShellProps extends Omit<TopStatusBarProps, "onOpenMobileNav"
 
 /**
  * Command Center layout shell: sidebar + sticky status bar + scrollable
- * content area, with a persistent compliance footer (matches the
- * blueprint's "keep as footer, not a destination" guidance). Owns the
- * mobile nav sheet's open/closed state - pure UI state, no reason to
- * live any higher up the tree.
+ * content area, with a persistent compliance footer (a permanent fixture
+ * of the shell, not a navigable destination). Owns the mobile nav
+ * sheet's open/closed state - pure UI state, no reason to live any
+ * higher up the tree.
  */
 export function AppShell({ active, onSelectDestination, children, ...statusBarProps }: AppShellProps) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);

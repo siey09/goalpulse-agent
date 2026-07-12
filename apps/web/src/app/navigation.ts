@@ -15,11 +15,8 @@ export interface NavGroup {
 }
 
 /**
- * Target information architecture from the Command Center redesign
- * blueprint (2026-07-11). Not wired into any page yet in Phase 1 - this
- * is the single source of truth Phase 3 will use to compose destination
- * pages and rebuild the guided tour's step -> destination mapping from,
- * instead of the two hand-kept-in-sync arrays that exist today.
+ * The Command Center's information architecture - the single source of
+ * truth both the sidebar and the destination pages compose from.
  */
 export const NAV_GROUPS: NavGroup[] = [
   {

@@ -93,13 +93,11 @@ export interface SignalAuditDrawerProps {
 }
 
 /**
- * The reusable "Signal Audit Drawer" from the redesign blueprint: a
- * single component that can open from any chart, card, or table across
- * the Command Center, showing everything the blueprint requires -
- * including fields the old default-page modal never had (implied
- * probability, percentage-point shift, per-strategy Arena decisions,
- * and the same live Solana verify state used everywhere else via
- * VerificationReceipt).
+ * A single reusable drawer that can open from any chart, card, or table
+ * across the Command Center, showing a signal's full evidence trail:
+ * implied probability, percentage-point shift, per-strategy Arena
+ * decisions, and the same live Solana verify state used everywhere else
+ * via VerificationReceipt.
  */
 export function SignalAuditDrawer({
   signal,

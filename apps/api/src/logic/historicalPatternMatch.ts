@@ -63,9 +63,9 @@ function emptyResult(): SimilarSignalsResult {
  * Finds settled archive signals of the same signalType as the target,
  * ranked by closeness on oddsChangePct/fieldPressureScore, excluding the
  * target's own match and capping each other match to 2 contributions so
- * one repeatedly-firing match can't dominate the comparison set (same
- * concentration bug class already found and fixed for Signal Performance
- * and Signal Correlation).
+ * one repeatedly-firing match can't dominate the comparison set - the same
+ * match-concentration risk guarded against in Signal Performance and
+ * Signal Correlation.
  */
 export function findSimilarSignals(
   entries: ArchiveEntry[],

@@ -259,12 +259,10 @@ export function calculateKellyStake(oddsTaken: number, confidenceScore: number):
 }
 
 /**
- * Real risk-limit check (P1 Mandatory Test Plan Gap 2), distinct from
- * calculateKellyStake's existing clamp: previously, a raw Kelly fraction
- * beyond MAX_STAKE_FRACTION was silently resized down to the cap and a
- * paper position was still created - there was no path anywhere that
- * actually rejected a position for exceeding a risk threshold. This
- * checks the same raw (uncapped) fraction calculateKellyStake computes
+ * A real risk-limit check, distinct from calculateKellyStake's own
+ * clamp: a raw Kelly fraction beyond MAX_STAKE_FRACTION rejects the
+ * position outright rather than silently resizing it down to the cap.
+ * Checks the same raw (uncapped) fraction calculateKellyStake computes
  * internally, so the two functions can never disagree about what the
  * "true" desired stake was before capping.
  */
