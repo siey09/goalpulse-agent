@@ -212,7 +212,7 @@ Click "Guide" (bottom-right). Walks through all 22 steps in order:
 3. TxLINE market board
 4. Scores intelligence signals
 5. Final score audit
-6. Field pressure context
+6. Match state and signal pressure
 7. In-Play Market Maker
 8. Steam move detection
 9. Agent vs Agent Arena

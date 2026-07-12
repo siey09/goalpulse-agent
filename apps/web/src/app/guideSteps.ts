@@ -57,9 +57,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     targetId: "guide-outcome-verification",
   },
   {
-    title: "6. Field pressure context",
+    title: "6. Match state and signal pressure",
     detail:
-      "GoalPulse separates field-backed moves from market-only moves using Field Pressure Index and TXODDS play-by-play events.",
+      "Review the selected match, exact score and status, and the current signal-pressure comparison.",
     destination: "live-markets",
     targetId: "guide-selected-match",
   },

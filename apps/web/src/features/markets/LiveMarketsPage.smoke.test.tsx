@@ -22,6 +22,7 @@ const baseProps = {
   chartSignalMarkers: [],
   chartReadout: {
     homeCurrent: "1.85",
+    drawCurrent: "3.40",
     awayCurrent: "4.20",
     verdict: "Market steady",
     meaning: "No material move yet.",
@@ -43,7 +44,9 @@ const baseProps = {
   health: null,
   correctSignals: 3,
   closedSignals: 5,
-  selectedMatchMarketPressure: { homePressure: 62, awayPressure: 38, leader: "Norway" },
+  selectedMatchMarketPressure: { homePressure: 62, awayPressure: 38, leader: "Norway", hasData: true },
+  fieldContext: { label: "Field-backed", tone: "positive" as const },
+  hasDroppedUpdate: false,
   matches: [selectedMatch],
   matchStatusFilter: "all",
   onChangeMatchStatusFilter: vi.fn(),
@@ -60,8 +63,7 @@ describe("LiveMarketsPage", () => {
 
   it("renders the Selected match card with team names and market pressure", () => {
     render(<LiveMarketsPage {...baseProps} />);
-    // "Norway vs England" legitimately appears twice: the Selected match header and the market subtitle.
-    expect(screen.getAllByText("Norway vs England")).toHaveLength(2);
+    expect(screen.getByText("Norway vs England")).toBeInTheDocument();
     expect(screen.getByText("Market pressure")).toBeInTheDocument();
     expect(screen.getByText("62")).toBeInTheDocument();
     expect(screen.getByText("38")).toBeInTheDocument();
