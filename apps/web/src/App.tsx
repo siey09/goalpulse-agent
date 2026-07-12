@@ -270,6 +270,8 @@ function App() {
   const [oddsHistory, setOddsHistory] = useState<OddsSnapshot[]>([]);
   const [isOddsStreamLive, setIsOddsStreamLive] = useState(false);
   const [oddsStreamLastUpdate, setOddsStreamLastUpdate] = useState("");
+  /** Briefly true after one SSE tick fails to parse - non-blocking, self-clears, never carries the raw payload. */
+  const [hasDroppedUpdate, setHasDroppedUpdate] = useState(false);
   const [isReplayStreamMode, setIsReplayStreamMode] = useState(false);
   const [replayStreamProgress, setReplayStreamProgress] = useState("");
   const [streamProgressPercent, setStreamProgressPercent] = useState(0);
@@ -1253,7 +1255,12 @@ function App() {
         setOddsStreamLastUpdate(formatTime(payload.timestamp));
         setIsOddsStreamLive(true);
       } catch (currentError) {
+        // One malformed tick should never look like the whole stream died -
+        // drop this update, show a brief non-blocking notice, and keep
+        // listening; the next valid event continues updating the page.
         console.error("Unable to parse odds stream update", currentError);
+        setHasDroppedUpdate(true);
+        window.setTimeout(() => setHasDroppedUpdate(false), 4000);
       }
     });
 
@@ -1344,6 +1351,7 @@ function App() {
         homePressure: 0,
         awayPressure: 0,
         leader: "Waiting",
+        hasData: false,
       };
     }
 
@@ -1351,8 +1359,8 @@ function App() {
     const awayName = selectedMatch.awayTeam ?? "Away";
     const matchLabel = `${homeName} vs ${awayName}`.toLowerCase();
 
-    let homePressure = 34;
-    let awayPressure = 34;
+    let homePressure = 0;
+    let awayPressure = 0;
 
     const relatedSignals = signals.filter((signal) => {
       const signalMatch = `${signal.match ?? ""}`.toLowerCase();
@@ -1385,7 +1393,26 @@ function App() {
           : awayPressure > homePressure
             ? awayName
             : "Balanced",
+      hasData: relatedSignals.length > 0,
     };
+  }, [selectedMatch, signals]);
+
+  /** Field-backed / market-only / no-context-yet for the most recent signal on the selected match - reuses SignalIntelligencePanel's exact >= 22 fieldPressureScore threshold and tone convention, never a new scoring model. */
+  const selectedMatchFieldContext = useMemo(() => {
+    if (!selectedMatch) {
+      return { label: "No field context yet", tone: "neutral" as const };
+    }
+
+    const latestRelatedSignal = signals.find((signal) => signal.matchId === selectedMatch.id);
+    const fieldPressureScore = latestRelatedSignal?.evidence?.scoresContext?.fieldPressureScore;
+
+    if (fieldPressureScore == null) {
+      return { label: "No field context yet", tone: "neutral" as const };
+    }
+
+    return fieldPressureScore >= 22
+      ? { label: "Field-backed", tone: "positive" as const }
+      : { label: "Market-only", tone: "neutral" as const };
   }, [selectedMatch, signals]);
 
   const matchStatusCounts = useMemo(
@@ -1519,6 +1546,7 @@ function App() {
     if (!selectedMatch || !latestPoint || !firstPoint) {
       return {
         homeCurrent: "—",
+        drawCurrent: "—",
         awayCurrent: "—",
         dominantSide: "Waiting",
         dominantMove: "—",
@@ -1599,6 +1627,7 @@ function App() {
 
     return {
       homeCurrent: formatOdds(homeEnd),
+      drawCurrent: formatOdds(Number(latestPoint.draw)),
       awayCurrent: formatOdds(awayEnd),
       dominantSide,
       dominantMove:
@@ -1714,6 +1743,8 @@ function App() {
             correctSignals={stats?.correctSignals ?? 0}
             closedSignals={stats?.closedSignals ?? 0}
             selectedMatchMarketPressure={selectedMatchMarketPressure}
+            fieldContext={selectedMatchFieldContext}
+            hasDroppedUpdate={hasDroppedUpdate}
             matches={filteredMatches}
             matchStatusFilter={matchStatusFilter}
             onChangeMatchStatusFilter={setMatchStatusFilter}
@@ -1771,6 +1802,7 @@ function App() {
                 : null
             }
             systemHealthLabel={health?.liveStream?.connected ? "Streams connected" : "Stream issue"}
+            isSystemHealthy={health?.liveStream?.connected ?? false}
           />
         );
     }

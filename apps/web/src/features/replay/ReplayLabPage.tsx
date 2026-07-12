@@ -1,4 +1,5 @@
 import { Card } from "../../components/ui/Card";
+import { StatusCapsule } from "../../components/ui/widgets/StatusCapsule";
 import { VerificationReceipt } from "../../components/VerificationReceipt";
 import { getSignalTarget } from "../../lib/formatters";
 import type { AgentSignal, OnChainVerifyData, ReplayBacktest } from "../../types";
@@ -79,19 +80,10 @@ export function ReplayLabPage({
                 {pnl.roiPercent}% ROI
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div>
-                <p className="text-lg font-bold tabular-nums text-white">{pnl.settledBets}</p>
-                <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Settled bets</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold tabular-nums text-white">{pnl.totalStaked}u</p>
-                <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Total staked</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold tabular-nums text-warning-200">{pnl.openPositions}</p>
-                <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Open positions</p>
-              </div>
+            <div className="grid grid-cols-3 gap-3">
+              <StatusCapsule label="Settled bets" value={pnl.settledBets} tone="neutral" />
+              <StatusCapsule label="Total staked" value={`${pnl.totalStaked}u`} tone="neutral" />
+              <StatusCapsule label="Open positions" value={pnl.openPositions} tone="warning" />
             </div>
             <p className="mt-2 text-[9px] leading-4 text-stone-500">{pnl.note}</p>
             <p className="mt-1 text-left text-[9px] leading-4 text-stone-500">
@@ -103,26 +95,14 @@ export function ReplayLabPage({
 
         {replayBacktest && (
           <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl bg-black/20 p-2.5">
-                <p className="text-[10px] text-stone-500">Snapshots</p>
-                <p className="mt-1 text-sm font-semibold text-white">
-                  {replayBacktest.summary?.snapshotsProcessed ?? 0}
-                </p>
-              </div>
-              <div className="rounded-xl bg-black/20 p-2.5">
-                <p className="text-[10px] text-stone-500">Signals</p>
-                <p className="mt-1 text-sm font-semibold text-white">
-                  {replayBacktest.summary?.signalsDetected ?? 0}
-                </p>
-              </div>
-              <div className="rounded-xl bg-black/20 p-2.5">
-                <p className="text-[10px] text-stone-500">Settled checks</p>
-                <p className="mt-1 text-sm font-semibold text-positive-200">
-                  {(replayBacktest.summary?.correctSignals ?? 0) +
-                    (replayBacktest.summary?.incorrectSignals ?? 0)}
-                </p>
-              </div>
+            <div className="grid grid-cols-3 gap-3">
+              <StatusCapsule label="Snapshots" value={replayBacktest.summary?.snapshotsProcessed ?? 0} tone="neutral" />
+              <StatusCapsule label="Signals" value={replayBacktest.summary?.signalsDetected ?? 0} tone="neutral" />
+              <StatusCapsule
+                label="Settled checks"
+                value={(replayBacktest.summary?.correctSignals ?? 0) + (replayBacktest.summary?.incorrectSignals ?? 0)}
+                tone="positive"
+              />
             </div>
 
             <div className="rounded-xl border border-danger/20 bg-danger/10 p-3">

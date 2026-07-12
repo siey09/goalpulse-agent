@@ -64,6 +64,7 @@ const baseProps = {
     priceMoveLabel: "39.54%",
   },
   systemHealthLabel: "Streams connected",
+  isSystemHealthy: true,
 };
 
 describe("CommandCenterPage", () => {
@@ -86,7 +87,8 @@ describe("CommandCenterPage", () => {
 
     expect(screen.getByText("Norway vs England")).toBeInTheDocument();
     expect(screen.getByText("Live fixtures")).toBeInTheDocument();
-    expect(screen.getByText("HIGH · Draw")).toBeInTheDocument();
+    expect(screen.getByText("Draw")).toBeInTheDocument();
+    expect(screen.getByText("39.54%")).toBeInTheDocument();
     expect(screen.getByText("Streams connected")).toBeInTheDocument();
   });
 
@@ -114,8 +116,9 @@ describe("CommandCenterPage", () => {
     render(<CommandCenterPage {...baseProps} />);
 
     expect(await screen.findByText("Momentum Follower")).toBeInTheDocument();
-    expect(screen.getByText("+20% ROI · 12 settled")).toBeInTheDocument();
-    expect(screen.getByText("No settled signal to verify yet")).toBeInTheDocument();
+    expect(screen.getByText("+20%")).toBeInTheDocument();
+    expect(screen.getByText("12 settled")).toBeInTheDocument();
+    expect(screen.getByText("No settled signal yet")).toBeInTheDocument();
     expect(screen.getByText(/Hash abc123def456/)).toBeInTheDocument();
   });
 

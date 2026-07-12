@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { Card } from "./ui/Card";
 import { SectionHeader } from "./ui/SectionHeader";
 import { StatusBadge, type StatusTone } from "./ui/StatusBadge";
-import { MetricCard } from "./ui/MetricCard";
+import { StatusCapsule } from "./ui/widgets/StatusCapsule";
+import { DeltaTicker } from "./ui/widgets/DeltaTicker";
 import { EmptyState } from "./ui/EmptyState";
 import {
   getMetaAgentRecommendation,
@@ -101,15 +102,17 @@ function ScoreboardCard({
         )}
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-2">
-        <MetricCard
+      <div className="mb-4 grid grid-cols-2 gap-3">
+        <StatusCapsule
           label="Net units"
           value={formatUnits(scoreboard.netUnits)}
           tone={scoreboard.netUnits > 0 ? "positive" : scoreboard.netUnits < 0 ? "danger" : "neutral"}
         />
-        <MetricCard
+        <DeltaTicker
           label="ROI"
           value={`${scoreboard.roiPercent > 0 ? "+" : ""}${scoreboard.roiPercent}%`}
+          delta={formatUnits(scoreboard.netUnits)}
+          deltaTone={scoreboard.netUnits > 0 ? "positive" : scoreboard.netUnits < 0 ? "danger" : "neutral"}
           tone={scoreboard.roiPercent > 0 ? "positive" : scoreboard.roiPercent < 0 ? "danger" : "neutral"}
         />
       </div>
