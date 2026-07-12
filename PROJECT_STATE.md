@@ -10,9 +10,10 @@ way around.
 
 ## ⏸ SESSION HANDOFF (updated after every milestone — see status below)
 
-🔄 **Panel design system + dashboard pipeline rail, branch
-`feature/panel-design-system` off `main`, pushed, not yet merged
-(2026-07-12):** user asked for a `/frontend-design`-led restyle of the
+✅ **Panel design system + dashboard pipeline rail merged to `main`
+2026-07-12** (was branch `feature/panel-design-system`, fast-forward
+merge `ee0ecc7`, no divergence). User asked for a `/frontend-design`-led
+restyle of the
 12 legacy panel components (SignalIntelligencePanel, ArenaPanel,
 MarketMakerPanel, SteamMoveDetectionPanel, SignalArchivePanel,
 SignalPerformancePanel, ConfidenceCalibrationPanel,
@@ -52,9 +53,14 @@ CDP screenshot timeout, not a real regression; confirmed via direct
 `curl` (backend/CORS both fine) and a fresh tab (zero errors).
 
 7 commits on the branch (`4623026`, `5caf263`, `4e107a7`, `2910473`,
-`456ae3c`, `05faea2`), pushed to origin. **Not yet merged to `main` —
-awaiting explicit merge instruction**, per this project's standing
-gate (push and merge are separate user decisions).
+`456ae3c`, `05faea2`, `ee0ecc7`), merged and pushed to `main`
+(`ee0ecc7`). Post-merge verification against `main` (build/lint/test
+clean, 43 tests) and directly against goalpulse-agent.vercel.app (fresh
+tabs, no cached state): default page renders the new pipeline rail with
+real production data flowing (Render free-tier cold-start blip on first
+load, self-resolved on reload — expected, not a bug), `?preview=
+command-center` unaffected, zero console errors on both surfaces,
+`/health` shows both streams connected with zero reconnects.
 
 Working through a 10-item feature queue, each via brainstorm → spec → plan →
 **Inline Execution** (standing user preference, not subagent-driven) →
