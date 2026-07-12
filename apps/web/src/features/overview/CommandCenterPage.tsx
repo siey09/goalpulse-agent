@@ -134,14 +134,24 @@ export function CommandCenterPage({
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
+                  <defs>
+                    <pattern id="ccPixelHome" width="8" height="8" patternUnits="userSpaceOnUse">
+                      <rect width="8" height="8" fill="transparent" />
+                      <rect width="4" height="4" fill="#f97316" fillOpacity={0.6} />
+                    </pattern>
+                    <pattern id="ccPixelAway" width="8" height="8" patternUnits="userSpaceOnUse">
+                      <rect width="8" height="8" fill="transparent" />
+                      <rect width="4" height="4" fill="#38bdf8" fillOpacity={0.4} />
+                    </pattern>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                   <XAxis dataKey="name" stroke="#78716c" fontSize={10} />
                   <YAxis stroke="#78716c" fontSize={10} />
                   <Tooltip
                     contentStyle={{ background: "#15191d", border: "1px solid rgba(255,255,255,0.08)" }}
                   />
-                  <Area type="monotone" dataKey="home" stroke="#f97316" fill="#f97316" fillOpacity={0.15} />
-                  <Area type="monotone" dataKey="away" stroke="#38bdf8" fill="#38bdf8" fillOpacity={0.1} />
+                  <Area type="monotone" dataKey="home" stroke="#f97316" fill="url(#ccPixelHome)" />
+                  <Area type="monotone" dataKey="away" stroke="#38bdf8" fill="url(#ccPixelAway)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

@@ -327,15 +327,19 @@ export function LiveMarketsPage({
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 8, right: 18, left: 0, bottom: 4 }}>
                 <defs>
-                  <linearGradient id="lmReferenceHome" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#fb923c" stopOpacity={0.78} />
-                    <stop offset="45%" stopColor="#fb923c" stopOpacity={0.28} />
-                    <stop offset="100%" stopColor="#fb923c" stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="lmReferenceAway" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#34d399" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
-                  </linearGradient>
+                  {/* Pixel/halftone fill instead of a smooth gradient - each Area's
+                      fill is a repeating small-square tile clipped to the area
+                      shape, same technique a bar chart would use for a "pixel
+                      bar" look, adapted here since our data is a continuous
+                      line, not discrete bars. */}
+                  <pattern id="lmPixelHome" width="8" height="8" patternUnits="userSpaceOnUse">
+                    <rect width="8" height="8" fill="transparent" />
+                    <rect width="4" height="4" fill="#fb923c" fillOpacity={0.65} />
+                  </pattern>
+                  <pattern id="lmPixelAway" width="8" height="8" patternUnits="userSpaceOnUse">
+                    <rect width="8" height="8" fill="transparent" />
+                    <rect width="4" height="4" fill="#34d399" fillOpacity={0.45} />
+                  </pattern>
                 </defs>
 
                 <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 9" vertical={false} />
@@ -417,7 +421,7 @@ export function LiveMarketsPage({
                   dataKey="home"
                   stroke="#fb923c"
                   strokeWidth={2.8}
-                  fill="url(#lmReferenceHome)"
+                  fill="url(#lmPixelHome)"
                   dot={false}
                   activeDot={{ r: 5, strokeWidth: 2 }}
                   isAnimationActive={true}
@@ -430,7 +434,7 @@ export function LiveMarketsPage({
                   dataKey="away"
                   stroke="#34d399"
                   strokeWidth={2}
-                  fill="url(#lmReferenceAway)"
+                  fill="url(#lmPixelAway)"
                   dot={false}
                   activeDot={{ r: 4 }}
                   isAnimationActive={true}
