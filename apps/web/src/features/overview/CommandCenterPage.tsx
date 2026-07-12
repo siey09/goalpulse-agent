@@ -1,9 +1,14 @@
+import { useEffect, useState } from "react";
 import { AreaChart, Area, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Activity, Radio, Signal as SignalIcon, Wallet } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { MetricCard } from "../../components/ui/MetricCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { getMetaAgentRecommendation, formatRoi, type ArenaResponse } from "../../lib/arena";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
 
 export interface CommandCenterKpis {
   liveFixtures: number;
@@ -43,14 +48,12 @@ export interface CommandCenterPageProps {
 }
 
 /**
- * Command Center Phase 2: composed entirely from data App.tsx already
- * fetches on its normal 5s poll - no new API calls. Two of the blueprint's
- * five above-fold summary cards (Strategy Leader, Verification) need data
- * that currently only exists behind ArenaPanel/verification-specific
- * fetches, not App.tsx's central state; rather than add new fetching in
- * this phase or fabricate placeholder numbers, they're honestly shown as
- * not-yet-available here and left for Phase 3 when those destinations
- * exist and can own their own data.
+ * Most of this page is composed entirely from data App.tsx already fetches
+ * on its normal 5s poll - no new API calls. Strategy Leader and
+ * Verification are the exception: they self-fetch /api/arena directly
+ * (same endpoint and cadence as ArenaPanel/AgentArenaPage), reusing
+ * getMetaAgentRecommendation from lib/arena so the summary here can never
+ * disagree with the full Agent Arena page's own callout.
  */
 export function CommandCenterPage({
   kpis,
@@ -60,6 +63,44 @@ export function CommandCenterPage({
   latestSignal,
   systemHealthLabel,
 }: CommandCenterPageProps) {
+  const [arena, setArena] = useState<ArenaResponse | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadArena() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/arena`);
+        const payload = (await response.json()) as { data?: ArenaResponse };
+
+        if (!mounted) return;
+
+        setArena(payload.data ?? null);
+      } catch (error) {
+        console.error("Unable to load arena summary for Command Center overview", error);
+      }
+    }
+
+    loadArena();
+
+    const timer = window.setInterval(loadArena, 5000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const recommendation = getMetaAgentRecommendation(arena);
+  const leaderScoreboard =
+    arena && recommendation.agentId
+      ? recommendation.agentId === "momentum_follower"
+        ? arena.momentumFollower
+        : recommendation.agentId === "contrarian"
+          ? arena.contrarian
+          : arena.kellyCriterion
+      : null;
+
   return (
     <div id="guide-command-center-overview" className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -140,12 +181,32 @@ export function CommandCenterPage({
 
         <Card className="p-4">
           <SectionHeader eyebrow="Strategy snapshot" title="Strategy Leader" />
-          <EmptyState reason="Not available in this Phase 2 preview - Agent Arena has its own data source, wired in Phase 3." />
+          {leaderScoreboard ? (
+            <div>
+              <p className="text-sm font-semibold text-white">{leaderScoreboard.label}</p>
+              <p className="text-xs text-stone-400">
+                {formatRoi(leaderScoreboard.roiPercent)} ROI · {leaderScoreboard.settledCount} settled
+              </p>
+            </div>
+          ) : (
+            <EmptyState reason={recommendation.message} />
+          )}
         </Card>
 
         <Card className="p-4">
           <SectionHeader eyebrow="Trust" title="Verification" />
-          <EmptyState reason="Not available in this Phase 2 preview - Verification has its own data source, wired in Phase 3." />
+          {arena ? (
+            <div>
+              <p className="text-sm font-semibold text-white">
+                {arena.proof.verifiableStat ? "Live stat ready to verify" : "No settled signal to verify yet"}
+              </p>
+              <p className="truncate font-mono text-xs text-stone-400">
+                Hash {arena.proof.hash.slice(0, 12)}…
+              </p>
+            </div>
+          ) : (
+            <EmptyState reason="Waiting for arena data." />
+          )}
         </Card>
 
         <Card className="p-4">

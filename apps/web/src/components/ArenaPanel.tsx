@@ -5,117 +5,20 @@ import { SectionHeader } from "./ui/SectionHeader";
 import { StatusBadge, type StatusTone } from "./ui/StatusBadge";
 import { MetricCard } from "./ui/MetricCard";
 import { EmptyState } from "./ui/EmptyState";
+import {
+  getMetaAgentRecommendation,
+  type ArenaAgentId,
+  type ArenaResponse,
+  type ArenaScoreboard,
+  type ArenaRejection,
+  type MetaAgentRecommendation,
+} from "../lib/arena";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
 
-type ArenaAgentId = "momentum_follower" | "contrarian" | "kelly_criterion";
-
-type ArenaPosition = {
-  agentId: ArenaAgentId;
-  signalId: string;
-  matchId: string;
-  match: string;
-  side: "home" | "away" | "draw";
-  target: string;
-  oddsTaken: number;
-  stakeUnits: number;
-  resultStatus: "pending" | "correct" | "incorrect";
-  profitUnits: number;
-};
-
-type ArenaScoreboard = {
-  agentId: ArenaAgentId;
-  label: string;
-  positions: ArenaPosition[];
-  settledCount: number;
-  correctCount: number;
-  incorrectCount: number;
-  winRatePct: number;
-  netUnits: number;
-  roiPercent: number;
-  openPositions: number;
-};
-
-type ArenaRejection = {
-  agentId: ArenaAgentId;
-  signalId: string;
-  matchId: string;
-  reason:
-    | "totals_signal"
-    | "not_market_only_move"
-    | "no_original_snapshot"
-    | "draw_signal"
-    | "risk_limit_exceeded";
-  reasonText: string;
-};
-
-type ArenaProof = {
-  type: "sha256";
-  hash: string;
-  verifiableStat: { fixtureId: number; seq: number; statKey: number } | null;
-  note: string;
-};
-
-type ArenaResponse = {
-  momentumFollower: ArenaScoreboard;
-  contrarian: ArenaScoreboard;
-  kellyCriterion: ArenaScoreboard;
-  rejections: ArenaRejection[];
-  proof: ArenaProof;
-};
-
 function formatUnits(value: number) {
   return `${value > 0 ? "+" : ""}${value.toFixed(2)}u`;
-}
-
-const MIN_SETTLED_FOR_RANKING = 5;
-const NARROW_MARGIN_THRESHOLD_PCT = 10;
-
-const STRATEGY_MECHANISM: Record<ArenaAgentId, string> = {
-  momentum_follower: "takes every signal at face value",
-  contrarian: "fades signals that fire without real field support",
-  kelly_criterion: "sizes stakes by the model's own confidence score instead of betting flat",
-};
-
-type MetaAgentRecommendation = {
-  agentId: ArenaAgentId | null;
-  message: string;
-};
-
-function formatRoi(value: number) {
-  return `${value > 0 ? "+" : ""}${value}%`;
-}
-
-function getMetaAgentRecommendation(arena: ArenaResponse | null): MetaAgentRecommendation {
-  if (!arena) {
-    return { agentId: null, message: "Waiting for arena data." };
-  }
-
-  const scoreboards = [arena.momentumFollower, arena.contrarian, arena.kellyCriterion];
-  const qualifying = scoreboards.filter((s) => s.settledCount >= MIN_SETTLED_FOR_RANKING);
-
-  if (qualifying.length < 2) {
-    return {
-      agentId: null,
-      message: "Not enough settled positions yet to recommend a leading strategy.",
-    };
-  }
-
-  const sorted = [...qualifying].sort((a, b) => b.roiPercent - a.roiPercent);
-  const leader = sorted[0];
-  const runnerUp = sorted[1];
-  const margin = leader.roiPercent - runnerUp.roiPercent;
-  const isNarrow = margin < NARROW_MARGIN_THRESHOLD_PCT;
-
-  const marginText = isNarrow
-    ? `a narrow lead over ${runnerUp.label} (${formatRoi(runnerUp.roiPercent)}) — worth revisiting as more signals settle`
-    : `a clear lead over ${runnerUp.label} (${formatRoi(runnerUp.roiPercent)})`;
-
-  return {
-    agentId: leader.agentId,
-    message: `${leader.label} currently leads on ROI at ${formatRoi(leader.roiPercent)} over ${leader.settledCount} settled positions — ${marginText}. It ${STRATEGY_MECHANISM[leader.agentId]}.`,
-  };
 }
 
 const CONCENTRATION_WARNING_THRESHOLD_PCT = 50;
