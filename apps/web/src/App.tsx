@@ -2780,6 +2780,11 @@ function App() {
               </div>
             </div>
           </section>
+          <PipelineStageLabel
+            index={1}
+            title="Ingest"
+            description="Live TxLINE odds pulled and normalized into snapshots"
+          />
           <section id="markets" className="scroll-mt-4 grid grid-cols-1 gap-3 2xl:grid-cols-2">
             <div
               className={`rounded-[24px] border p-4 transition-all duration-500 ${
