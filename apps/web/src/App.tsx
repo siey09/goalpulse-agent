@@ -10,6 +10,7 @@ import { SignalArchivePanel } from "./components/SignalArchivePanel";
 import { SignalPerformancePanel } from "./components/SignalPerformancePanel";
 import { ConfidenceCalibrationPanel } from "./components/ConfidenceCalibrationPanel";
 import { SignalCorrelationPanel } from "./components/SignalCorrelationPanel";
+import { useScrollSpy } from "./hooks/useScrollSpy";
 import { AppShell } from "./app/AppShell";
 import { DEFAULT_DESTINATION, type DestinationId } from "./app/navigation";
 import { GUIDE_STEPS } from "./app/guideSteps";
@@ -89,12 +90,14 @@ import {
   Bot,
   ChevronDown,
   Gauge,
+  History,
   LayoutDashboard,
   Radio,
   RefreshCw,
   Search,
   Server,
   ShieldCheck,
+  Swords,
   Target,
   TrendingDown,
   TrendingUp,
@@ -196,6 +199,24 @@ function findNearestSnapshot(
   return closest;
 }
 
+function PipelineStageLabel({
+  index,
+  title,
+  description,
+}: {
+  index: number;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="mb-1 flex items-baseline gap-3 border-b border-border pb-2">
+      <span className="font-mono text-xs text-accent-soft">0{index}</span>
+      <h2 className="font-display text-lg font-semibold uppercase tracking-[0.08em] text-white">{title}</h2>
+      <span className="ml-auto hidden text-xs text-stone-500 sm:block">{description}</span>
+    </div>
+  );
+}
+
 function DetailRow({
   label,
   value,
@@ -210,6 +231,23 @@ function DetailRow({
     </div>
   );
 }
+
+/**
+ * Mirrors the agent's real automated pipeline as already narrated in the
+ * Agent Timeline card ("Feed ingested -> Snapshots created -> Signal
+ * engine ran -> Outcomes evaluated"), extended one stage further to
+ * cover the permanent audit trail. Not an arbitrary numbered list - this
+ * is the literal sequence GoalPulse runs on every match.
+ */
+const PIPELINE_STAGES = [
+  { id: "markets", label: "Ingest", icon: Wifi },
+  { id: "pipeline-detect", label: "Detect", icon: Activity },
+  { id: "pipeline-decide", label: "Decide", icon: Swords },
+  { id: "pipeline-verify", label: "Verify", icon: Target },
+  { id: "pipeline-audit", label: "Audit", icon: History },
+] as const;
+
+const PIPELINE_STAGE_IDS = PIPELINE_STAGES.map((stage) => stage.id);
 
 function App() {
   const [health, setHealth] = useState<Health | null>(null);
@@ -239,6 +277,7 @@ function App() {
   const [similarSignals, setSimilarSignals] = useState<SimilarSignalsResult | null>(null);
   const [isSimilarSignalsLoading, setIsSimilarSignalsLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
+  const activePipelineStage = useScrollSpy(PIPELINE_STAGE_IDS);
   const [previewDestination, setPreviewDestination] = useState<DestinationId>(DEFAULT_DESTINATION);
   const [isPreviewGuideMode, setIsPreviewGuideMode] = useState(false);
   const [previewGuideStep, setPreviewGuideStep] = useState(0);
@@ -2035,6 +2074,33 @@ function App() {
             >
               <ShieldCheck className="h-5 w-5" />
             </button>
+
+            <div className="my-3 h-px bg-white/8" />
+
+            {PIPELINE_STAGES.map((stage, index) => {
+              const StageIcon = stage.icon;
+              const isActive = activePipelineStage === stage.id;
+
+              return (
+                <button
+                  key={stage.id}
+                  onClick={() =>
+                    document.getElementById(stage.id)?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
+                  title={`${index + 1}. ${stage.label}`}
+                  className={`relative flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-300 ${
+                    isActive
+                      ? "bg-accent text-white scale-105 shadow-lg shadow-accent/30"
+                      : "text-stone-500 hover:bg-white/8 hover:text-white"
+                  }`}
+                >
+                  <span className="absolute left-1 top-1 font-mono text-[8px] leading-none text-stone-600">
+                    {index + 1}
+                  </span>
+                  <StageIcon className="h-5 w-5" />
+                </button>
+              );
+            })}
           </nav>
 
           <div className="absolute bottom-4 left-3">
@@ -2829,29 +2895,54 @@ function App() {
                 })}
               </div>
             </div>
-          <div className="2xl:col-span-2">
+          <div id="pipeline-detect" className="scroll-mt-4 space-y-4 2xl:col-span-2">
+            <PipelineStageLabel
+              index={2}
+              title="Detect"
+              description="Deterministic thresholds flag odds movement as it happens"
+            />
             <SignalIntelligencePanel />
+            <div className="grid gap-4 md:grid-cols-2">
+              <MarketMakerPanel />
+              <SteamMoveDetectionPanel />
+            </div>
           </div>
 
-          <MarketMakerPanel />
+          <div id="pipeline-decide" className="scroll-mt-4 2xl:col-span-2">
+            <PipelineStageLabel
+              index={3}
+              title="Decide"
+              description="Three agents trade the same signal feed under different strategies"
+            />
+            <ArenaPanel />
+          </div>
 
-          <SteamMoveDetectionPanel />
+          <div id="pipeline-verify" className="scroll-mt-4 space-y-4 2xl:col-span-2">
+            <PipelineStageLabel
+              index={4}
+              title="Verify"
+              description="Every claim is checked against the final result and the track record"
+            />
+            <ResultsSettlementPanel />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <SignalArchivePanel />
+              <SignalPerformancePanel />
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <ConfidenceCalibrationPanel />
+              <SignalCorrelationPanel />
+            </div>
+            <VerifiedCaseStudiesPanel />
+          </div>
 
-          <ArenaPanel />
-
-          <ResultsSettlementPanel />
-
-          <SignalArchivePanel />
-
-          <SignalPerformancePanel />
-
-          <ConfidenceCalibrationPanel />
-
-          <SignalCorrelationPanel />
-
-          <VerifiedCaseStudiesPanel />
-
-          <WhatChangedPanel />
+          <div id="pipeline-audit" className="scroll-mt-4 2xl:col-span-2">
+            <PipelineStageLabel
+              index={5}
+              title="Audit"
+              description="A live, permanent trail of everything the agent just did"
+            />
+            <WhatChangedPanel />
+          </div>
 
             <div
               id="agent"
