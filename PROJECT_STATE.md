@@ -1,6 +1,6 @@
 # GoalPulse Agent — Project State
 
-**As of:** 2026-07-11. This document is a session-handoff brief — read this
+**As of:** 2026-07-12. This document is a session-handoff brief — read this
 first, before `README.md`/`TECHNICAL_DOCS.md`/`SUBMISSION_NOTES.md` (which are
 judge/submission-facing and slightly stale relative to this file as of this
 writing — they predate the three features this document adds in the
@@ -9,6 +9,52 @@ code, trust the code and treat this file as needing an update, not the other
 way around.
 
 ## ⏸ SESSION HANDOFF (updated after every milestone — see status below)
+
+🔄 **Panel design system + dashboard pipeline rail, branch
+`feature/panel-design-system` off `main`, pushed, not yet merged
+(2026-07-12):** user asked for a `/frontend-design`-led restyle of the
+12 legacy panel components (SignalIntelligencePanel, ArenaPanel,
+MarketMakerPanel, SteamMoveDetectionPanel, SignalArchivePanel,
+SignalPerformancePanel, ConfidenceCalibrationPanel,
+SignalCorrelationPanel, VerifiedCaseStudiesPanel,
+ResultsSettlementPanel, WhatChangedPanel, VerificationReceipt) that had
+each drifted its own ad-hoc bracket-value Tailwind colors/gradients/
+radii instead of the Command Center's shared design tokens. Ran the
+skill's brainstorm → design plan → self-critique → build → critique-
+again process: activated two already-defined-but-dormant resources
+instead of inventing new ones (the `--color-proof` violet token, unused
+since Phase 1; Inter/JetBrains Mono/Space Grotesk fonts, referenced in
+CSS but never actually `<link>`-loaded until now). New signature
+element `EvidenceStamp` (rule → observed delta → traceable reference,
+always monospace) ties every evidence-backed card to GoalPulse's actual
+mechanic — deterministic thresholds, not decoration. All 12 panels
+restyled in 4 batches (foundation+Signals, Strategy, Archive, default-
+page-only), each batch build/lint/test clean (43 tests) and live-
+verified against real production data before committing.
+
+User pushed back mid-session that the restyle alone wasn't distinctive
+enough — the retone was real but the underlying layout (flat stack of
+equal-weight cards) hadn't changed. Second pass, scoped to the default
+dashboard (`App.tsx`) per user's own priority call: added a 5-stage
+"pipeline rail" (Ingest → Detect → Decide → Verify → Audit) to the
+existing sidebar, reusing the exact pipeline language already narrated
+in the hero's Agent Timeline card rather than inventing new copy. New
+`useScrollSpy` hook (`apps/web/src/hooks/`) drives the active-stage
+highlight independently of the page's existing click-driven
+`activeSection` state, avoiding any touch to that state's other
+consumers (guide mode, legacy agent/compliance cards). The 11 panels
+below the hero are now grouped under labeled `0X · STAGE` dividers
+matching the rail. Verified live: scroll-spy highlight transitions
+correctly through all 5 stages, all dividers render, zero console
+errors. One false alarm during verification — a burst of "Failed to
+fetch" errors turned out to be a corrupted browser tab from an earlier
+CDP screenshot timeout, not a real regression; confirmed via direct
+`curl` (backend/CORS both fine) and a fresh tab (zero errors).
+
+7 commits on the branch (`4623026`, `5caf263`, `4e107a7`, `2910473`,
+`456ae3c`, `05faea2`), pushed to origin. **Not yet merged to `main` —
+awaiting explicit merge instruction**, per this project's standing
+gate (push and merge are separate user decisions).
 
 Working through a 10-item feature queue, each via brainstorm → spec → plan →
 **Inline Execution** (standing user preference, not subagent-driven) →
