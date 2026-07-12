@@ -16,14 +16,12 @@ https://github.com/siey09/goalpulse-agent
 
 https://goalpulse-agent.vercel.app
 
-**Judge demo URL: `https://goalpulse-agent.vercel.app/?preview=command-center`**
-— open the app via this exact URL for the demo, not the bare production
-URL above. The redesigned 9-destination Command Center experience
-(Operations/Strategy/Trust nav groups, the reworked Guided Tour, the
-Signal Audit Drawer) is gated behind this `?preview=command-center`
-flag, adopted as the official demo link rather than the new default —
-the lower-risk choice, since the bare URL keeps serving the older
-layout unchanged as a fallback.
+**Judge demo URL: `https://goalpulse-agent.vercel.app/`** — the
+redesigned 9-destination Command Center experience (Operations/
+Strategy/Trust nav groups, the reworked Guided Tour, the Signal Audit
+Drawer) is the default at the bare production URL, no query param
+needed. The older single-scroll layout is still reachable at
+`?preview=classic` for reference.
 
 ## Backend API
 
@@ -354,7 +352,7 @@ The frontend is built with React, TypeScript, Vite, Tailwind CSS, and Recharts. 
 
 ## Demo Flow
 
-**Open the app at `https://goalpulse-agent.vercel.app/?preview=command-center`** — the Command Center redesign's 9-destination experience, not the bare production URL.
+**Open the app at `https://goalpulse-agent.vercel.app/`** — the Command Center redesign's 9-destination experience is now the default, no query param needed.
 
 The dashboard includes an in-app 22-step Guided Tour that walks a judge through every destination with spotlighting, superseding a fixed manual script. The authoritative, current demo script — with concrete spoken lines — is `DEMO_CHECKLIST.md`'s "Recommended Live Path" section; its "Final Demo Order" summary (target 4-6 minutes):
 

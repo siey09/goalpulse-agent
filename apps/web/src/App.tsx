@@ -1652,15 +1652,17 @@ function App() {
   const hasMeaningfulAccuracySample =
     (stats?.closedSignals ?? 0) >= MIN_MEANINGFUL_ACCURACY_SAMPLE;
 
-  // Command Center redesign, Phase 2-3 preview only. Gated behind an
-  // explicit, undocumented query param so the default page (everything
-  // below) is completely unaffected - this exists purely so the new
-  // pages can be reviewed against real live data before a later phase
-  // makes any of it the real default. Reuses the exact state already
-  // fetched above; no new requests.
-  const isCommandCenterPreview =
+  // Command Center is now the default experience - the two-surface split
+  // (this vs. the legacy single-scroll dashboard below) was confusing to
+  // navigate and gave the app two different looks depending on the URL.
+  // `?preview=classic` is the escape hatch to the old dashboard, kept for
+  // reference rather than deleted outright; `?preview=command-center`
+  // still works too (now redundant with the default, harmless to keep).
+  const isLegacyDashboardRequested =
     typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("preview") === "command-center";
+    new URLSearchParams(window.location.search).get("preview") === "classic";
+
+  const isCommandCenterPreview = !isLegacyDashboardRequested;
 
   if (isCommandCenterPreview) {
     const latestSignal = signals[0];

@@ -1,13 +1,12 @@
 # GoalPulse Agent Demo Checklist
 
-> **Demo URL: `https://goalpulse-agent.vercel.app/?preview=command-center`**
-> Open the app via this exact URL, not the bare production URL. The
-> redesigned 9-destination Command Center experience (Operations/
+> **Demo URL: `https://goalpulse-agent.vercel.app/`**
+> The redesigned 9-destination Command Center experience (Operations/
 > Strategy/Trust nav groups, the reworked 22-step Guided Tour, the
-> Signal Audit Drawer) lives behind this `?preview=command-center` flag
-> — that's the officially adopted judge demo link. The bare URL still
-> serves the older single-scroll layout and stays untouched as a
-> low-risk fallback, but it is **not** what should be shown live.
+> Signal Audit Drawer) is now the default at the bare production URL —
+> no query param needed. The older single-scroll dashboard is still
+> reachable at `?preview=classic` for reference, but it is **not** what
+> should be shown live.
 
 This doc has two parts:
 
@@ -46,8 +45,7 @@ with zero manual analyst work."
 
 ### 2. Open Production App
 
-[Open `https://goalpulse-agent.vercel.app/?preview=command-center`,
-hard refresh `Ctrl+Shift+R`]
+[Open `https://goalpulse-agent.vercel.app/`, hard refresh `Ctrl+Shift+R`]
 
 **Say:** "This is the live, deployed app — not a local demo. Everything
 you're about to see is running against real TxLINE data right now."
@@ -189,7 +187,7 @@ field-backed or market-only.
 
 ### 2. Open Production App
 
-Open: `https://goalpulse-agent.vercel.app/?preview=command-center`
+Open: `https://goalpulse-agent.vercel.app/`
 
 Hard refresh before demo: `Ctrl + Shift + R`
 
@@ -506,5 +504,6 @@ Run locally or verify production:
 - Results Settlement shows audit rows
 - Score breakdown rows are visible
 - No localhost URL is used in production frontend
-- The demo is opened via `?preview=command-center`, not the bare
-  production URL
+- The demo is opened via the bare production URL (Command Center is now
+  the default; `?preview=classic` reaches the old dashboard if ever
+  needed)
