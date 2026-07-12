@@ -116,8 +116,9 @@ describe("AppShell", () => {
     );
 
     expect(screen.getByText("page content")).toBeInTheDocument();
-    // "Command Center" legitimately appears twice: the sidebar nav label and the status-bar title.
-    expect(screen.getAllByText("Command Center")).toHaveLength(2);
+    // "Command Center" legitimately appears three times: the sidebar nav label,
+    // the status-bar title, and the PageHeader breadcrumb above the page content.
+    expect(screen.getAllByText("Command Center")).toHaveLength(3);
   });
 
   it("renders the persistent Compliance footer on every destination", () => {

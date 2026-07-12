@@ -1771,6 +1771,7 @@ function App() {
                 : null
             }
             systemHealthLabel={health?.liveStream?.connected ? "Streams connected" : "Stream issue"}
+            isSystemHealthy={health?.liveStream?.connected ?? false}
           />
         );
     }

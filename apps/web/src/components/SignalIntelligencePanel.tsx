@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card } from "./ui/Card";
 import { SectionHeader } from "./ui/SectionHeader";
 import { StatusBadge, type StatusTone } from "./ui/StatusBadge";
-import { MetricCard } from "./ui/MetricCard";
+import { StatusCapsule } from "./ui/widgets/StatusCapsule";
 import { EvidenceStamp } from "./ui/EvidenceStamp";
 
 const API_BASE_URL =
@@ -254,26 +254,26 @@ export function SignalIntelligencePanel() {
         path, and attaches TxLINE evidence fields for judge-verifiable signal review.
       </p>
 
-      <div className="grid gap-3 md:grid-cols-4">
-        <MetricCard
+      <div className="grid gap-4 md:grid-cols-4">
+        <StatusCapsule
           icon={<Database className="h-4 w-4" />}
           label="Verified snapshots"
           value={isLoading ? "..." : verifiedSnapshots}
           tone="positive"
         />
-        <MetricCard
+        <StatusCapsule
           icon={<Radar className="h-4 w-4" />}
           label="Signals detected"
           value={isLoading ? "..." : generatedSignals}
           tone="info"
         />
-        <MetricCard
+        <StatusCapsule
           icon={<ShieldCheck className="h-4 w-4" />}
           label="Noise filtered"
           value={isLoading ? "..." : rejectedNoise}
           tone="neutral"
         />
-        <MetricCard
+        <StatusCapsule
           icon={<Activity className="h-4 w-4" />}
           label="Field-backed"
           value={isLoading ? "..." : fieldBackedSignals}

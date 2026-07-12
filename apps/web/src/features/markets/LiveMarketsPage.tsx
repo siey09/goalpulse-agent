@@ -1,6 +1,7 @@
 import { Area, AreaChart, CartesianGrid, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { TrendingDown, TrendingUp, Activity } from "lucide-react";
 import { Card } from "../../components/ui/Card";
+import { StatusCapsule } from "../../components/ui/widgets/StatusCapsule";
 import {
   formatOdds,
   formatOddsChange,
@@ -119,8 +120,15 @@ export function LiveMarketsPage({
           {selectedMatch ? `${selectedMatch.homeTeam} vs ${selectedMatch.awayTeam}` : "No match yet"}
         </h2>
 
+        {/* Row height is always driven by the tallest column (Market Pressure,
+            with two progress-bar rows) regardless of align-items - that's how
+            CSS grid tracks work. items-start alone left Score and
+            Timing/Status floating with visible empty space below them. The
+            actual fix: let the row stretch (default) but center each
+            column's own content vertically within it, so the extra height
+            reads as intentional breathing room instead of a leftover gap. */}
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div className="rounded-xl bg-black/25 p-3">
+          <div className="flex h-full flex-col justify-center rounded-xl bg-black/25 p-3">
             <div className="flex items-center justify-between text-sm text-stone-300">
               <span>{selectedMatch?.homeTeam ?? "Home"}</span>
               <span className="text-xl font-semibold text-white">
@@ -136,17 +144,16 @@ export function LiveMarketsPage({
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-xl bg-white/15 p-2.5">
-              <p className="text-xs text-white/70">{selectedMatch?.status === "live" ? "Clock" : "Timing"}</p>
-              <p className="text-xl font-semibold">{matchClockLabel(selectedMatch)}</p>
-            </div>
-            <div className="rounded-xl bg-white/15 p-2.5">
-              <p className="text-xs text-white/70">Status</p>
-              <p className="text-sm font-semibold">{preciseStatusLabel(selectedMatch)}</p>
-            </div>
+            <StatusCapsule
+              label={selectedMatch?.status === "live" ? "Clock" : "Timing"}
+              value={matchClockLabel(selectedMatch)}
+              tone="neutral"
+              pulse={selectedMatch?.status === "live"}
+            />
+            <StatusCapsule label="Status" value={preciseStatusLabel(selectedMatch)} tone="neutral" />
           </div>
 
-          <div className="rounded-xl bg-black/20 p-3">
+          <div className="flex h-full flex-col justify-center rounded-xl bg-black/20 p-3">
             <div className="mb-2 flex items-center justify-between">
               <div>
                 <p className="text-[11px] text-white/60">Market pressure</p>
@@ -342,7 +349,7 @@ export function LiveMarketsPage({
                   </pattern>
                 </defs>
 
-                <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 9" vertical={false} />
+                <CartesianGrid stroke="rgba(158,196,224,0.3)" strokeDasharray="1 7" strokeLinecap="round" />
 
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#a8a29e", fontSize: 10 }} />
 
@@ -358,7 +365,7 @@ export function LiveMarketsPage({
                 />
 
                 <Tooltip
-                  cursor={{ stroke: "rgba(255,255,255,0.35)", strokeWidth: 1 }}
+                  cursor={{ stroke: "rgba(255,255,255,0.35)", strokeWidth: 1, strokeDasharray: "4 4" }}
                   wrapperStyle={{ zIndex: 50 }}
                   content={(tooltipProps) => {
                     const payload = tooltipProps.payload ?? [];
@@ -586,18 +593,24 @@ export function LiveMarketsPage({
                   </div>
                 </div>
 
-                <div className="mt-2 grid grid-cols-3 gap-1.5 text-center text-[10px]">
-                  <div className="rounded-lg bg-black/25 px-2 py-1.5">
-                    <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Home" : "Home"}</p>
-                    <p className="font-semibold text-accent-200">{formatOdds(odds.homeOdds)}</p>
+                <div className="mt-2 grid grid-cols-3 gap-1.5 text-center">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">
+                      {match.status === "scheduled" ? "Pre-match Home" : "Home"}
+                    </p>
+                    <p className="font-mono text-sm font-bold tabular-nums text-accent-200">{formatOdds(odds.homeOdds)}</p>
                   </div>
-                  <div className="rounded-lg bg-black/25 px-2 py-1.5">
-                    <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Draw" : "Draw"}</p>
-                    <p className="font-semibold text-stone-200">{formatOdds(odds.drawOdds)}</p>
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">
+                      {match.status === "scheduled" ? "Pre-match Draw" : "Draw"}
+                    </p>
+                    <p className="font-mono text-sm font-bold tabular-nums text-stone-200">{formatOdds(odds.drawOdds)}</p>
                   </div>
-                  <div className="rounded-lg bg-black/25 px-2 py-1.5">
-                    <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Away" : "Away"}</p>
-                    <p className="font-semibold text-positive-200">{formatOdds(odds.awayOdds)}</p>
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">
+                      {match.status === "scheduled" ? "Pre-match Away" : "Away"}
+                    </p>
+                    <p className="font-mono text-sm font-bold tabular-nums text-positive-200">{formatOdds(odds.awayOdds)}</p>
                   </div>
                 </div>
               </button>
