@@ -10,6 +10,24 @@ way around.
 
 ## ⏸ SESSION HANDOFF (updated after every milestone — see status below)
 
+✅ **Fixed: "Ask GoalPulse" analyst chat missing on the default surface,
+2026-07-12** (was branch `fix/analyst-chat-missing-on-command-center`,
+fast-forward merge `e6f9308`). Real regression from the earlier
+"Command Center made the default" change: the chat widget's JSX only
+ever existed inside the classic dashboard's render branch, so flipping
+the default silently dropped it for anyone landing on the bare URL —
+still reachable at `?preview=classic`, but gone from what almost
+everyone sees. User noticed the chat had disappeared and asked why.
+Traced to the exact render-branch split rather than guessing, then
+extracted the widget into a new `components/AnalystChatWidget.tsx`
+(props-only, zero logic change — reuses the same state/handlers already
+declared above both render branches in `App.tsx`) and rendered it from
+both branches. Clean build/lint/test (45 tests). Verified live in
+production: sent a real question ("what is the latest signal") through
+the chat on the default Command Center view and got a correct live-data
+reply; confirmed the widget still works on `?preview=classic` too; zero
+console errors on either surface.
+
 ✅ **Pixel/halftone chart fill shipped 2026-07-12** (was branch
 `feature/pixel-chart-signature`, fast-forward merge `db94fb0`). User
 referenced a dashboard design (same reference from the earlier panel-
