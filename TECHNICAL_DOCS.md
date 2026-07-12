@@ -65,21 +65,34 @@ Important backend files:
 
 The frontend is a React, TypeScript, Vite, Tailwind CSS dashboard.
 
-Core dashboard areas:
+**Command Center is the default experience** as of 2026-07-12 — a
+9-destination layout (Operations: Command Center, Live Markets,
+Signals; Strategy: Agent Arena, Market Maker, Replay Lab; Trust:
+Verification, Archive, System Health), rendered via `AppShell` with a
+grouped sidebar nav. The older single-scroll dashboard still exists
+behind `?preview=classic` (reachable via `App.tsx`'s
+`isLegacyDashboardRequested` check) but is not what most users see.
+Both surfaces share the same underlying panel components and the same
+top-level data-fetching effects in `App.tsx` - only the layout/routing
+differs.
 
-- Market Board
-- Odds movement chart
-- Signal Intelligence Panel
-- Market Maker Panel
-- Agent vs Agent Arena Panel
-- Results Settlement Panel
-- Replay audit demo
-- Judge Demo Guide
-- Agent timeline and stats
+Every panel component now draws from one shared design-token system
+(`apps/web/src/styles/tokens.css`) and shared UI primitives (`Card`,
+`StatusBadge`, `MetricCard`, `SectionHeader`, `EmptyState`,
+`EvidenceStamp`) in `apps/web/src/components/ui/`, instead of each
+panel inventing its own ad-hoc colors and radii.
 
 Important frontend files:
 
-- apps/web/src/App.tsx
+- apps/web/src/App.tsx (data-fetching + both the Command Center and classic-fallback render branches)
+- apps/web/src/app/AppShell.tsx (Command Center's persistent sidebar/topbar shell)
+- apps/web/src/features/overview/CommandCenterPage.tsx (self-fetches /api/arena for the Strategy Leader/Verification summary cards)
+- apps/web/src/features/markets/LiveMarketsPage.tsx (odds chart with the pixel/halftone Area fill pattern)
+- apps/web/src/features/*/  (one page per destination: overview, markets, signals, arena, market-maker, replay, verification, archive, health)
+- apps/web/src/lib/arena.ts (shared Arena types + getMetaAgentRecommendation, used by both ArenaPanel and CommandCenterPage)
+- apps/web/src/components/ui/ (Card, StatusBadge, MetricCard, SectionHeader, EmptyState, EvidenceStamp - the shared design system)
+- apps/web/src/components/AnalystChatWidget.tsx (deterministic "Ask GoalPulse" chat, no external LLM call - keyword-matched against live signal/replay/audit state)
+- apps/web/src/components/signals/SignalAuditDrawer.tsx (per-signal detail drawer: evidence, Arena decisions, on-chain verification)
 - apps/web/src/components/SignalIntelligencePanel.tsx
 - apps/web/src/components/MarketMakerPanel.tsx
 - apps/web/src/components/ArenaPanel.tsx
@@ -387,7 +400,7 @@ Because the live `strategyAccuracy` number can look worse than the strategy's re
 
 ## Automated Test Coverage
 
-**276 tests across 22 files as of 2026-07-11** (Vitest, `npm run test` from `apps/api/` for the current count; the repo's CI badge in `README.md` always reflects whether `main` currently passes): `agent.test.ts`, `logic/arena.test.ts`, `logic/backtest.test.ts`, `logic/councilDissent.test.ts`, `logic/eventLatency.test.ts`, `logic/feedHealth.test.ts`, `logic/historicalPatternMatch.test.ts`, `logic/marketConfirmation.test.ts`, `logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`, `logic/replaySettlement.test.ts`, `logic/scoresContextFreshness.test.ts`, `logic/signalCorrelation.test.ts`, `logic/signalEngine.test.ts`, `logic/signalPerformance.test.ts`, `logic/steamDetection.test.ts`, `middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`, `services/persistence.test.ts`, `services/sseStreamMonitor.test.ts`, `services/txlineClient.test.ts`, `store.test.ts`. Covers the deterministic core: severity classification at the exact 4%/8%/15% thresholds, correct side selection across home/draw/away, multi-market `matchLabel` handling, momentum score clamping to 0-100, signal settlement for both the 1X2 market (home/away/draw) and the Over/Under totals market (including matchId-suffix resolution back to the base fixture, in both the live and replay settlement paths), the API key middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian/Kelly Criterion position logic (including risk-limit rejection) and variable-stake ROI math, the retroactive backtest orchestration against archived signals, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's backend-deduplicated session-windowing/cluster-filtering logic and its pattern-matched variant, the composite confidence score's weighting/renormalization and longshot penalty, the signal-type performance aggregation, the historical pattern match's similarity ranking and match-concentration cap, the event-latency aggregation, the shared SSE stream monitor's connect/reconnect/backoff/status-derivation logic, and the live-poll rotation's confirmed-finished-fixture filtering. Pure logic gets unit tests with plain objects/mocks; anything requiring a real TxLINE/Supabase connection is explicitly not automated (verified instead directly against production). `tsconfig.json` excludes `src/**/*.test.ts` so test files never ship in the production build output.
+**276 tests across 22 files as of 2026-07-12** (Vitest, `npm run test` from `apps/api/` for the current count; the repo's CI badge in `README.md` always reflects whether `main` currently passes): `agent.test.ts`, `logic/arena.test.ts`, `logic/backtest.test.ts`, `logic/councilDissent.test.ts`, `logic/eventLatency.test.ts`, `logic/feedHealth.test.ts`, `logic/historicalPatternMatch.test.ts`, `logic/marketConfirmation.test.ts`, `logic/marketMaker.test.ts`, `logic/paginationParams.test.ts`, `logic/replaySettlement.test.ts`, `logic/scoresContextFreshness.test.ts`, `logic/signalCorrelation.test.ts`, `logic/signalEngine.test.ts`, `logic/signalPerformance.test.ts`, `logic/steamDetection.test.ts`, `middleware/apiKeyAuth.test.ts`, `services/archive.test.ts`, `services/persistence.test.ts`, `services/sseStreamMonitor.test.ts`, `services/txlineClient.test.ts`, `store.test.ts`. Covers the deterministic core: severity classification at the exact 4%/8%/15% thresholds, correct side selection across home/draw/away, multi-market `matchLabel` handling, momentum score clamping to 0-100, signal settlement for both the 1X2 market (home/away/draw) and the Over/Under totals market (including matchId-suffix resolution back to the base fixture, in both the live and replay settlement paths), the API key middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian/Kelly Criterion position logic (including risk-limit rejection) and variable-stake ROI math, the retroactive backtest orchestration against archived signals, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's backend-deduplicated session-windowing/cluster-filtering logic and its pattern-matched variant, the composite confidence score's weighting/renormalization and longshot penalty, the signal-type performance aggregation, the historical pattern match's similarity ranking and match-concentration cap, the event-latency aggregation, the shared SSE stream monitor's connect/reconnect/backoff/status-derivation logic, and the live-poll rotation's confirmed-finished-fixture filtering. Pure logic gets unit tests with plain objects/mocks; anything requiring a real TxLINE/Supabase connection is explicitly not automated (verified instead directly against production). `tsconfig.json` excludes `src/**/*.test.ts` so test files never ship in the production build output.
 
 ## Signal Thresholds
 

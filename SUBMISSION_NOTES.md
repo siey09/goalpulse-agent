@@ -186,7 +186,7 @@ Beyond code bugs, two real production deployment incidents were investigated and
 
 ## Automated Test Coverage and Security Audit
 
-- **276 automated unit tests across 22 files as of 2026-07-11** (Vitest, up from 24 at initial verification; run `npm run test` in `apps/api` for the current count, or check the CI badge in `README.md` for whether `main` currently passes) — cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection across home/draw/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic, in both the live and replay-path code — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian/Kelly Criterion position logic (including risk-limit rejection) and variable-stake ROI math, the retroactive backtest orchestration against archived signals, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's backend-deduplicated session-windowing/cluster-filtering logic and its pattern-matched variant, the composite confidence score's weighting/renormalization and longshot penalty, the signal-type performance aggregation, the historical pattern match's similarity ranking, the event-latency aggregation, and the shared SSE stream monitor's connect/reconnect/backoff/status-derivation logic. Test files are excluded from the production TypeScript build output.
+- **276 automated backend unit tests across 22 files, plus 45 frontend unit tests across 11 files, as of 2026-07-12** (Vitest, backend up from 24 at initial verification; run `npm run test` in `apps/api` for the current count, or check the CI badge in `README.md` for whether `main` currently passes) — cover the deterministic core: signal threshold classification at the exact 4%/8%/15% boundaries, correct side selection across home/draw/away, multi-market match-label handling, momentum score clamping, signal settlement — including the Over/Under totals settlement logic, in both the live and replay-path code — the API key authentication middleware's fail-closed behavior, the Supabase persistence service's fail-open behavior against a mocked client, the market maker's spread/reliability model, the Arena's Momentum Follower/Contrarian/Kelly Criterion position logic (including risk-limit rejection) and variable-stake ROI math, the retroactive backtest orchestration against archived signals, the scores-context freshness gate and its graduated tightness companion, the insert-only archive's fail-open behavior on both write and read, the archive read endpoint's query-param parsing/clamping, the Outcome Audit council's dissent computation/aggregation, the feed health module's cycle/odds/coverage checks and status derivation, the market maker band-breach cross-check/summary, the steam detection module's tick-sequence/window/trailing-run logic, the signal correlation module's backend-deduplicated session-windowing/cluster-filtering logic and its pattern-matched variant, the composite confidence score's weighting/renormalization and longshot penalty, the signal-type performance aggregation, the historical pattern match's similarity ranking, the event-latency aggregation, and the shared SSE stream monitor's connect/reconnect/backoff/status-derivation logic. Test files are excluded from the production TypeScript build output.
 - **Git history security audit**: searched the full commit history for accidentally committed secrets (API tokens, wallet keys, webhook URLs) and confirmed none were ever committed. Only `.env.example` (a template with no real values) was ever tracked; `.env.local` and `.secrets/` are gitignored throughout.
 
 ## Production Readiness Features (Added After Core Verification)
@@ -299,7 +299,7 @@ GoalPulse uses:
 - Permanent match archive (`match_archive`), a second insert-only Supabase table alongside the signal archive
 - Second live push-stream monitor (odds side) with derived connectivity status labels
 - CI (GitHub Actions), pinned dependencies, explicit CORS allowlist, MIT license, upsert-based archive idempotency, `/api/metrics`
-- Automated unit tests (276 as of 2026-07-11 — see CI badge/`npm run test` for the current count)
+- Automated unit tests (276 backend + 45 frontend as of 2026-07-12 — see CI badge/`npm run test` for the current count)
 
 ## Outcome Audit Layer
 
@@ -350,6 +350,46 @@ The frontend is built with React, TypeScript, Vite, Tailwind CSS, and Recharts. 
 
 27 endpoints total (26 routes plus /api/docs).
 
+## Frontend Redesign (2026-07-11 to 2026-07-12)
+
+Beyond the Command Center's 9-destination restructure noted above, the
+dashboard went through a full visual/UX pass; see `PROJECT_STATE.md`
+for the complete phase-by-phase record.
+
+- **Shared panel design system.** Every panel previously invented its
+  own ad-hoc Tailwind colors, gradients, and border radii. All 12
+  legacy panels (Signal Intelligence, Arena, Market Maker, Steam Move
+  Detection, Signal Archive, Signal Performance, Confidence
+  Calibration, Signal Correlation, Verified Case Studies, Results
+  Settlement, What Changed, and the shared on-chain Verification
+  Receipt) now draw from one token system and shared UI primitives.
+  Two dormant resources already defined but never used were activated
+  instead of inventing new ones: a violet "proof" accent color, and the
+  Space Grotesk/JetBrains Mono display/mono fonts (referenced in CSS
+  since Phase 1 but never actually loaded).
+- **`EvidenceStamp` signature element** — a monospace "rule crossed →
+  observed delta → traceable reference" strip on every evidence-backed
+  card (e.g. `⌁ SHARP MOVE ≥ 15% · Δ 33% · #18213979`), grounded
+  directly in GoalPulse's real mechanic (deterministic thresholds,
+  evidence-chained) rather than generic decoration.
+- **Pixel/halftone chart fill.** The odds movement chart's area fill
+  (both on Live Markets and Command Center's smaller "Market Pulse"
+  chart) is a small-square SVG pattern tile clipped to the area shape,
+  replacing a smooth gradient — a deliberate, distinctive visual choice
+  rather than a template default.
+- **Command Center overview's Strategy Leader and Verification cards**
+  self-fetch `/api/arena` and share the exact ranking logic
+  (`getMetaAgentRecommendation`) with the full Agent Arena page, so the
+  two can never silently disagree — replacing a "not available yet"
+  placeholder that had been live since Command Center's Phase 2.
+- **Regression found and fixed during manual verification:** the
+  in-app deterministic "Ask GoalPulse" analyst chat (keyword-matched
+  against live signal/replay/audit state, no external LLM call) had
+  only ever been rendered inside the classic dashboard's render branch.
+  When Command Center became the default, the chat silently stopped
+  appearing for anyone on the bare URL. Fixed by extracting it into a
+  shared `AnalystChatWidget` component rendered from both surfaces.
+
 ## Demo Flow
 
 **Open the app at `https://goalpulse-agent.vercel.app/`** — the Command Center redesign's 9-destination experience is now the default, no query param needed.
@@ -382,4 +422,5 @@ GoalPulse is a sports analytics and market intelligence tool only. It does not p
 - API key authentication, rate limiting, and Supabase persistence verified live in production on 2026-07-07, including a real manual Render restart that confirmed the store correctly recovered older historical data from Supabase instead of resetting to empty.
 - Interactive OpenAPI/Swagger documentation live at /api/docs.
 - External uptime monitoring configured via UptimeRobot, pinging /health every 5 minutes.
-- Full external technical review (P0 + P1 + Mandatory Test Plan/DoD) closed out and independently verified live in production on 2026-07-11 — see `PROJECT_STATE.md` for the complete, current record. `PROJECT_STATE.md` is the authoritative up-to-date reference; this document reflects the state of the project as of that closure.
+- Full external technical review (P0 + P1 + Mandatory Test Plan/DoD) closed out and independently verified live in production on 2026-07-11.
+- Frontend redesign (Command Center as default, shared panel design system, pixel chart signature, analyst chat regression fix) verified live in production on 2026-07-12 — see `PROJECT_STATE.md` for the complete, current record. `PROJECT_STATE.md` is the authoritative up-to-date reference; this document reflects the state of the project as of that verification.

@@ -15,9 +15,10 @@ repo root is the authoritative reference — it is updated after every
 milestone. **The test/file/endpoint counts below are a point-in-time
 snapshot, not a live value** — the CI badge above always reflects
 whether the current `main` actually passes; run `npm run test` in
-`apps/api` for the exact current count. Snapshot as of 2026-07-11: 276
-automated backend unit tests across 22 files, 27 API endpoints (26
-routes plus `/api/docs`, documented interactively there).
+`apps/api` for the exact current count. Snapshot as of 2026-07-12: 276
+automated backend unit tests across 22 files, 45 frontend unit tests
+across 11 files, 27 API endpoints (26 routes plus `/api/docs`,
+documented interactively there).
 
 ## Live Links
 
@@ -79,6 +80,40 @@ Beyond code bugs, two real production deployment incidents were found and resolv
 - **Vercel deploy pipeline (2026-07-09)** — the Vercel project had no Git connection at all (every prior deploy was a manual CLI snapshot, so pushes to `main` never triggered a rebuild), and once connected, the first real git-triggered build failed because Root Directory wasn't set to `apps/web`. Both fixed directly in the Vercel dashboard; auto-deploy on push to `main` is now live and confirmed working end-to-end.
 - **Render bandwidth suspension (2026-07-10)** — the free-tier backend workspace exceeded its 5GB/month bandwidth allowance (dominated by TxLINE's own outbound service traffic, not HTTP responses to users), which Render suspends all free services for the rest of the calendar month for, with no payment method on file — this would have stayed down past the July 19 deadline if left unfixed. Fixed by adding a card to the Render workspace (overage billed at $0.15/GB, trivially cheap); service confirmed back to "Deployed" and healthy.
 
+## Frontend Redesign (2026-07-11 to 2026-07-12)
+
+The judge-facing dashboard was restructured and restyled; see
+`PROJECT_STATE.md` for the full phase-by-phase history.
+
+- **Command Center is now the default experience** at the bare
+  production URL — a 9-destination layout (Operations: Command Center,
+  Live Markets, Signals; Strategy: Agent Arena, Market Maker, Replay
+  Lab; Trust: Verification, Archive, System Health) replacing the old
+  single-scroll dashboard, which is still reachable at
+  `?preview=classic` for reference.
+- **Shared panel design system** — every panel (Signal Intelligence,
+  Arena, Market Maker, Archive, and the rest) now draws from one design
+  token system (`apps/web/src/styles/tokens.css`) and shared primitives
+  (`Card`, `StatusBadge`, `MetricCard`, `SectionHeader`) instead of each
+  panel inventing its own colors and radii. The signature element is
+  `EvidenceStamp` — a monospace "rule crossed → observed delta →
+  traceable reference" strip on every evidence-backed card, tying the
+  visual design directly to GoalPulse's actual mechanic (deterministic
+  thresholds, not decoration).
+- **Pixel/halftone chart fill** — the odds movement chart's area fill
+  is a small-square SVG pattern tile instead of a smooth gradient, a
+  distinctive, deliberately-chosen visual signature rather than a
+  generic dashboard look.
+- **Command Center overview's Strategy Leader and Verification cards**
+  are wired to real live data (self-fetching `/api/arena`, sharing the
+  same ranking logic as the full Agent Arena page so the two can never
+  disagree) instead of a "not available yet" placeholder.
+- The in-app deterministic **"Ask GoalPulse" analyst chat** (answers
+  questions about the latest signal, failed-continuation patterns,
+  reversal risk, and score reality checks using only live data — no
+  external LLM call) is available on both the Command Center default
+  and the classic fallback.
+
 ## Key Features
 
 - Autonomous backend agent loop
@@ -133,8 +168,12 @@ Beyond code bugs, two real production deployment incidents were found and resolv
 - Probability-point-shift reporting, separate from raw odds compression
 - CI (GitHub Actions), pinned dependencies, MIT license, explicit CORS origin allowlist
 - Upsert-based idempotency on the permanent archive tables (signal_archive, match_archive)
-- Automated backend unit tests (276 as of 2026-07-11 — see the CI badge/`npm run test` for the current count)
-- React dashboard for live monitoring and judge presentation
+- Automated backend unit tests (276 as of 2026-07-12 — see the CI badge/`npm run test` for the current count)
+- Automated frontend unit tests (45 as of 2026-07-12 — run `npm run test` in `apps/web` for the current count)
+- React dashboard for live monitoring and judge presentation, restructured into a 9-destination Command Center as the default experience
+- Shared panel design system with a deterministic evidence-stamp signature element, replacing per-panel ad-hoc styling
+- Pixel/halftone chart fill as a deliberate visual signature, not a generic gradient
+- In-app deterministic "Ask GoalPulse" analyst chat (no external LLM call)
 
 ## Scores Intelligence Layer
 
@@ -241,7 +280,7 @@ Judges should look for the live market board, TXODDS field context, Field Pressu
 
 ## Current Limitations
 
-Stated honestly, as of 2026-07-11:
+Stated honestly, as of 2026-07-12:
 
 - **Single-source odds, not multi-bookmaker consensus.** TxLINE's feed is
   powered by TXODDS' own "Stable Price" consensus pricing engine — lines
