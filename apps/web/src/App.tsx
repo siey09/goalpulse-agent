@@ -10,6 +10,7 @@ import { SignalArchivePanel } from "./components/SignalArchivePanel";
 import { SignalPerformancePanel } from "./components/SignalPerformancePanel";
 import { ConfidenceCalibrationPanel } from "./components/ConfidenceCalibrationPanel";
 import { SignalCorrelationPanel } from "./components/SignalCorrelationPanel";
+import { AnalystChatWidget } from "./components/AnalystChatWidget";
 import { useScrollSpy } from "./hooks/useScrollSpy";
 import { AppShell } from "./app/AppShell";
 import { DEFAULT_DESTINATION, type DestinationId } from "./app/navigation";
@@ -1809,6 +1810,17 @@ function App() {
           proofHash={selectedSignalProofHash}
         />
 
+        <AnalystChatWidget
+          isOpen={isAnalystChatOpen}
+          onToggleOpen={() => setIsAnalystChatOpen((isOpen) => !isOpen)}
+          onClose={() => setIsAnalystChatOpen(false)}
+          messages={analystMessages}
+          question={analystQuestion}
+          onQuestionChange={setAnalystQuestion}
+          onSend={sendAnalystMessage}
+          isReplying={isAnalystReplying}
+        />
+
         <button
           onClick={startPreviewGuideTour}
           className="fixed bottom-4 right-4 z-[80] rounded-full border border-orange-400/30 bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-orange-500/25 transition hover:bg-orange-400"
@@ -1871,87 +1883,16 @@ function App() {
 
   return (
     <main className="min-h-screen bg-[#0b0806] p-3 text-stone-100">
-      <button
-        onClick={() => setIsAnalystChatOpen((isOpen) => !isOpen)}
-        className="fixed bottom-4 left-4 z-[80] rounded-full border border-sky-400/30 bg-sky-500 px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-sky-500/25 transition hover:bg-sky-400"
-      >
-        Ask GoalPulse
-      </button>
-
-      {isAnalystChatOpen && (
-        <div className="fixed bottom-20 left-4 z-[80] flex max-h-[560px] w-[380px] flex-col overflow-hidden rounded-[26px] border border-sky-400/25 bg-[#11100f]/95 shadow-2xl shadow-sky-500/20 backdrop-blur-xl ring-1 ring-white/10">
-          <div className="border-b border-white/10 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.24em] text-sky-200/70">
-                  GoalPulse Analyst Chat
-                </p>
-                <h2 className="mt-1 text-sm font-semibold text-white">
-                  Ask the audit agent
-                </h2>
-              </div>
-              <button
-                onClick={() => setIsAnalystChatOpen(false)}
-                className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-stone-300 transition hover:bg-white/10 hover:text-white"
-              >
-                Close
-              </button>
-            </div>
-            <p className="mt-2 text-[11px] leading-5 text-stone-400">
-              Deterministic analyst replies using the current signals, TxLINE replay audit,
-              trap detector, reversal radar, and score reality checks.
-            </p>
-          </div>
-
-          <div className="flex-1 space-y-3 overflow-y-auto p-4">
-            {analystMessages.map((message, index) => (
-              <div
-                key={`${message.role}-${index}`}
-                className={`rounded-2xl border p-3 text-xs leading-5 ${
-                  message.role === "assistant"
-                    ? "border-sky-400/15 bg-sky-400/10 text-sky-50"
-                    : "ml-8 border-white/10 bg-white/5 text-stone-200"
-                }`}
-              >
-                <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-stone-400">
-                  {message.role === "assistant" ? "GoalPulse" : "You"}
-                </p>
-                {message.content}
-              </div>
-            ))}
-            {isAnalystReplying && (
-              <div className="rounded-2xl border border-sky-400/15 bg-sky-400/10 p-3 text-xs leading-5 text-sky-50">
-                <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-stone-400">
-                  GoalPulse
-                </p>
-                GoalPulse is thinking…
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-white/10 p-3">
-            <div className="flex gap-2">
-              <input
-                value={analystQuestion}
-                onChange={(event) => setAnalystQuestion(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") sendAnalystMessage();
-                }}
-                placeholder="Ask about failed continuation patterns, reversals, score checks..."
-                disabled={isAnalystReplying}
-                className="min-w-0 flex-1 rounded-full border border-white/10 bg-black/30 px-3 py-2 text-xs text-white outline-none placeholder:text-stone-500 focus:border-sky-400/40 disabled:opacity-50"
-              />
-              <button
-                onClick={sendAnalystMessage}
-                disabled={isAnalystReplying}
-                className="rounded-full border border-sky-400/30 bg-sky-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Ask
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AnalystChatWidget
+        isOpen={isAnalystChatOpen}
+        onToggleOpen={() => setIsAnalystChatOpen((isOpen) => !isOpen)}
+        onClose={() => setIsAnalystChatOpen(false)}
+        messages={analystMessages}
+        question={analystQuestion}
+        onQuestionChange={setAnalystQuestion}
+        onSend={sendAnalystMessage}
+        isReplying={isAnalystReplying}
+      />
       {isJudgeMode && (
         <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] transition-opacity duration-500 pointer-events-none" />
       )}
