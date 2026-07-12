@@ -1,4 +1,5 @@
 import { Card } from "../../components/ui/Card";
+import { ErrorState } from "../../components/ui/ErrorState";
 import { StatusCapsule } from "../../components/ui/widgets/StatusCapsule";
 import { VerificationReceipt } from "../../components/VerificationReceipt";
 import { getSignalTarget } from "../../lib/formatters";
@@ -18,6 +19,8 @@ export interface ReplayLabPageProps {
   pnl: ReplayLabPnl | null;
   isReplayRunning: boolean;
   onRunAudit: () => void;
+  /** User-readable message when the last Run Audit attempt failed - empty string when there's nothing to show. */
+  error?: string;
   selectedSignal: AgentSignal | null;
   onSelectSignal: (signal: AgentSignal) => void;
   onchainVerify: Record<string, { loading: boolean; data: OnChainVerifyData | null }>;
@@ -36,6 +39,7 @@ export function ReplayLabPage({
   pnl,
   isReplayRunning,
   onRunAudit,
+  error,
   selectedSignal,
   onSelectSignal,
   onchainVerify,
@@ -59,6 +63,12 @@ export function ReplayLabPage({
             {isReplayRunning ? "Running..." : "Run audit"}
           </button>
         </div>
+
+        {error && (
+          <div className="mb-3">
+            <ErrorState message={error} onRetry={onRunAudit} />
+          </div>
+        )}
 
         {pnl && (
           <div className="mb-3 rounded-xl border border-border bg-black/25 p-3.5">

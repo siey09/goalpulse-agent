@@ -1,8 +1,8 @@
 import { Menu } from "lucide-react";
 import { StatusBadge, type StatusTone } from "../components/ui/StatusBadge";
+import { FRESHNESS_COPY, type FreshnessState } from "../lib/freshness";
 
 export type AgentStatus = "RUNNING" | "DEGRADED" | "RECONNECTING" | "STOPPED";
-export type FeedMode = "LIVE TxLINE" | "HISTORICAL TxLINE REPLAY";
 
 const AGENT_STATUS_TONE: Record<AgentStatus, StatusTone> = {
   RUNNING: "positive",
@@ -11,10 +11,19 @@ const AGENT_STATUS_TONE: Record<AgentStatus, StatusTone> = {
   STOPPED: "danger",
 };
 
+const FRESHNESS_TONE: Record<FreshnessState, StatusTone> = {
+  waiting: "neutral",
+  replay: "info",
+  live: "accent",
+  stale: "warning",
+  reconnecting: "danger",
+};
+
 export interface TopStatusBarProps {
   title: string;
   agentStatus: AgentStatus;
-  feedMode: FeedMode;
+  /** App-wide freshness (dashboard poll health + replay mode + backend feed health) - never derived from a single selected match. */
+  feedMode: FreshnessState;
   /** Human-readable freshness, e.g. "2.4s ago" - caller formats, this component just displays. */
   freshnessLabel?: string;
   lastDecisionLabel?: string;
@@ -25,7 +34,11 @@ export interface TopStatusBarProps {
 /**
  * Sticky top status strip showing live agent status, feed mode, and
  * freshness - driven by the Command Center page's own polling/stream
- * state.
+ * state. feedMode reuses the same FreshnessState vocabulary as Live
+ * Markets' per-match freshness pill, but is computed from app-wide
+ * sources only (see App.tsx's getGlobalFreshnessState call site) so a
+ * single finished/scheduled selected match never makes the whole app
+ * read as stale or waiting.
  */
 export function TopStatusBar({
   title,
@@ -36,6 +49,7 @@ export function TopStatusBar({
   onOpenMobileNav,
 }: TopStatusBarProps) {
   const isRunning = agentStatus === "RUNNING";
+  const freshness = FRESHNESS_COPY[feedMode];
 
   return (
     <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface-1/95 px-6 py-3 backdrop-blur">
@@ -56,7 +70,9 @@ export function TopStatusBar({
         <span className={isRunning ? "rounded-full animate-glow-pulse" : ""}>
           <StatusBadge label={agentStatus} tone={AGENT_STATUS_TONE[agentStatus]} withDot />
         </span>
-        <StatusBadge label={feedMode} tone={feedMode === "LIVE TxLINE" ? "accent" : "info"} />
+        <span className={feedMode === "live" ? "rounded-full animate-glow-pulse" : ""}>
+          <StatusBadge label={freshness.label} tone={FRESHNESS_TONE[feedMode]} withDot={feedMode === "live"} />
+        </span>
         {freshnessLabel && <StatusBadge label={freshnessLabel} tone="neutral" />}
         {lastDecisionLabel && <StatusBadge label={lastDecisionLabel} tone="neutral" />}
       </div>

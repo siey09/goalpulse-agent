@@ -54,6 +54,7 @@ const SystemHealthPage = lazy(() =>
 );
 import { VerificationReceipt } from "./components/VerificationReceipt";
 import { SignalAuditDrawer } from "./components/signals/SignalAuditDrawer";
+import { getGlobalFreshnessState, isSustainedPollFailure } from "./lib/freshness";
 import type {
   Odds,
   Match,
@@ -61,6 +62,7 @@ import type {
   OnChainVerifyData,
   ReplayBacktest,
   Health,
+  FeedHealth,
   SimilarSignalsResult,
 } from "./types";
 import {
@@ -307,8 +309,15 @@ function App() {
   const [lastRefresh, setLastRefresh] = useState("");
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState("");
+  const [feedHealth, setFeedHealth] = useState<FeedHealth | null>(null);
+  /** True once loadDashboard has SUCCEEDED at least once - distinct from hasLoadedOnceRef, which flips on the first attempt regardless of outcome. */
+  const [hasLoadedDashboardOnce, setHasLoadedDashboardOnce] = useState(false);
+  const [consecutiveDashboardFailures, setConsecutiveDashboardFailures] = useState(0);
+  const [lastDashboardSuccessAt, setLastDashboardSuccessAt] = useState<number | null>(null);
   const [replayBacktest, setReplayBacktest] = useState<ReplayBacktest | null>(null);
   const [isReplayRunning, setIsReplayRunning] = useState(false);
+  /** Scoped to the Run Audit action so a stale dashboard-poll error can never bleed onto Replay Lab, and vice versa. */
+  const [replayAuditError, setReplayAuditError] = useState("");
   const [onchainVerify, setOnchainVerify] = useState<
     Record<string, { loading: boolean; data: OnChainVerifyData | null }>
   >({});
@@ -752,6 +761,7 @@ function App() {
   async function runReplayBacktest() {
     try {
       setIsReplayRunning(true);
+      setReplayAuditError("");
 
       const payload = await request<unknown>("/api/replay/backtest");
       const replay =
@@ -761,11 +771,11 @@ function App() {
 
       setReplayBacktest(replay);
     } catch (currentError) {
-      setError(
-        currentError instanceof Error
-          ? currentError.message
-          : "Unable to run replay backtest."
-      );
+      const message =
+        currentError instanceof Error ? currentError.message : "Unable to run replay backtest.";
+      // Also set the shared `error` state - still read by the ?preview=classic branch.
+      setError(message);
+      setReplayAuditError(message);
     } finally {
       setIsReplayRunning(false);
     }
@@ -1105,6 +1115,7 @@ function App() {
         runsPayload,
         statsPayload,
         pnlPayload,
+        feedHealthPayload,
       ] = await Promise.all([
         request<Health>("/health"),
         request<unknown>("/api/matches"),
@@ -1113,6 +1124,7 @@ function App() {
         request<unknown>("/api/agent-runs"),
         request<AgentStats | { data?: AgentStats }>("/api/stats"),
         request<{ data?: typeof pnl }>("/api/pnl").catch(() => null),
+        request<{ data?: FeedHealth }>("/api/feed-health").catch(() => null),
       ]);
 
       const currentMatchList = asArray<Match>(matchesPayload, ["matches", "data"]);
@@ -1144,11 +1156,15 @@ function App() {
       if (pnlPayload?.data) {
         setPnl(pnlPayload.data);
       }
+      setFeedHealth(feedHealthPayload?.data ?? null);
       setSelectedMatchId((currentMatchId) => currentMatchId || fallbackMatchId);
 
       setLastRefresh(new Date().toLocaleTimeString());
       hasLoadedOnceRef.current = true;
       setIsConnecting(false);
+      setHasLoadedDashboardOnce(true);
+      setConsecutiveDashboardFailures(0);
+      setLastDashboardSuccessAt(Date.now());
     } catch (currentError) {
       setError(
         currentError instanceof Error
@@ -1157,6 +1173,7 @@ function App() {
       );
       hasLoadedOnceRef.current = true;
       setIsConnecting(false);
+      setConsecutiveDashboardFailures((count) => count + 1);
     }
   }
 
@@ -1697,12 +1714,25 @@ function App() {
   if (isCommandCenterPreview) {
     const latestSignal = signals[0];
 
+    const isSustainedDashboardPollFailure = isSustainedPollFailure(
+      consecutiveDashboardFailures,
+      lastDashboardSuccessAt !== null ? Date.now() - lastDashboardSuccessAt : null
+    );
+
     const shellProps = {
       title: "Autonomous World Cup Market Intelligence",
       agentStatus: (health?.ok ? "RUNNING" : "DEGRADED") as "RUNNING" | "DEGRADED",
-      feedMode: "LIVE TxLINE" as const,
+      feedMode: getGlobalFreshnessState({
+        hasLoadedDashboardOnce,
+        isReplayStreamMode,
+        isSustainedDashboardPollFailure,
+        isLiveStreamConnected: health?.liveStream?.connected ?? false,
+        feedHealthStatus: feedHealth?.status,
+      }),
       freshnessLabel: dataFreshnessLabel(selectedMatch?.lastUpdated) ?? undefined,
       lastDecisionLabel: agentTimeline[2]?.title,
+      showStalePollWarning: isSustainedDashboardPollFailure,
+      onRetryDashboard: () => void loadDashboard(),
     };
 
     let destinationContent: ReactNode;
@@ -1762,6 +1792,7 @@ function App() {
             pnl={pnl}
             isReplayRunning={isReplayRunning}
             onRunAudit={runReplayBacktest}
+            error={replayAuditError}
             selectedSignal={selectedSignal}
             onSelectSignal={setSelectedSignal}
             onchainVerify={onchainVerify}
@@ -1775,7 +1806,7 @@ function App() {
         );
         break;
       case "system-health":
-        destinationContent = <SystemHealthPage health={health} />;
+        destinationContent = <SystemHealthPage health={health} feedHealth={feedHealth} />;
         break;
       case "command-center":
       default:

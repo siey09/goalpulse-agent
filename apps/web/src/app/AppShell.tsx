@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { TopStatusBar, type TopStatusBarProps } from "./TopStatusBar";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -9,6 +9,10 @@ export interface AppShellProps extends Omit<TopStatusBarProps, "onOpenMobileNav"
   active: DestinationId;
   onSelectDestination: (destination: DestinationId) => void;
   children: ReactNode;
+  /** True only once the dashboard poll has failed for a sustained period (see App.tsx's isSustainedPollFailure) - never for one transient miss. */
+  showStalePollWarning?: boolean;
+  /** Re-invokes the dashboard poll immediately, without waiting for the next 5s tick. */
+  onRetryDashboard?: () => void;
 }
 
 /**
@@ -18,7 +22,14 @@ export interface AppShellProps extends Omit<TopStatusBarProps, "onOpenMobileNav"
  * sheet's open/closed state - pure UI state, no reason to live any
  * higher up the tree.
  */
-export function AppShell({ active, onSelectDestination, children, ...statusBarProps }: AppShellProps) {
+export function AppShell({
+  active,
+  onSelectDestination,
+  children,
+  showStalePollWarning,
+  onRetryDashboard,
+  ...statusBarProps
+}: AppShellProps) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   return (
@@ -31,6 +42,27 @@ export function AppShell({ active, onSelectDestination, children, ...statusBarPr
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopStatusBar {...statusBarProps} onOpenMobileNav={() => setIsMobileNavOpen(true)} />
+        {showStalePollWarning && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex flex-wrap items-center justify-between gap-3 border-b border-warning/20 bg-warning/10 px-6 py-2 text-xs text-warning-200"
+          >
+            <span className="flex items-center gap-2">
+              <TriangleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              Showing the last data we could load — reconnecting to refresh it.
+            </span>
+            {onRetryDashboard && (
+              <button
+                type="button"
+                onClick={onRetryDashboard}
+                className="shrink-0 rounded-md border border-warning/30 px-2.5 py-1 font-semibold text-warning-100 transition hover:bg-warning/15"
+              >
+                Retry now
+              </button>
+            )}
+          </div>
+        )}
         <main className="min-w-0 flex-1 overflow-y-auto px-6 py-5">
           <PageHeader destinationId={active} />
           {children}

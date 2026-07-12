@@ -74,14 +74,28 @@ describe("AppSidebar", () => {
 
 describe("TopStatusBar", () => {
   it("renders title and status badges", () => {
-    render(<TopStatusBar title="Command Center" agentStatus="RUNNING" feedMode="LIVE TxLINE" />);
+    render(<TopStatusBar title="Command Center" agentStatus="RUNNING" feedMode="live" />);
     expect(screen.getByText("Command Center")).toBeInTheDocument();
     expect(screen.getByText("RUNNING")).toBeInTheDocument();
-    expect(screen.getByText("LIVE TxLINE")).toBeInTheDocument();
+    expect(screen.getByText("Live")).toBeInTheDocument();
+  });
+
+  it("renders the freshness copy for each app-wide feed state", () => {
+    const { rerender } = render(<TopStatusBar title="Command Center" agentStatus="RUNNING" feedMode="waiting" />);
+    expect(screen.getByText("Waiting")).toBeInTheDocument();
+
+    rerender(<TopStatusBar title="Command Center" agentStatus="RUNNING" feedMode="replay" />);
+    expect(screen.getByText("Replay")).toBeInTheDocument();
+
+    rerender(<TopStatusBar title="Command Center" agentStatus="RUNNING" feedMode="stale" />);
+    expect(screen.getByText("Stale")).toBeInTheDocument();
+
+    rerender(<TopStatusBar title="Command Center" agentStatus="RUNNING" feedMode="reconnecting" />);
+    expect(screen.getByText("Reconnecting")).toBeInTheDocument();
   });
 
   it("does not render a mobile nav toggle when onOpenMobileNav is omitted", () => {
-    render(<TopStatusBar title="Command Center" agentStatus="RUNNING" feedMode="LIVE TxLINE" />);
+    render(<TopStatusBar title="Command Center" agentStatus="RUNNING" feedMode="live" />);
     expect(screen.queryByLabelText("Open navigation menu")).not.toBeInTheDocument();
   });
 
@@ -91,7 +105,7 @@ describe("TopStatusBar", () => {
       <TopStatusBar
         title="Command Center"
         agentStatus="RUNNING"
-        feedMode="LIVE TxLINE"
+        feedMode="live"
         onOpenMobileNav={onOpenMobileNav}
       />
     );
@@ -108,7 +122,7 @@ describe("AppShell", () => {
         onSelectDestination={() => {}}
         title="Command Center"
         agentStatus="RUNNING"
-        feedMode="LIVE TxLINE"
+        feedMode="live"
         freshnessLabel="2.4s"
       >
         <p>page content</p>
@@ -128,7 +142,7 @@ describe("AppShell", () => {
         onSelectDestination={() => {}}
         title="Command Center"
         agentStatus="RUNNING"
-        feedMode="LIVE TxLINE"
+        feedMode="live"
         freshnessLabel="2.4s"
       >
         <p>page content</p>
@@ -147,7 +161,7 @@ describe("AppShell", () => {
         onSelectDestination={onSelectDestination}
         title="Command Center"
         agentStatus="RUNNING"
-        feedMode="LIVE TxLINE"
+        feedMode="live"
       >
         <p>page content</p>
       </AppShell>
@@ -163,5 +177,45 @@ describe("AppShell", () => {
 
     expect(onSelectDestination).toHaveBeenCalledWith("signals");
     expect(screen.queryByLabelText("Close menu")).not.toBeInTheDocument();
+  });
+
+  it("does not render the stale-poll warning by default", () => {
+    render(
+      <AppShell active={DEFAULT_DESTINATION} onSelectDestination={() => {}} title="Command Center" agentStatus="RUNNING" feedMode="live">
+        <p>page content</p>
+      </AppShell>
+    );
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("renders the stale-poll warning with role=status and aria-live=polite, and Retry invokes the callback", () => {
+    const onRetryDashboard = vi.fn();
+    render(
+      <AppShell
+        active={DEFAULT_DESTINATION}
+        onSelectDestination={() => {}}
+        title="Command Center"
+        agentStatus="RUNNING"
+        feedMode="reconnecting"
+        showStalePollWarning
+        onRetryDashboard={onRetryDashboard}
+      >
+        <p>page content</p>
+      </AppShell>
+    );
+
+    const banner = screen.getByRole("status");
+    expect(banner).toHaveAttribute("aria-live", "polite");
+
+    // Communicates staleness without exposing technical detail - never a URL, status code, or stack trace.
+    expect(banner.textContent).toMatch(/last data we could load/i);
+    expect(banner.textContent).not.toMatch(/https?:\/\//i);
+    expect(banner.textContent).not.toMatch(/\b\d{3}\b/); // no bare HTTP status codes
+    expect(banner.textContent?.toLowerCase()).not.toContain("stack");
+    expect(banner.textContent?.toLowerCase()).not.toContain("fetch failed");
+
+    fireEvent.click(screen.getByText("Retry now"));
+    expect(onRetryDashboard).toHaveBeenCalledOnce();
   });
 });
