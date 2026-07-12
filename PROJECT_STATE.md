@@ -10,6 +10,24 @@ way around.
 
 ## ⏸ SESSION HANDOFF (updated after every milestone — see status below)
 
+✅ **Pixel/halftone chart fill shipped 2026-07-12** (was branch
+`feature/pixel-chart-signature`, fast-forward merge `db94fb0`). User
+referenced a dashboard design (same reference from the earlier panel-
+design-system pass) with a distinctive pixel-square bar chart style and
+asked for that signature look, then explicitly said to stop asking
+clarifying questions and just build it. Brainstormed scope internally:
+GoalPulse's odds chart is a continuous line (home/away odds over time),
+not discrete bars like the reference, so the "pixel bar" concept is
+adapted as an SVG `<pattern>` tile (small squares, clipped to the
+`<Area>` shape) replacing the previous smooth `<linearGradient>` fill,
+rather than converting to a literal bar chart or copying the reference
+1:1. Applied to both charts that share the same odds data: Live
+Markets' main "Odds movement over time" chart and Command Center
+overview's smaller "Market Pulse" chart, each keeping its own existing
+home/away colors. Clean build/lint/test (45 tests). Verified live in
+production: pixel texture renders crisply under both lines at both chart
+sizes, zero console errors.
+
 ✅ **Command Center overview's Strategy Leader and Verification cards
 wired to real data 2026-07-12** (was branch
 `feature/command-center-overview-wiring`, fast-forward merge `8ada009`).
