@@ -202,19 +202,6 @@ Stated honestly:
   so no de-vig calculation is performed by this codebase. Features
   premised on comparing multiple bookmakers or computing cross-bookmaker
   dispersion do not apply to this data source and are not implemented.
-- **Risk-limit rejection is a rule, not just a clamp.** Kelly Criterion
-  rejects a paper position outright (`risk_limit_exceeded`, surfaced in
-  the Arena's rejection reasons) when its raw, uncapped stake fraction
-  would exceed the maximum bankroll fraction — the pre-existing 20% cap
-  still exists as a display clamp, but the position itself is never
-  opened once the raw sizing crosses that line.
-- **Probability-point shift is reported alongside raw compression, in
-  the signal explanation only.** Signals carry an optional
-  `probabilityPointShiftPct` field (a de-vigged implied-probability-point
-  shift, distinct from the raw percentage odds compression in
-  `oddsChangePct`) and mention it in the explanation text. There is no
-  dedicated UI panel or chart for it — it's a backend field plus prose,
-  by design, not a gap.
 - **In-memory store resets on restart; two different persistence
   mechanisms cover different things.** `store_snapshots` (Supabase) is
   a periodic snapshot for restart recovery only — it is not a
@@ -226,10 +213,7 @@ Stated honestly:
   — do not assume a push is live within minutes.
 - **Tournament-bounded live validation.** As the World Cup narrows
   toward its final, the volume of new live signals available to
-  validate new features against shrinks correspondingly; some recent
-  additions (e.g. draw-side signal generation) are verified correct by
-  unit tests and structurally, but had not yet had a real live
-  occurrence to observe end-to-end.
+  validate features against shrinks correspondingly.
 
 ## Compliance Boundary
 

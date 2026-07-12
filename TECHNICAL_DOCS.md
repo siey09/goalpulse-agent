@@ -318,7 +318,7 @@ The signal engine evaluates all three 1X2 outcomes — home, draw, and away — 
 
 ## Probability-Point Shift (Separate From Raw Compression)
 
-Every signal reports `oddsChangePct` (raw percentage odds compression) and, since TxLINE's feed is already de-vigged at the source, an additional optional `probabilityPointShiftPct` — a de-vigged implied-probability-point shift (`(1/oddsAfter - 1/oddsBefore) * 100`), same sign convention as `oddsChangePct` but a genuinely different number. Surfaced in the signal's `explanation` text as a distinct sentence; no dedicated UI panel, by design.
+Every signal reports `oddsChangePct` (raw percentage odds compression) and, since TxLINE's feed is already de-vigged at the source, an additional optional `probabilityPointShiftPct` — a de-vigged implied-probability-point shift (`(1/oddsAfter - 1/oddsBefore) * 100`), same sign convention as `oddsChangePct` but a genuinely different number. Surfaced both in the signal's `explanation` text as a distinct sentence and as its own labeled "Probability shift" row (next to "Odds compression") in the Signal Audit Drawer's "Odds & probability" card.
 
 ## Multi-Market Signal Detection
 
