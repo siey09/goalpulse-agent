@@ -10,6 +10,22 @@ way around.
 
 ## ⏸ SESSION HANDOFF (updated after every milestone — see status below)
 
+✅ **Command Center made the default experience, URL split retired
+2026-07-12** (was branch `feature/command-center-as-default`,
+fast-forward merge `4be2e48`). User flagged real confusion after the
+panel-design-system merge: the app showed two visually different
+surfaces depending on the URL (bare `/` vs `?preview=command-center`),
+which read as broken/inconsistent rather than intentional. Flipped
+`isCommandCenterPreview` in `App.tsx` so Command Center now renders by
+default at the bare URL; `?preview=classic` is the new escape hatch to
+the old single-scroll dashboard (kept for reference, not deleted —
+lower risk than ripping out the shared data-fetching hooks both
+surfaces depend on this close to the deadline). Updated
+`DEMO_CHECKLIST.md` and `SUBMISSION_NOTES.md` to point judges at the
+bare production URL instead of the old query-param link. Verified live
+in production: bare URL shows Command Center with real data flowing,
+zero console errors, `/health` clean. Build/lint/test clean (43 tests).
+
 ✅ **Panel design system + dashboard pipeline rail merged to `main`
 2026-07-12** (was branch `feature/panel-design-system`, fast-forward
 merge `ee0ecc7`, no divergence). User asked for a `/frontend-design`-led
