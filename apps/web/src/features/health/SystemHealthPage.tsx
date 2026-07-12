@@ -48,7 +48,7 @@ export function SystemHealthPage({ health }: SystemHealthPageProps) {
           <div className="rounded-xl bg-black/20 p-3">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-stone-100">WATCH</span>
-              <span className="text-orange-200">≥ 4%</span>
+              <span className="text-accent-200">≥ 4%</span>
             </div>
             <p className="mt-1 text-[11px] text-stone-500">
               Early movement detected, but not yet strong enough for a major alert.
@@ -57,7 +57,7 @@ export function SystemHealthPage({ health }: SystemHealthPageProps) {
           <div className="rounded-xl bg-black/20 p-3">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-stone-100">MOMENTUM SHIFT</span>
-              <span className="text-orange-200">≥ 8%</span>
+              <span className="text-accent-200">≥ 8%</span>
             </div>
             <p className="mt-1 text-[11px] text-stone-500">
               Odds compression suggests meaningful market pressure.
@@ -66,7 +66,7 @@ export function SystemHealthPage({ health }: SystemHealthPageProps) {
           <div className="rounded-xl bg-black/20 p-3">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-stone-100">SHARP MOVE</span>
-              <span className="text-orange-200">≥ 15%</span>
+              <span className="text-accent-200">≥ 15%</span>
             </div>
             <p className="mt-1 text-[11px] text-stone-500">
               High-severity movement that the agent flags for review.

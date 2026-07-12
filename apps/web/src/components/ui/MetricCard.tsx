@@ -41,7 +41,7 @@ export function MetricCard({ label, value, caveat, tone = "neutral", icon, onCli
   return (
     <Card
       className={`flex min-w-[104px] items-center gap-2.5 px-3.5 py-2.5 transition-all ${
-        onClick ? "hover:scale-[1.03] cursor-pointer text-left" : ""
+        onClick ? "cursor-pointer text-left hover:border-border-strong hover:bg-surface-3" : ""
       }`}
     >
       <Wrapper
@@ -50,13 +50,13 @@ export function MetricCard({ label, value, caveat, tone = "neutral", icon, onCli
         className="flex w-full items-center gap-2.5"
       >
         {icon && (
-          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${TONE_ICON_BG[tone]}`}>
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${TONE_ICON_BG[tone]}`}>
             {icon}
           </div>
         )}
         <div className="min-w-0">
           <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">{label}</p>
-          <p className={`truncate text-xl font-bold tabular-nums ${TONE_TEXT[tone]}`}>{value}</p>
+          <p className={`truncate font-mono text-xl font-bold tabular-nums ${TONE_TEXT[tone]}`}>{value}</p>
           {caveat && <p className="mt-1 text-[11px] leading-tight text-stone-400">{caveat}</p>}
         </div>
       </Wrapper>

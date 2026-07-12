@@ -5,9 +5,9 @@ const GUIDE_SPOTLIGHT_CLASSES = [
   "z-[60]",
   "scale-[1.01]",
   "ring-2",
-  "ring-orange-400/70",
+  "ring-accent/70",
   "shadow-2xl",
-  "shadow-orange-500/20",
+  "shadow-accent/20",
 ];
 
 export function clearGuideSpotlight() {
@@ -24,10 +24,10 @@ function findCardByText(text: string): HTMLElement | null {
     const className = `${element.className}`;
     const isGuidePanel = Boolean(element.closest("[data-guide-panel='true']"));
     const isCardLike =
+      className.includes("rounded-xl") ||
       className.includes("rounded-2xl") ||
       className.includes("rounded-[24px]") ||
       className.includes("rounded-[28px]") ||
-      className.includes("rounded-xl") ||
       element.tagName.toLowerCase() === "section" ||
       element.tagName.toLowerCase() === "aside";
 

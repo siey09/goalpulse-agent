@@ -11,14 +11,14 @@ export function ErrorState({
   healthHref = "https://goalpulse-agent-api.onrender.com/health",
 }: ErrorStateProps) {
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-danger/20 bg-danger/5 p-4 text-sm text-danger">
+    <div className="flex flex-col gap-2 rounded-xl border border-danger/25 bg-danger/8 p-4 text-sm text-danger-200">
       <p>{message}</p>
       <div className="flex items-center gap-3 text-xs">
         {onRetry && (
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-full border border-danger/30 px-3 py-1 font-semibold text-danger transition hover:bg-danger/10"
+            className="rounded-lg border border-danger/30 px-3 py-1.5 font-semibold text-danger-200 transition hover:bg-danger/15"
           >
             Retry
           </button>
@@ -27,7 +27,7 @@ export function ErrorState({
           href={healthHref}
           target="_blank"
           rel="noreferrer"
-          className="text-stone-400 underline decoration-dotted hover:text-stone-200"
+          className="text-stone-400 underline decoration-dotted underline-offset-2 hover:text-stone-200"
         >
           Check System Health
         </a>

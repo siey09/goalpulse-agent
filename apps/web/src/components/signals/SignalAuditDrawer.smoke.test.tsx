@@ -82,7 +82,7 @@ describe("SignalAuditDrawer", () => {
   it("calls onClose when the close button is clicked", () => {
     const onClose = vi.fn();
     render(<SignalAuditDrawer {...baseProps} onClose={onClose} />);
-    fireEvent.click(screen.getByRole("button", { name: "" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close signal audit" }));
     expect(onClose).toHaveBeenCalled();
   });
 });

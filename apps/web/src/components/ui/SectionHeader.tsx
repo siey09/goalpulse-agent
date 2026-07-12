@@ -11,8 +11,8 @@ export function SectionHeader({ eyebrow, title, action }: SectionHeaderProps) {
   return (
     <div className="mb-4 flex items-center justify-between gap-4">
       <div>
-        <p className="text-xs text-stone-500">{eyebrow}</p>
-        <h2 className="text-xl font-semibold text-white">{title}</h2>
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-stone-500">{eyebrow}</p>
+        <h2 className="font-display text-xl font-bold tracking-tight text-white">{title}</h2>
       </div>
       {action}
     </div>

@@ -137,21 +137,21 @@ export function CommandCenterPage({
                   <defs>
                     <pattern id="ccPixelHome" width="8" height="8" patternUnits="userSpaceOnUse">
                       <rect width="8" height="8" fill="transparent" />
-                      <rect width="4" height="4" fill="#f97316" fillOpacity={0.6} />
+                      <rect width="4" height="4" fill="#ffb020" fillOpacity={0.6} />
                     </pattern>
                     <pattern id="ccPixelAway" width="8" height="8" patternUnits="userSpaceOnUse">
                       <rect width="8" height="8" fill="transparent" />
-                      <rect width="4" height="4" fill="#38bdf8" fillOpacity={0.4} />
+                      <rect width="4" height="4" fill="#5aa9ff" fillOpacity={0.4} />
                     </pattern>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(158,196,224,0.08)" />
                   <XAxis dataKey="name" stroke="#78716c" fontSize={10} />
                   <YAxis stroke="#78716c" fontSize={10} />
                   <Tooltip
-                    contentStyle={{ background: "#15191d", border: "1px solid rgba(255,255,255,0.08)" }}
+                    contentStyle={{ background: "#161d26", border: "1px solid rgba(158,196,224,0.12)", borderRadius: 10 }}
                   />
-                  <Area type="monotone" dataKey="home" stroke="#f97316" fill="url(#ccPixelHome)" />
-                  <Area type="monotone" dataKey="away" stroke="#38bdf8" fill="url(#ccPixelAway)" />
+                  <Area type="monotone" dataKey="home" stroke="#ffb020" fill="url(#ccPixelHome)" />
+                  <Area type="monotone" dataKey="away" stroke="#5aa9ff" fill="url(#ccPixelAway)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

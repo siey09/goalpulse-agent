@@ -30,7 +30,7 @@ export interface StatusBadgeProps {
 export function StatusBadge({ label, tone = "neutral", withDot = false }: StatusBadgeProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${TONE_CLASSES[tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] ${TONE_CLASSES[tone]}`}
     >
       {withDot && <span className={`h-1.5 w-1.5 rounded-full ${TONE_DOT[tone]}`} aria-hidden="true" />}
       {label}

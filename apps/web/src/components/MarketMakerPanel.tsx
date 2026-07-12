@@ -131,7 +131,7 @@ export function MarketMakerPanel() {
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-xl border border-border bg-surface-3 p-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold text-white">{bestQuote.match}</h3>
+              <h3 className="font-display text-lg font-bold tracking-tight text-white">{bestQuote.match}</h3>
               <StatusBadge
                 label={`${bestQuote.spreadWidth} · ${bestQuote.spreadPct}%`}
                 tone={spreadWidthTone(bestQuote.spreadWidth)}

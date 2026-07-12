@@ -29,9 +29,9 @@ export function formatTime(value?: string) {
 }
 
 export function severityMarkerStyle(severity?: string) {
-  if (severity === "HIGH") return { fill: "#f87171", radius: 7 };
-  if (severity === "MEDIUM") return { fill: "#fbbf24", radius: 5.5 };
-  return { fill: "#94a3b8", radius: 4 };
+  if (severity === "HIGH") return { fill: "#ff6161", radius: 7 };
+  if (severity === "MEDIUM") return { fill: "#f2c14e", radius: 5.5 };
+  return { fill: "#7c8ba1", radius: 4 };
 }
 
 export function getOdds(match?: Match) {
@@ -41,10 +41,10 @@ export function getOdds(match?: Match) {
 export function severityStyle(severity?: string) {
   const value = (severity ?? "LOW").toUpperCase();
 
-  if (value === "HIGH") return "bg-red-500/15 text-red-200 border-red-400/20";
-  if (value === "MEDIUM") return "bg-orange-500/15 text-orange-200 border-orange-400/20";
+  if (value === "HIGH") return "bg-danger-500/15 text-danger-200 border-danger/20";
+  if (value === "MEDIUM") return "bg-accent/15 text-accent-200 border-accent/20";
 
-  return "bg-emerald-500/15 text-emerald-200 border-emerald-400/20";
+  return "bg-positive-500/15 text-positive-200 border-positive/20";
 }
 
 function statusLabel(status?: string) {
@@ -108,19 +108,19 @@ export function matchStatusTone(match?: Match) {
   const label = `${match?.statusLabel ?? ""}`.toLowerCase();
 
   if (label.includes("suspended") || label.includes("interrupted")) {
-    return "bg-amber-400/15 text-amber-200";
+    return "bg-warning/15 text-warning-200";
   }
 
   if (label.includes("cancelled") || label.includes("abandoned")) {
-    return "bg-rose-400/15 text-rose-200";
+    return "bg-danger/15 text-danger-200";
   }
 
   if (match?.status === "live") {
-    return "bg-emerald-400/15 text-emerald-200";
+    return "bg-positive/15 text-positive-200";
   }
 
   if (match?.status === "scheduled") {
-    return "bg-sky-400/15 text-sky-200";
+    return "bg-info/15 text-info-200";
   }
 
   if (match?.status === "finished") {
@@ -142,13 +142,13 @@ export function marketTypeLabel(marketType?: string) {
 
 export function discordAlertBadge(status?: "sent" | "failed" | "not_configured") {
   if (status === "sent") {
-    return { label: "🔔 Alert sent", className: "border-emerald-400/20 bg-emerald-400/10 text-emerald-200" };
+    return { label: "🔔 Alert sent", className: "border-positive/20 bg-positive/10 text-positive-200" };
   }
   if (status === "failed") {
-    return { label: "⚠ Alert failed", className: "border-amber-400/20 bg-amber-400/10 text-amber-200" };
+    return { label: "⚠ Alert failed", className: "border-warning/20 bg-warning/10 text-warning-200" };
   }
   if (status === "not_configured") {
-    return { label: "Alerts off", className: "border-white/10 bg-white/5 text-stone-400" };
+    return { label: "Alerts off", className: "border-border bg-white/5 text-stone-400" };
   }
   return undefined;
 }
@@ -190,7 +190,7 @@ export function formatProbabilityPointShift(value?: number) {
 }
 
 export function reliabilityTone(reliability?: string) {
-  if (reliability === "RELIABLE") return "border-emerald-400/20 bg-emerald-400/10 text-emerald-200";
-  if (reliability === "UNRELIABLE" || reliability === "SUSPENDED") return "border-red-400/20 bg-red-400/10 text-red-200";
-  return "border-white/10 bg-white/5 text-stone-400";
+  if (reliability === "RELIABLE") return "border-positive/20 bg-positive/10 text-positive-200";
+  if (reliability === "UNRELIABLE" || reliability === "SUSPENDED") return "border-danger/20 bg-danger/10 text-danger-200";
+  return "border-border bg-white/5 text-stone-400";
 }

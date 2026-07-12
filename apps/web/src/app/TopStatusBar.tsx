@@ -35,6 +35,8 @@ export function TopStatusBar({
   lastDecisionLabel,
   onOpenMobileNav,
 }: TopStatusBarProps) {
+  const isRunning = agentStatus === "RUNNING";
+
   return (
     <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface-1/95 px-6 py-3 backdrop-blur">
       <div className="flex items-center gap-3">
@@ -43,15 +45,17 @@ export function TopStatusBar({
             type="button"
             onClick={onOpenMobileNav}
             aria-label="Open navigation menu"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/8 text-stone-300 transition hover:bg-white/12 hover:text-white md:hidden"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/8 text-stone-300 transition hover:bg-white/12 hover:text-white md:hidden"
           >
             <Menu className="h-5 w-5" />
           </button>
         )}
-        <h1 className="text-lg font-bold text-white">{title}</h1>
+        <h1 className="font-display text-lg font-bold tracking-tight text-white">{title}</h1>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <StatusBadge label={agentStatus} tone={AGENT_STATUS_TONE[agentStatus]} withDot />
+        <span className={isRunning ? "rounded-full animate-glow-pulse" : ""}>
+          <StatusBadge label={agentStatus} tone={AGENT_STATUS_TONE[agentStatus]} withDot />
+        </span>
         <StatusBadge label={feedMode} tone={feedMode === "LIVE TxLINE" ? "accent" : "info"} />
         {freshnessLabel && <StatusBadge label={freshnessLabel} tone="neutral" />}
         {lastDecisionLabel && <StatusBadge label={lastDecisionLabel} tone="neutral" />}

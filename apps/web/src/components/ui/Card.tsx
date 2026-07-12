@@ -12,8 +12,8 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 export function Card({ children, elevated = false, className = "", ...rest }: CardProps) {
   return (
     <div
-      className={`rounded-2xl border border-border ${
-        elevated ? "bg-surface-3" : "bg-surface-2"
+      className={`rounded-xl border border-border ${
+        elevated ? "bg-surface-3 shadow-[0_10px_30px_-16px_rgba(0,0,0,0.7)]" : "bg-surface-2"
       } ${className}`}
       {...rest}
     >

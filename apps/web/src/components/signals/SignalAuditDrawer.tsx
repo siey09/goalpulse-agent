@@ -153,7 +153,7 @@ export function SignalAuditDrawer({
         onClick={onClose}
       />
       <div
-        className={`fixed inset-y-0 right-0 z-50 w-full max-w-lg overflow-y-auto border-l border-white/10 bg-[#15100c] p-4 shadow-2xl shadow-black/50 transition-transform duration-300 ${
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-lg overflow-y-auto border-l border-border bg-surface-1 p-4 shadow-2xl shadow-black/50 transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -161,8 +161,8 @@ export function SignalAuditDrawer({
           <>
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs text-stone-500">Signal audit</p>
-                <h2 className="mt-1 text-2xl font-semibold text-white">
+                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-stone-500">Signal audit</p>
+                <h2 className="mt-1 font-display text-2xl font-bold tracking-tight text-white">
                   {signalTypeLabel(getSignalType(signal))}
                 </h2>
                 <p className="mt-1 text-xs text-stone-400">
@@ -172,10 +172,12 @@ export function SignalAuditDrawer({
                 </p>
               </div>
               <button
+                type="button"
                 onClick={onClose}
-                className="rounded-2xl bg-white/8 p-2 text-stone-400 transition hover:bg-white/12 hover:text-white"
+                aria-label="Close signal audit"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/8 text-stone-400 transition hover:bg-white/12 hover:text-white"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
 
@@ -185,7 +187,7 @@ export function SignalAuditDrawer({
               <StatusBadge label={getSignalOutcome(signal)} />
             </div>
 
-            <div className="mb-4 rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="mb-4 rounded-xl border border-border bg-black/25 p-4">
               <p className="mb-3 text-[11px] uppercase tracking-[0.2em] text-stone-400">Odds &amp; probability</p>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-xl bg-black/25 p-3">
@@ -206,11 +208,11 @@ export function SignalAuditDrawer({
                 </div>
                 <div className="rounded-xl bg-black/25 p-3">
                   <p className="text-stone-500">Odds compression</p>
-                  <p className="mt-1 font-semibold text-orange-200">{formatOddsChange(signal.oddsChangePct)}</p>
+                  <p className="mt-1 font-semibold text-accent-200">{formatOddsChange(signal.oddsChangePct)}</p>
                 </div>
                 <div className="rounded-xl bg-black/25 p-3">
                   <p className="text-stone-500">Probability shift</p>
-                  <p className="mt-1 font-semibold text-orange-200">{formatProbabilityPointShift(signal.probabilityPointShiftPct)}</p>
+                  <p className="mt-1 font-semibold text-accent-200">{formatProbabilityPointShift(signal.probabilityPointShiftPct)}</p>
                 </div>
               </div>
               <p className="mt-2 text-[10px] leading-4 text-stone-500">
@@ -219,12 +221,12 @@ export function SignalAuditDrawer({
               </p>
             </div>
 
-            <div className="mb-4 rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="mb-4 rounded-xl border border-border bg-black/25 p-4">
               <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-stone-400">Deterministic threshold</p>
               <p className="text-xs leading-5 text-stone-300">{getThresholdLabel(signal)}</p>
             </div>
 
-            <div className="mb-4 rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="mb-4 rounded-xl border border-border bg-black/25 p-4">
               <p className="mb-3 text-[11px] uppercase tracking-[0.2em] text-stone-400">
                 Field &amp; score context
               </p>
@@ -265,7 +267,7 @@ export function SignalAuditDrawer({
               )}
             </div>
 
-            <div className="mb-4 rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="mb-4 rounded-xl border border-border bg-black/25 p-4">
               <p className="mb-3 text-[11px] uppercase tracking-[0.2em] text-stone-400">
                 Strategy decisions
               </p>
@@ -282,10 +284,10 @@ export function SignalAuditDrawer({
                         <span
                           className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
                             position.resultStatus === "correct"
-                              ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                              ? "border-positive/30 bg-positive/10 text-positive-200"
                               : position.resultStatus === "incorrect"
-                                ? "border-red-400/30 bg-red-400/10 text-red-200"
-                                : "border-orange-400/30 bg-orange-400/10 text-orange-200"
+                                ? "border-danger/30 bg-danger/10 text-danger-200"
+                                : "border-accent/30 bg-accent/10 text-accent-200"
                           }`}
                         >
                           {position.resultStatus.toUpperCase()}
@@ -303,7 +305,7 @@ export function SignalAuditDrawer({
                     <div key={rejection.agentLabel} className="rounded-xl bg-black/25 p-3 text-xs">
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-semibold text-stone-100">{rejection.agentLabel}</p>
-                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-stone-400">
+                        <span className="rounded-full border border-border bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-stone-400">
                           NOT TRADED
                         </span>
                       </div>
@@ -314,7 +316,7 @@ export function SignalAuditDrawer({
               )}
             </div>
 
-            <div className="mb-4 rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="mb-4 rounded-xl border border-border bg-black/25 p-4">
               <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-stone-400">Agent explanation</p>
               <p className="text-sm leading-6 text-stone-200">
                 {signal.explanation ??
@@ -323,7 +325,7 @@ export function SignalAuditDrawer({
               </p>
             </div>
 
-            <div className="mb-4 rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="mb-4 rounded-xl border border-border bg-black/25 p-4">
               <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-stone-400">Local audit fingerprint</p>
               <p className="text-xs leading-5 text-stone-300">
                 {proofHash
@@ -336,14 +338,14 @@ export function SignalAuditDrawer({
               </p>
             </div>
 
-            <div className="mb-4 rounded-2xl border border-sky-400/15 bg-sky-400/10 p-4">
-              <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-sky-200/70">
+            <div className="mb-4 rounded-xl border border-info/15 bg-info/10 p-4">
+              <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-info-200/70">
                 Solana / Merkle validation
               </p>
               <VerificationReceipt selectedSignal={signal} onchainVerify={onchainVerify} onVerify={onVerify} />
             </div>
 
-            <div className="mb-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div className="mb-4 rounded-xl border border-border bg-black/20 p-4">
               <p className="mb-1 text-[11px] uppercase tracking-[0.2em] text-stone-400">Historical precedent</p>
               <h3 className="text-sm font-semibold text-white">Similar past signals</h3>
 
@@ -375,8 +377,8 @@ export function SignalAuditDrawer({
                         <span
                           className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
                             entry.resultStatus === "correct"
-                              ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-                              : "border-red-400/30 bg-red-400/10 text-red-200"
+                              ? "border-positive/30 bg-positive/10 text-positive-200"
+                              : "border-danger/30 bg-danger/10 text-danger-200"
                           }`}
                         >
                           {(entry.resultStatus ?? "unknown").toUpperCase()}

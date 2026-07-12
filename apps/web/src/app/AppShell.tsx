@@ -32,13 +32,13 @@ export function AppShell({ active, onSelectDestination, children, ...statusBarPr
         <TopStatusBar {...statusBarProps} onOpenMobileNav={() => setIsMobileNavOpen(true)} />
         <main className="min-w-0 flex-1 overflow-y-auto px-6 py-5">
           {children}
-          <div id="app-shell-compliance" className="mt-6 flex items-center gap-2 rounded-2xl border border-border bg-surface-2 p-4">
-            <div className="rounded-xl bg-positive/10 p-2 text-positive">
-              <ShieldCheck className="h-4 w-4" />
+          <div id="app-shell-compliance" className="mt-6 flex items-center gap-3 rounded-xl border border-border bg-surface-2 p-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-positive/10 text-positive">
+              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-xs text-stone-500">Compliance</p>
-              <p className="text-sm font-semibold text-white">Analytics only</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-stone-500">Compliance</p>
+              <p className="font-display text-sm font-bold text-white">Analytics only</p>
               <p className="mt-1 text-[11px] leading-5 text-stone-400">
                 GoalPulse does not place wagers, custody funds, execute trades, or facilitate illegal betting. It
                 is a market monitoring layer with a TxLINE-ready adapter boundary.

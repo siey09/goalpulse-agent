@@ -1,24 +1,56 @@
 /*
- * Command Center design tokens (Phase 1 scaffolding).
- * Registered as Tailwind v4 theme colors so they're usable as
- * bg-canvas, text-accent, border-border, etc. Not wired into any
- * existing page yet - additive only, imported once from index.css.
+ * GoalPulse design tokens - the "instrument console" system.
+ * Registered as Tailwind v4 theme colors, usable as bg-canvas,
+ * text-accent, border-border, etc. Every panel and page draws from
+ * this single palette instead of inventing its own colors, so a
+ * value changed here reskins the whole app consistently.
  */
 @theme {
-  --color-canvas: #090b0d;
-  --color-surface-1: #111417;
-  --color-surface-2: #15191d;
-  --color-surface-3: #1b2025;
-  --color-border: rgba(255, 255, 255, 0.08);
+  --color-canvas: #0a0e13;
+  --color-surface-1: #10161d;
+  --color-surface-2: #161d26;
+  --color-surface-3: #1e2733;
+  --color-border: rgba(158, 196, 224, 0.12);
+  --color-border-strong: rgba(158, 196, 224, 0.22);
 
-  --color-accent: #f97316;
-  --color-accent-soft: #fb923c;
+  /* Brass/amber signal color - the "gauge needle." Distinct from a
+     generic Tailwind orange on purpose: warmer, less safety-vest. */
+  --color-accent: #ffb020;
+  --color-accent-soft: #ffcf7a;
 
-  --color-positive: #34d399;
-  --color-warning: #fbbf24;
-  --color-danger: #f87171;
-  --color-info: #38bdf8;
-  --color-proof: #a78bfa;
+  --color-positive: #2fd6b4;
+  --color-warning: #f2c14e;
+  --color-danger: #ff6161;
+  --color-info: #5aa9ff;
+  --color-proof: #b48cff;
+
+  /* Light tints for text/border-on-dark use where the base tone reads
+     too saturated - a small ramp per semantic color, not a full Tailwind
+     50-900 scale. */
+  --color-accent-100: #ffecc7;
+  --color-accent-200: #ffd98f;
+  --color-accent-300: #ffc65c;
+  --color-accent-600: #cc7a05;
+  --color-warning-100: #fdeab8;
+  --color-warning-200: #f8dc94;
+  --color-warning-300: #f5cd6e;
+  --color-warning-600: #c99a24;
+  --color-positive-100: #c9f5e9;
+  --color-positive-200: #a0f0dd;
+  --color-positive-300: #6fe6c9;
+  --color-positive-500: #17b799;
+  --color-positive-600: #159a83;
+  --color-danger-100: #ffd9d9;
+  --color-danger-200: #ffabab;
+  --color-danger-300: #ff8b8b;
+  --color-danger-500: #e14747;
+  --color-info-100: #dcebff;
+  --color-info-200: #adcfff;
+  --color-info-300: #7fbdff;
+  --color-info-500: #3f8ce0;
+  --color-proof-100: #ece2ff;
+  --color-proof-200: #d7c3ff;
+  --color-proof-300: #c4a8ff;
 
   --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;

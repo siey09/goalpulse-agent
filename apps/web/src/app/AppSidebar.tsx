@@ -61,12 +61,12 @@ function NavButton({
         aria-current={isActive ? "page" : undefined}
         aria-label={label}
         title={label}
-        className={`flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition ${
+        className={`flex min-h-11 w-full items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-sm font-medium transition-colors ${
           responsiveLabel ? "justify-center xl:justify-start" : ""
         } ${
           isActive
-            ? "bg-accent/15 text-accent-soft"
-            : "text-stone-400 hover:bg-white/5 hover:text-stone-200"
+            ? "border-accent bg-accent/12 text-accent-soft"
+            : "border-transparent text-stone-400 hover:bg-white/5 hover:text-stone-200"
         }`}
       >
         <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -84,6 +84,11 @@ function NavButton({
  * nav or menu sheet; a sheet was chosen since 9 destinations across 3
  * groups don't fit a bottom bar at a real 44px touch target without
  * cramming or flattening the groups).
+ *
+ * The 1px amber rail along the outer edge and the active-item tick mark
+ * are the console's "power strip" cue - a fixed reference line the rest
+ * of the rail's state reads against, echoing the calibration-bar
+ * signature used throughout the panels.
  */
 export function AppSidebar({ active, onSelect, isMobileNavOpen = false, onCloseMobileNav }: AppSidebarProps) {
   function handleSelect(destinationId: DestinationId) {
@@ -95,35 +100,39 @@ export function AppSidebar({ active, onSelect, isMobileNavOpen = false, onCloseM
     <>
       <nav
         aria-label="Primary"
-        className="hidden h-full shrink-0 flex-col gap-6 border-r border-border bg-surface-1 p-4 md:flex md:w-[72px] xl:w-[248px]"
+        className="relative hidden h-full shrink-0 flex-col gap-6 border-r border-border bg-surface-1 p-4 md:flex md:w-[72px] xl:w-[248px]"
       >
+        <span className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-accent/60 via-accent/10 to-transparent" aria-hidden="true" />
+
         <div className="hidden xl:block">
-          <p className="text-lg font-bold tracking-tight text-white">GOALPULSE</p>
-          <p className="text-xs font-semibold text-accent">COMMAND CENTER</p>
+          <p className="font-display text-lg font-bold tracking-tight text-white">GOALPULSE</p>
+          <p className="font-mono text-[11px] font-semibold tracking-[0.08em] text-accent">COMMAND CENTER</p>
         </div>
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-sm font-black text-canvas xl:hidden">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent font-display text-sm font-black text-canvas xl:hidden">
           GP
         </div>
 
-        {NAV_GROUPS.map((group) => (
-          <div key={group.label}>
-            <p className="mb-2 hidden px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500 xl:block">
-              {group.label}
-            </p>
-            <ul className="space-y-1">
-              {group.destinations.map((destination) => (
-                <NavButton
-                  key={destination.id}
-                  destinationId={destination.id}
-                  label={destination.label}
-                  isActive={destination.id === active}
-                  onSelect={handleSelect}
-                  responsiveLabel
-                />
-              ))}
-            </ul>
-          </div>
-        ))}
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label}>
+              <p className="mb-2 hidden px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-600 xl:block">
+                {group.label}
+              </p>
+              <ul className="space-y-1">
+                {group.destinations.map((destination) => (
+                  <NavButton
+                    key={destination.id}
+                    destinationId={destination.id}
+                    label={destination.label}
+                    isActive={destination.id === active}
+                    onSelect={handleSelect}
+                    responsiveLabel
+                  />
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </nav>
 
       {isMobileNavOpen && (
@@ -135,14 +144,14 @@ export function AppSidebar({ active, onSelect, isMobileNavOpen = false, onCloseM
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-lg font-bold tracking-tight text-white">GOALPULSE</p>
-                <p className="text-xs font-semibold text-accent">COMMAND CENTER</p>
+                <p className="font-display text-lg font-bold tracking-tight text-white">GOALPULSE</p>
+                <p className="font-mono text-[11px] font-semibold tracking-[0.08em] text-accent">COMMAND CENTER</p>
               </div>
               <button
                 type="button"
                 onClick={onCloseMobileNav}
                 aria-label="Close menu"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/8 text-stone-300 transition hover:bg-white/12 hover:text-white"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/8 text-stone-300 transition hover:bg-white/12 hover:text-white"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -150,7 +159,7 @@ export function AppSidebar({ active, onSelect, isMobileNavOpen = false, onCloseM
 
             {NAV_GROUPS.map((group) => (
               <div key={group.label}>
-                <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">
+                <p className="mb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-600">
                   {group.label}
                 </p>
                 <ul className="space-y-1">

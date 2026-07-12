@@ -34,10 +34,10 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
       <Card id="guide-outcome-verification" className="p-4">
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <p className="text-xs text-stone-500">Post-signal audit</p>
-            <h2 className="text-xl font-semibold">Outcome verification</h2>
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-stone-500">Post-signal audit</p>
+            <h2 className="font-display text-xl font-bold tracking-tight text-white">Outcome verification</h2>
           </div>
-          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-medium text-emerald-200">
+          <span className="rounded-full border border-positive/20 bg-positive/10 px-3 py-1.5 text-[11px] font-medium text-positive-200">
             Verifiable
           </span>
         </div>
@@ -56,7 +56,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                 <button
                   key={`${item.source}-${item.signal.id ?? index}`}
                   onClick={() => onSelectSignal(item.signal)}
-                  className="w-full rounded-xl border border-white/8 bg-black/20 p-3 text-left transition hover:border-emerald-400/30 hover:bg-emerald-400/10"
+                  className="w-full rounded-xl border border-white/8 bg-black/20 p-3 text-left transition hover:border-positive/30 hover:bg-positive/10"
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <div className="min-w-0">
@@ -71,10 +71,10 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                     <span
                       className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
                         isCorrect
-                          ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                          ? "border-positive/30 bg-positive/10 text-positive-200"
                           : isIncorrect
-                            ? "border-red-400/30 bg-red-400/10 text-red-200"
-                            : "border-orange-400/30 bg-orange-400/10 text-orange-200"
+                            ? "border-danger/30 bg-danger/10 text-danger-200"
+                            : "border-accent/30 bg-accent/10 text-accent-200"
                       }`}
                     >
                       {outcome}
@@ -92,7 +92,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                     </div>
                     <div className="rounded-lg bg-black/25 p-2">
                       <p className="text-stone-500">Move</p>
-                      <p className="mt-1 font-semibold text-orange-200">{formatOddsChange(item.signal.oddsChangePct)}</p>
+                      <p className="mt-1 font-semibold text-accent-200">{formatOddsChange(item.signal.oddsChangePct)}</p>
                     </div>
                   </div>
 

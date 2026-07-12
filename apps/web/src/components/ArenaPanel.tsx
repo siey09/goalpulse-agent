@@ -94,7 +94,7 @@ function ScoreboardCard({
             style={{ backgroundColor: `var(--color-${AGENT_TONE[scoreboard.agentId]})` }}
             aria-hidden="true"
           />
-          <h3 className="text-lg font-semibold text-white">{scoreboard.label}</h3>
+          <h3 className="font-display text-lg font-bold tracking-tight text-white">{scoreboard.label}</h3>
         </div>
         {isLeader && (
           <StatusBadge label="Leading" tone="warning" />
@@ -275,7 +275,7 @@ export function ArenaPanel({ onSelectSignalId }: ArenaPanelProps = {}) {
       ) : arena ? (
         <>
           <div id="guide-meta-skeptic">
-            <div className="mb-4 rounded-2xl border border-accent/15 bg-accent/5 p-4">
+            <div className="mb-4 rounded-xl border border-accent/15 bg-accent/5 p-4">
               <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">
                 <Trophy className="h-4 w-4" />
                 Meta-agent recommendation
@@ -284,7 +284,7 @@ export function ArenaPanel({ onSelectSignalId }: ArenaPanelProps = {}) {
             </div>
 
             {skepticMessage && (
-              <div className="mb-4 rounded-2xl border border-danger/15 bg-danger/5 p-4">
+              <div className="mb-4 rounded-xl border border-danger/15 bg-danger/5 p-4">
                 <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-danger">
                   <ShieldQuestion className="h-4 w-4" />
                   Skeptic check
@@ -315,7 +315,7 @@ export function ArenaPanel({ onSelectSignalId }: ArenaPanelProps = {}) {
             />
           </div>
 
-          <div className="mt-4 rounded-2xl border border-border bg-surface-3 p-4">
+          <div className="mt-4 rounded-xl border border-border bg-surface-3 p-4">
             <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
               <ShieldCheck className="h-4 w-4" />
               Tamper-evident settlement

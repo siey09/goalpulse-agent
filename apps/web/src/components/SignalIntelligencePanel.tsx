@@ -142,6 +142,12 @@ function thresholdRule(severity?: string) {
   return "WATCH ≥ 4%";
 }
 
+function thresholdValue(severity?: string) {
+  if (severity === "HIGH") return 15;
+  if (severity === "MEDIUM") return 8;
+  return 4;
+}
+
 export function SignalIntelligencePanel() {
   const [health, setHealth] = useState<Health | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -277,7 +283,7 @@ export function SignalIntelligencePanel() {
 
       {bestSignal ? (
         <div className="mt-5 grid gap-4 2xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-2xl border border-border bg-surface-1 p-5">
+          <div className="rounded-xl border border-border bg-surface-1 p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="mb-2">
@@ -287,7 +293,7 @@ export function SignalIntelligencePanel() {
                   />
                 </div>
                 <p className="text-[11px] uppercase tracking-[0.22em] text-stone-500">Best current signal</p>
-                <h3 className="mt-1 font-display text-xl font-semibold text-white">
+                <h3 className="mt-1 font-display text-xl font-bold tracking-tight text-white">
                   {bestSignal.match} → {bestSignal.target}
                 </h3>
                 <p className="mt-1 text-sm text-stone-400">
@@ -369,10 +375,15 @@ export function SignalIntelligencePanel() {
               delta={`Δ ${bestSignal.oddsChangePct}%`}
               reference={bestSignal.evidence?.fixtureId ? `#${bestSignal.evidence.fixtureId}` : undefined}
               tone={severityTone(bestSignal.severity) === "danger" ? "accent" : "neutral"}
+              gauge={{
+                threshold: thresholdValue(bestSignal.severity),
+                value: Math.abs(bestSignal.oddsChangePct),
+                max: 30,
+              }}
             />
           </div>
 
-          <div className="rounded-2xl border border-border bg-surface-1 p-5">
+          <div className="rounded-xl border border-border bg-surface-1 p-5">
             <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
               <Fingerprint className="h-4 w-4" />
               TxLINE evidence chain
@@ -411,7 +422,7 @@ export function SignalIntelligencePanel() {
           </div>
         </div>
       ) : (
-        <div className="mt-5 rounded-2xl border border-border bg-surface-3 p-5 text-sm text-stone-400">
+        <div className="mt-5 rounded-xl border border-border bg-surface-3 p-5 text-sm text-stone-400">
           Waiting for live TxLINE signals. Run the agent cycle or wait for the backend refresh interval.
         </div>
       )}

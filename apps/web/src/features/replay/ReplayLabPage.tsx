@@ -53,14 +53,14 @@ export function ReplayLabPage({
           <button
             onClick={onRunAudit}
             disabled={isReplayRunning}
-            className="rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1.5 text-[11px] font-medium text-orange-200 transition hover:border-orange-300/40 hover:bg-orange-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-[11px] font-medium text-accent-200 transition hover:border-accent-300/40 hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isReplayRunning ? "Running..." : "Run audit"}
           </button>
         </div>
 
         {pnl && (
-          <div className="mb-3 rounded-2xl border border-white/10 bg-black/25 p-3.5">
+          <div className="mb-3 rounded-xl border border-border bg-black/25 p-3.5">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
                 Simulated P&amp;L — flat 1 unit per signal
@@ -68,10 +68,10 @@ export function ReplayLabPage({
               <span
                 className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${
                   pnl.netUnits > 0
-                    ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                    ? "border-positive/30 bg-positive/10 text-positive-200"
                     : pnl.netUnits < 0
-                      ? "border-red-400/30 bg-red-400/10 text-red-200"
-                      : "border-white/10 bg-white/5 text-stone-300"
+                      ? "border-danger/30 bg-danger/10 text-danger-200"
+                      : "border-border bg-white/5 text-stone-300"
                 }`}
               >
                 {pnl.netUnits > 0 ? "+" : ""}
@@ -89,7 +89,7 @@ export function ReplayLabPage({
                 <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Total staked</p>
               </div>
               <div>
-                <p className="text-lg font-bold tabular-nums text-amber-200">{pnl.openPositions}</p>
+                <p className="text-lg font-bold tabular-nums text-warning-200">{pnl.openPositions}</p>
                 <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Open positions</p>
               </div>
             </div>
@@ -118,24 +118,24 @@ export function ReplayLabPage({
               </div>
               <div className="rounded-xl bg-black/20 p-2.5">
                 <p className="text-[10px] text-stone-500">Settled checks</p>
-                <p className="mt-1 text-sm font-semibold text-emerald-200">
+                <p className="mt-1 text-sm font-semibold text-positive-200">
                   {(replayBacktest.summary?.correctSignals ?? 0) +
                     (replayBacktest.summary?.incorrectSignals ?? 0)}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-xl border border-red-400/20 bg-red-400/10 p-3">
+            <div className="rounded-xl border border-danger/20 bg-danger/10 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-red-200/70">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-danger-200/70">
                     Failed Continuation Detector
                   </p>
                   <p className="mt-1 text-sm font-semibold text-white">
                     {replayBacktest.summary?.smartMoneyTraps ?? 0} trap pattern(s) detected
                   </p>
                 </div>
-                <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-red-100">
+                <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-danger-100">
                   {replayBacktest.summary?.confirmedTraps ?? 0} rejected •{" "}
                   {replayBacktest.summary?.possibleTraps ?? 0} possible
                 </span>
@@ -159,18 +159,18 @@ export function ReplayLabPage({
                     <button
                       key={`${signal.id ?? "trap"}-${index}`}
                       onClick={() => onSelectSignal(signal)}
-                      className="w-full rounded-lg bg-black/25 p-2 text-left transition hover:bg-red-400/10"
+                      className="w-full rounded-lg bg-black/25 p-2 text-left transition hover:bg-danger/10"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <p className="truncate text-[11px] font-semibold text-white">
                           #{index + 1} · {signal.match ?? signal.matchId ?? "Unknown match"} ·{" "}
                           {getSignalTarget(signal)}
                         </p>
-                        <span className="shrink-0 rounded-full bg-red-400/10 px-2 py-0.5 text-[10px] font-semibold text-red-100">
+                        <span className="shrink-0 rounded-full bg-danger/10 px-2 py-0.5 text-[10px] font-semibold text-danger-100">
                           Reversal score {signal.trapScore ?? 0}
                         </span>
                       </div>
-                      <p className="mt-1 text-[10px] font-semibold text-purple-200">
+                      <p className="mt-1 text-[10px] font-semibold text-proof-200">
                         {(signal.reversalRisk ?? "REVERSAL_SCAN").replaceAll("_", " ")}
                       </p>
                       <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-stone-400">
@@ -186,10 +186,10 @@ export function ReplayLabPage({
 
       {replayBacktest ? (
         <>
-          <Card className="border-emerald-400/15 bg-emerald-400/10 p-3">
+          <Card className="border-positive/15 bg-positive/10 p-3">
             <div className="flex items-center justify-between gap-3 text-[11px]">
               <span className="text-stone-400">Outcome audit</span>
-              <span className="font-medium text-emerald-200">
+              <span className="font-medium text-positive-200">
                 {replayBacktest.summary?.correctSignals ?? 0} confirmed •{" "}
                 {replayBacktest.summary?.incorrectSignals ?? 0} rejected
               </span>
@@ -198,12 +198,12 @@ export function ReplayLabPage({
             <div id="guide-proof-readiness" className="mt-3 rounded-lg bg-black/20 p-2">
               <div className="flex items-center justify-between gap-3 text-[10px]">
                 <span className="text-stone-500">Proof network</span>
-                <span className="font-medium text-sky-200">{replayBacktest.proof?.network ?? "solana-devnet"}</span>
+                <span className="font-medium text-info-200">{replayBacktest.proof?.network ?? "solana-devnet"}</span>
               </div>
 
               <div className="mt-1 flex items-center justify-between gap-3 text-[10px]">
                 <span className="text-stone-500">Anchoring</span>
-                <span className="font-medium text-orange-200">
+                <span className="font-medium text-accent-200">
                   {(replayBacktest.proof?.anchoringStatus ?? "pending_wallet_configuration").replaceAll("_", " ")}
                 </span>
               </div>
@@ -217,15 +217,15 @@ export function ReplayLabPage({
           </Card>
 
           {(replayBacktest.events ?? []).length > 0 && (
-            <Card id="guide-event-correlation" className="border-orange-400/15 bg-orange-400/10 p-3">
+            <Card id="guide-event-correlation" className="border-accent/15 bg-accent/10 p-3">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] text-orange-200/80">Evidence chain</p>
+                  <p className="text-[10px] text-accent-200/80">Evidence chain</p>
                   <p className="text-xs font-semibold text-white">
                     {(replayBacktest.events ?? []).length} supporting event(s)
                   </p>
                 </div>
-                <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-medium text-orange-100">
+                <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-medium text-accent-100">
                   Dual-feed
                 </span>
               </div>
@@ -237,7 +237,7 @@ export function ReplayLabPage({
                       <p className="truncate text-[11px] font-semibold text-stone-100">
                         {event.type?.replaceAll("_", " ").toUpperCase()}
                       </p>
-                      <span className="shrink-0 text-[10px] text-orange-200">{event.minute}'</span>
+                      <span className="shrink-0 text-[10px] text-accent-200">{event.minute}'</span>
                     </div>
                     <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-stone-500">{event.description}</p>
                   </div>
@@ -247,15 +247,15 @@ export function ReplayLabPage({
           )}
 
           {(replayBacktest.councilVotes ?? []).length > 0 && (
-            <Card id="guide-oracle-council" className="border-sky-400/15 bg-sky-400/10 p-3">
+            <Card id="guide-oracle-council" className="border-info/15 bg-info/10 p-3">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] text-sky-200/80">Signal review council</p>
+                  <p className="text-[10px] text-info-200/80">Signal review council</p>
                   <p className="text-xs font-semibold text-white">
                     {(replayBacktest.councilVotes ?? [])[0]?.decision?.toUpperCase() ?? "PENDING"}
                   </p>
                 </div>
-                <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-medium text-sky-100">
+                <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-medium text-info-100">
                   {(replayBacktest.councilVotes ?? [])[0]?.approvals ?? 0}/
                   {(replayBacktest.councilVotes ?? [])[0]?.totalAgents ?? 3} approvals
                 </span>
@@ -269,10 +269,10 @@ export function ReplayLabPage({
                       <span
                         className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${
                           vote.vote === "approve"
-                            ? "bg-emerald-400/10 text-emerald-200"
+                            ? "bg-positive/10 text-positive-200"
                             : vote.vote === "reject"
-                              ? "bg-red-400/10 text-red-200"
-                              : "bg-orange-400/10 text-orange-200"
+                              ? "bg-danger/10 text-danger-200"
+                              : "bg-accent/10 text-accent-200"
                         }`}
                       >
                         {vote.vote}

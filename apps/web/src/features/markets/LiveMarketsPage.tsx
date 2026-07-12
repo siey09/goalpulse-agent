@@ -113,14 +113,14 @@ export function LiveMarketsPage({
 }: LiveMarketsPageProps) {
   return (
     <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
-      <Card id="guide-selected-match" className="overflow-hidden border-0 bg-gradient-to-br from-orange-400 to-[#2a1810] p-4 text-white 2xl:col-span-2">
-        <p className="text-sm text-orange-50/80">Selected match</p>
-        <h2 className="mt-1 text-xl font-semibold leading-tight">
+      <Card id="guide-selected-match" className="overflow-hidden border-0 bg-gradient-to-br from-accent to-canvas p-4 text-white 2xl:col-span-2">
+        <p className="text-sm text-accent-100/80">Selected match</p>
+        <h2 className="mt-1 font-display text-xl font-bold leading-tight tracking-tight">
           {selectedMatch ? `${selectedMatch.homeTeam} vs ${selectedMatch.awayTeam}` : "No match yet"}
         </h2>
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div className="rounded-2xl bg-[#17100c]/80 p-3">
+          <div className="rounded-xl bg-black/25 p-3">
             <div className="flex items-center justify-between text-sm text-stone-300">
               <span>{selectedMatch?.homeTeam ?? "Home"}</span>
               <span className="text-xl font-semibold text-white">
@@ -146,7 +146,7 @@ export function LiveMarketsPage({
             </div>
           </div>
 
-          <div className="rounded-2xl bg-[#17100c]/75 p-3">
+          <div className="rounded-xl bg-black/20 p-3">
             <div className="mb-2 flex items-center justify-between">
               <div>
                 <p className="text-[11px] text-white/60">Market pressure</p>
@@ -163,7 +163,7 @@ export function LiveMarketsPage({
                 </div>
                 <div className="h-2 rounded-full bg-white/15">
                   <div
-                    className="h-2 rounded-full bg-orange-200"
+                    className="h-2 rounded-full bg-accent-200"
                     style={{ width: `${selectedMatchMarketPressure.homePressure}%` }}
                   />
                 </div>
@@ -175,7 +175,7 @@ export function LiveMarketsPage({
                 </div>
                 <div className="h-2 rounded-full bg-white/15">
                   <div
-                    className="h-2 rounded-full bg-emerald-300"
+                    className="h-2 rounded-full bg-positive-300"
                     style={{ width: `${selectedMatchMarketPressure.awayPressure}%` }}
                   />
                 </div>
@@ -190,7 +190,7 @@ export function LiveMarketsPage({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs text-stone-400">Selected market</p>
-              <span className="rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-300">
+              <span className="rounded-full border border-border bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-300">
                 {isReplayStreamMode
                   ? "Demo replay"
                   : selectedMatch?.status === "scheduled"
@@ -206,7 +206,7 @@ export function LiveMarketsPage({
               <p className="text-3xl font-semibold tracking-tight text-white">
                 {formatOdds(chartData[chartData.length - 1]?.home)}
               </p>
-              <span className="mb-1 rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
+              <span className="mb-1 rounded-full bg-positive/10 px-2.5 py-1 text-xs font-medium text-positive-300">
                 {isReplayStreamMode
                   ? "Demo replay tracked odds"
                   : selectedMatch?.status === "scheduled"
@@ -226,7 +226,7 @@ export function LiveMarketsPage({
             </p>
           </div>
 
-          <div className="max-w-[260px] rounded-2xl border border-white/10 bg-black/25 px-3 py-2 text-right">
+          <div className="max-w-[260px] rounded-xl border border-border bg-black/25 px-3 py-2 text-right">
             <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Timeline view</p>
             <p className="mt-1 text-xs font-semibold text-white">Last {chartData.length} TxLINE snapshots</p>
             <p className="mt-1 text-[10px] leading-4 text-stone-500">
@@ -234,7 +234,7 @@ export function LiveMarketsPage({
             </p>
             <p
               className={`mt-2 text-[10px] font-semibold ${
-                isReplayStreamMode ? "text-sky-200" : isOddsStreamLive ? "text-emerald-200" : "text-amber-200"
+                isReplayStreamMode ? "text-info-200" : isOddsStreamLive ? "text-positive-200" : "text-warning-200"
               }`}
             >
               {isReplayStreamMode ? "DEMO REPLAY STREAM" : isOddsStreamLive ? "DATA STREAM ACTIVE" : "CONNECTING DATA STREAM"}
@@ -243,7 +243,7 @@ export function LiveMarketsPage({
             {health?.liveStream && (
               <p
                 className={`mt-2 text-[10px] font-semibold ${
-                  health.liveStream.connected ? "text-emerald-200" : "text-stone-500"
+                  health.liveStream.connected ? "text-positive-200" : "text-stone-500"
                 }`}
                 title={health.liveStream.lastError ?? undefined}
               >
@@ -257,14 +257,14 @@ export function LiveMarketsPage({
               onClick={onToggleReplayStreamMode}
               className={`mt-3 w-full rounded-xl border px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] transition ${
                 isReplayStreamMode
-                  ? "border-sky-400/40 bg-sky-500/15 text-sky-100"
-                  : "border-white/10 bg-white/5 text-stone-300 hover:border-white/20"
+                  ? "border-info/40 bg-info-500/15 text-info-100"
+                  : "border-border bg-white/5 text-stone-300 hover:border-white/20"
               }`}
             >
               {isReplayStreamMode ? "Stop demo replay" : "Start demo replay"}
             </button>
             {isReplayStreamMode && (
-              <p className="mt-2 rounded-xl border border-sky-400/20 bg-sky-500/10 px-3 py-2 text-[10px] leading-4 text-sky-100">
+              <p className="mt-2 rounded-xl border border-info/20 bg-info-500/10 px-3 py-2 text-[10px] leading-4 text-info-100">
                 {replayStreamProgress || "Demo replay using saved real TxLINE snapshots"}
               </p>
             )}
@@ -272,7 +272,7 @@ export function LiveMarketsPage({
         </div>
 
         <div className="mb-3 space-y-2">
-          <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3.5 transition-all duration-500 ${chartReadout.severity.cardClass}`}>
+          <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5 transition-all duration-500 ${chartReadout.severity.cardClass}`}>
             <div className="flex items-center gap-3">
               <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/20">
                 {(chartReadout.severity.tier === "Sharp move" || chartReadout.severity.tier === "Momentum") && (
@@ -302,13 +302,13 @@ export function LiveMarketsPage({
           </p>
 
           <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-2xl border border-orange-400/15 bg-gradient-to-br from-orange-400/10 to-black/30 p-3">
+            <div className="rounded-xl border border-accent/15 bg-gradient-to-br from-accent/10 to-black/30 p-3">
               <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">{selectedMatch?.homeTeam ?? "Home"} odds now</p>
-              <p className="mt-2 text-2xl font-bold text-orange-200">{chartReadout.homeCurrent}</p>
+              <p className="mt-2 text-2xl font-bold text-accent-200">{chartReadout.homeCurrent}</p>
             </div>
-            <div className="rounded-2xl border border-emerald-400/15 bg-gradient-to-br from-emerald-400/10 to-black/30 p-3">
+            <div className="rounded-xl border border-positive/15 bg-gradient-to-br from-positive/10 to-black/30 p-3">
               <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">{selectedMatch?.awayTeam ?? "Away"} odds now</p>
-              <p className="mt-2 text-2xl font-bold text-emerald-200">{chartReadout.awayCurrent}</p>
+              <p className="mt-2 text-2xl font-bold text-positive-200">{chartReadout.awayCurrent}</p>
             </div>
           </div>
           <p className="px-1 text-[10px] text-stone-500">Decimal odds — the lower number is the side the market currently favors.</p>
@@ -322,7 +322,7 @@ export function LiveMarketsPage({
             </p>
           </div>
         </div>
-        <div className="h-[285px] w-full rounded-[22px] bg-black/18 p-2">
+        <div className="h-[285px] w-full rounded-xl bg-black/18 p-2">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 8, right: 18, left: 0, bottom: 4 }}>
@@ -334,11 +334,11 @@ export function LiveMarketsPage({
                       line, not discrete bars. */}
                   <pattern id="lmPixelHome" width="8" height="8" patternUnits="userSpaceOnUse">
                     <rect width="8" height="8" fill="transparent" />
-                    <rect width="4" height="4" fill="#fb923c" fillOpacity={0.65} />
+                    <rect width="4" height="4" fill="#ffb020" fillOpacity={0.65} />
                   </pattern>
                   <pattern id="lmPixelAway" width="8" height="8" patternUnits="userSpaceOnUse">
                     <rect width="8" height="8" fill="transparent" />
-                    <rect width="4" height="4" fill="#34d399" fillOpacity={0.45} />
+                    <rect width="4" height="4" fill="#2fd6b4" fillOpacity={0.45} />
                   </pattern>
                 </defs>
 
@@ -368,16 +368,16 @@ export function LiveMarketsPage({
                     if (!point) return null;
 
                     return (
-                      <div className="w-[240px] rounded-2xl border border-white/10 bg-[#11100f]/95 p-3 text-xs text-stone-100 shadow-2xl shadow-black/50">
+                      <div className="w-[240px] rounded-xl border border-border bg-surface-1/95 p-3 text-xs text-stone-100 shadow-2xl shadow-black/50">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className="text-[10px] uppercase tracking-[0.18em] text-sky-200/70">
+                            <p className="text-[10px] uppercase tracking-[0.18em] text-info-200/70">
                               {point.snapshotLabel ?? "TxLINE snapshot"}
                             </p>
                             <p className="mt-1 text-[11px] text-stone-400">{point.timelineLabel ?? "Odds history point"}</p>
                           </div>
                           {marker && (
-                            <span className="rounded-full bg-orange-400/15 px-2 py-1 text-[10px] font-semibold text-orange-100">
+                            <span className="rounded-full bg-accent/15 px-2 py-1 text-[10px] font-semibold text-accent-100">
                               Signal
                             </span>
                           )}
@@ -386,21 +386,21 @@ export function LiveMarketsPage({
                         <div className="mt-3 grid gap-1.5">
                           <div className="flex justify-between rounded-xl bg-white/5 px-3 py-2">
                             <span className="text-stone-400">{selectedMatch?.homeTeam ?? "Home"}</span>
-                            <span className="font-semibold text-orange-200">{formatOdds(point.home)}</span>
+                            <span className="font-semibold text-accent-200">{formatOdds(point.home)}</span>
                           </div>
                           <div className="flex justify-between rounded-xl bg-white/5 px-3 py-2">
                             <span className="text-stone-400">{selectedMatch?.awayTeam ?? "Away"}</span>
-                            <span className="font-semibold text-emerald-200">{formatOdds(point.away)}</span>
+                            <span className="font-semibold text-positive-200">{formatOdds(point.away)}</span>
                           </div>
                         </div>
 
-                        <p className="mt-2 rounded-xl bg-sky-400/10 px-3 py-2 text-[11px] leading-5 text-sky-100">
+                        <p className="mt-2 rounded-xl bg-info/10 px-3 py-2 text-[11px] leading-5 text-info-100">
                           Lower odds = stronger market confidence.
                         </p>
 
                         {marker && (
-                          <div className="mt-2 rounded-xl border border-orange-400/20 bg-orange-400/10 px-3 py-2 text-[11px] leading-5 text-orange-50/90">
-                            <p className="font-semibold text-orange-100">{marker.label}</p>
+                          <div className="mt-2 rounded-xl border border-accent/20 bg-accent/10 px-3 py-2 text-[11px] leading-5 text-accent-100/90">
+                            <p className="font-semibold text-accent-100">{marker.label}</p>
                             <p>Target: {marker.target ?? "Tracked side"}</p>
                             <p>
                               Odds: {formatOdds(marker.oddsBefore)} → {formatOdds(marker.oddsAfter)}
@@ -408,7 +408,7 @@ export function LiveMarketsPage({
                             <p>Move: {formatOddsChange(marker.oddsChangePct)}</p>
                             <p>Confidence: {marker.confidenceScore != null ? `${marker.confidenceScore}%` : "—"}</p>
                             <p>Field pressure: {marker.fieldPressureScore != null ? marker.fieldPressureScore : "—"}</p>
-                            {marker.explanation && <p className="mt-1 text-orange-50/80">{marker.explanation}</p>}
+                            {marker.explanation && <p className="mt-1 text-accent-100/80">{marker.explanation}</p>}
                           </div>
                         )}
                       </div>
@@ -419,7 +419,7 @@ export function LiveMarketsPage({
                 <Area
                   type="monotone"
                   dataKey="home"
-                  stroke="#fb923c"
+                  stroke="#ffb020"
                   strokeWidth={2.8}
                   fill="url(#lmPixelHome)"
                   dot={false}
@@ -432,7 +432,7 @@ export function LiveMarketsPage({
                 <Area
                   type="monotone"
                   dataKey="away"
-                  stroke="#34d399"
+                  stroke="#2fd6b4"
                   strokeWidth={2}
                   fill="url(#lmPixelAway)"
                   dot={false}
@@ -450,10 +450,10 @@ export function LiveMarketsPage({
                       x={marker.x}
                       y={marker.y}
                       r={markerStyle.radius}
-                      stroke="#fff7ed"
+                      stroke="#ffecc7"
                       strokeWidth={2}
                       fill={markerStyle.fill}
-                      label={{ value: "Signal", position: "top", fill: "#fed7aa", fontSize: 10 }}
+                      label={{ value: "Signal", position: "top", fill: "#ffd98f", fontSize: 10 }}
                       onClick={() => onSelectSignalId(marker.id)}
                       style={{ cursor: "pointer" }}
                     />
@@ -472,7 +472,7 @@ export function LiveMarketsPage({
           <div className="flex items-center gap-2">
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/8">
               <div
-                className="h-2 rounded-full bg-gradient-to-r from-orange-500 to-emerald-400 transition-all duration-700 ease-out"
+                className="h-2 rounded-full bg-gradient-to-r from-accent to-positive transition-all duration-700 ease-out"
                 style={{ width: isReplayStreamMode ? `${streamProgressPercent}%` : isOddsStreamLive ? "100%" : "8%" }}
               />
             </div>
@@ -488,23 +488,23 @@ export function LiveMarketsPage({
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 rounded-xl bg-black/15 px-3 py-2 text-[10px] text-stone-400">
             <div className="flex flex-wrap items-center gap-3">
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-orange-400" />
+                <span className="h-2 w-2 rounded-full bg-accent" />
                 {selectedMatch?.homeTeam ?? "Home"} odds
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                <span className="h-2 w-2 rounded-full bg-positive" />
                 {selectedMatch?.awayTeam ?? "Away"} odds
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full border border-orange-100 bg-[#f87171]" />
+                <span className="h-2 w-2 rounded-full border border-accent-100 bg-danger" />
                 High severity
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full border border-orange-100 bg-[#fbbf24]" />
+                <span className="h-2 w-2 rounded-full border border-accent-100 bg-warning" />
                 Medium severity
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full border border-orange-100 bg-[#94a3b8]" />
+                <span className="h-2 w-2 rounded-full border border-accent-100 bg-stone-400" />
                 Low severity
               </span>
             </div>
@@ -519,22 +519,22 @@ export function LiveMarketsPage({
         <div className="mb-3 flex items-center justify-between">
           <div>
             <p className="text-xs text-stone-500">Market feed</p>
-            <h2 className="text-xl font-semibold">Market board</h2>
+            <h2 className="font-display text-xl font-bold tracking-tight">Market board</h2>
           </div>
         </div>
 
-        <p className="mb-3 rounded-2xl border border-white/10 bg-black/25 px-3 py-2 text-[11px] leading-5 text-stone-400">
+        <p className="mb-3 rounded-xl border border-border bg-black/25 px-3 py-2 text-[11px] leading-5 text-stone-400">
           Odds shown here are market prices, not match scores. Upcoming matches show pre-match odds before kickoff.
         </p>
 
-        <div className="mb-3 grid grid-cols-4 gap-1.5 rounded-2xl bg-black/20 p-1">
+        <div className="mb-3 grid grid-cols-4 gap-1.5 rounded-xl bg-black/20 p-1">
           {(["all", "live", "scheduled", "finished"] as const).map((status) => (
             <button
               key={status}
               onClick={() => onChangeMatchStatusFilter(status)}
               className={`rounded-xl px-2 py-2 text-[10px] font-semibold transition ${
                 matchStatusFilter === status
-                  ? "bg-orange-400/15 text-orange-200"
+                  ? "bg-accent/15 text-accent-200"
                   : "text-stone-500 hover:bg-white/6 hover:text-stone-200"
               }`}
             >
@@ -548,7 +548,7 @@ export function LiveMarketsPage({
 
         <div className="space-y-2">
           {matches.length === 0 && (
-            <div className="rounded-2xl bg-black/25 p-4 text-sm text-stone-500">No matches found</div>
+            <div className="rounded-xl bg-black/25 p-4 text-sm text-stone-500">No matches found</div>
           )}
           {matches.map((match) => {
             const odds = getOdds(match);
@@ -559,7 +559,7 @@ export function LiveMarketsPage({
                 onClick={() => onSelectMatch(match.id)}
                 className={`w-full rounded-xl border p-2.5 text-left transition ${
                   selectedMatchId === match.id
-                    ? "border-orange-400/30 bg-orange-400/10"
+                    ? "border-accent/30 bg-accent/10"
                     : "border-white/8 bg-black/20 hover:bg-white/6"
                 }`}
               >
@@ -589,7 +589,7 @@ export function LiveMarketsPage({
                 <div className="mt-2 grid grid-cols-3 gap-1.5 text-center text-[10px]">
                   <div className="rounded-lg bg-black/25 px-2 py-1.5">
                     <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Home" : "Home"}</p>
-                    <p className="font-semibold text-orange-200">{formatOdds(odds.homeOdds)}</p>
+                    <p className="font-semibold text-accent-200">{formatOdds(odds.homeOdds)}</p>
                   </div>
                   <div className="rounded-lg bg-black/25 px-2 py-1.5">
                     <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Draw" : "Draw"}</p>
@@ -597,7 +597,7 @@ export function LiveMarketsPage({
                   </div>
                   <div className="rounded-lg bg-black/25 px-2 py-1.5">
                     <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Away" : "Away"}</p>
-                    <p className="font-semibold text-emerald-200">{formatOdds(odds.awayOdds)}</p>
+                    <p className="font-semibold text-positive-200">{formatOdds(odds.awayOdds)}</p>
                   </div>
                 </div>
               </button>

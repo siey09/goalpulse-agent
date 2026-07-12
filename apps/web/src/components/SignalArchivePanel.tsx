@@ -159,7 +159,7 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
           <p className="text-xs text-stone-500">Permanent history</p>
-          <h2 className="text-xl font-semibold text-white">Full tournament archive</h2>
+          <h2 className="font-display text-xl font-bold tracking-tight text-white">Full tournament archive</h2>
         </div>
 
         <StatusBadge

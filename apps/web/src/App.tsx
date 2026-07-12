@@ -226,7 +226,7 @@ function DetailRow({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl bg-black/25 p-3">
+    <div className="rounded-xl bg-black/25 p-3">
       <p className="text-[11px] text-stone-500">{label}</p>
       <p className="mt-1 text-sm font-semibold text-stone-100">{value}</p>
     </div>
@@ -835,9 +835,9 @@ function App() {
     "z-[60]",
     "scale-[1.01]",
     "ring-2",
-    "ring-orange-400/70",
+    "ring-accent/70",
     "shadow-2xl",
-    "shadow-orange-500/20",
+    "shadow-accent/20",
   ];
   function clearGuideSpotlight() {
     document.querySelectorAll("[data-guide-active='true']").forEach((element) => {
@@ -855,8 +855,8 @@ function App() {
       const className = `${element.className}`;
       const isGuidePanel = Boolean(element.closest("[data-guide-panel='true']"));
       const isCardLike =
-        className.includes("rounded-[24px]") ||
-        className.includes("rounded-[28px]") ||
+        className.includes("rounded-2xl") ||
+        className.includes("rounded-2xl") ||
         className.includes("rounded-xl") ||
         element.tagName.toLowerCase() === "section" ||
         element.tagName.toLowerCase() === "aside";
@@ -1528,8 +1528,8 @@ function App() {
           tier: "Waiting",
           dotClass: "bg-stone-500",
           textClass: "text-stone-400",
-          badgeClass: "border-white/10 bg-white/5 text-stone-400",
-          cardClass: "border-white/10 bg-white/5",
+          badgeClass: "border-border bg-white/5 text-stone-400",
+          cardClass: "border-border bg-white/5",
         },
         verdict: "Select a match to see today's market verdict",
       };
@@ -1561,33 +1561,33 @@ function App() {
       dominantMove >= 15
         ? {
             tier: "Sharp move",
-            dotClass: "bg-red-400",
-            textClass: "text-red-200",
-            badgeClass: "border-red-400/30 bg-red-400/10 text-red-100",
-            cardClass: "border-red-400/20 bg-red-400/10",
+            dotClass: "bg-danger",
+            textClass: "text-danger-200",
+            badgeClass: "border-danger/30 bg-danger/10 text-danger-100",
+            cardClass: "border-danger/20 bg-danger/10",
           }
         : dominantMove >= 8
           ? {
               tier: "Momentum",
-              dotClass: "bg-orange-400",
-              textClass: "text-orange-200",
-              badgeClass: "border-orange-400/30 bg-orange-400/10 text-orange-100",
-              cardClass: "border-orange-400/20 bg-orange-400/10",
+              dotClass: "bg-accent",
+              textClass: "text-accent-200",
+              badgeClass: "border-accent/30 bg-accent/10 text-accent-100",
+              cardClass: "border-accent/20 bg-accent/10",
             }
           : dominantMove >= 4
             ? {
                 tier: "Building",
-                dotClass: "bg-amber-400",
-                textClass: "text-amber-200",
-                badgeClass: "border-amber-400/30 bg-amber-400/10 text-amber-100",
-                cardClass: "border-amber-400/20 bg-amber-400/10",
+                dotClass: "bg-warning",
+                textClass: "text-warning-200",
+                badgeClass: "border-warning/30 bg-warning/10 text-warning-100",
+                cardClass: "border-warning/20 bg-warning/10",
               }
             : {
                 tier: "Balanced",
                 dotClass: "bg-stone-400",
                 textClass: "text-stone-300",
-                badgeClass: "border-white/10 bg-white/5 text-stone-300",
-                cardClass: "border-white/10 bg-white/5",
+                badgeClass: "border-border bg-white/5 text-stone-300",
+                cardClass: "border-border bg-white/5",
               };
 
     const favoredSide = homeEnd <= awayEnd ? selectedMatch.homeTeam ?? "Home" : selectedMatch.awayTeam ?? "Away";
@@ -1790,7 +1790,7 @@ function App() {
         >
           <Suspense
             fallback={
-              <div className="rounded-2xl border border-border bg-surface-2 p-5 text-sm text-stone-400">
+              <div className="rounded-xl border border-border bg-surface-2 p-5 text-sm text-stone-400">
                 Loading...
               </div>
             }
@@ -1823,7 +1823,7 @@ function App() {
 
         <button
           onClick={startPreviewGuideTour}
-          className="fixed bottom-4 right-4 z-[80] rounded-full border border-orange-400/30 bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-orange-500/25 transition hover:bg-orange-400"
+          className="fixed bottom-4 right-4 z-[80] rounded-full border border-accent/30 bg-accent px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-accent/25 transition hover:bg-accent"
         >
           Guide
         </button>
@@ -1831,7 +1831,7 @@ function App() {
         {isPreviewGuideMode && previewGuideStepData && (
           <div
             data-guide-panel="true"
-            className="fixed z-[70] w-[340px] rounded-[26px] border border-orange-400/30 bg-[#15100c]/95 p-4 shadow-2xl shadow-orange-500/20 backdrop-blur-xl ring-1 ring-white/10 transition-[top,left,transform] duration-500"
+            className="fixed z-[70] w-[340px] rounded-2xl border border-accent/30 bg-[#10161d]/95 p-4 shadow-2xl shadow-accent/20 backdrop-blur-xl ring-1 ring-white/10 transition-[top,left,transform] duration-500"
             style={{
               top: previewGuidePanelPosition.top,
               left: previewGuidePanelPosition.left,
@@ -1839,15 +1839,15 @@ function App() {
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.24em] text-orange-200/70">Guided tour</p>
+                <p className="text-[10px] uppercase tracking-[0.24em] text-accent-200/70">Guided tour</p>
                 <h2 className="mt-1 text-sm font-semibold text-white">GoalPulse guided tour</h2>
               </div>
-              <span className="rounded-full bg-orange-400/10 px-2.5 py-1 text-[10px] font-semibold text-orange-200">
+              <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-semibold text-accent-200">
                 {previewGuideStep + 1}/{GUIDE_STEPS.length}
               </span>
             </div>
 
-            <div className="rounded-2xl border border-orange-400/15 bg-black/30 p-3 shadow-inner">
+            <div className="rounded-xl border border-accent/15 bg-black/30 p-3 shadow-inner">
               <p className="text-sm font-semibold text-white">{previewGuideStepData.title}</p>
               <p className="mt-1 text-[11px] leading-5 text-stone-400">{previewGuideStepData.detail}</p>
             </div>
@@ -1856,7 +1856,7 @@ function App() {
               {GUIDE_STEPS.map((step, index) => (
                 <div
                   key={step.title}
-                  className={`h-1.5 rounded-full ${index <= previewGuideStep ? "bg-orange-400" : "bg-white/10"}`}
+                  className={`h-1.5 rounded-full ${index <= previewGuideStep ? "bg-accent" : "bg-white/10"}`}
                 />
               ))}
             </div>
@@ -1864,13 +1864,13 @@ function App() {
             <div className="mt-3 grid grid-cols-2 gap-2">
               <button
                 onClick={skipPreviewGuideTour}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-medium text-stone-300 transition hover:bg-white/10 hover:text-white"
+                className="rounded-full border border-border bg-white/5 px-3 py-2 text-[11px] font-medium text-stone-300 transition hover:bg-white/10 hover:text-white"
               >
                 Skip
               </button>
               <button
                 onClick={nextPreviewGuideStep}
-                className="rounded-full border border-orange-400/30 bg-orange-500 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-orange-400"
+                className="rounded-full border border-accent/30 bg-accent px-3 py-2 text-[11px] font-bold text-white transition hover:bg-accent"
               >
                 {previewGuideStep + 1 >= GUIDE_STEPS.length ? "Finish" : "Next"}
               </button>
@@ -1882,7 +1882,7 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0b0806] p-3 text-stone-100">
+    <main className="min-h-screen bg-[#0a0e13] p-3 text-stone-100">
       <AnalystChatWidget
         isOpen={isAnalystChatOpen}
         onToggleOpen={() => setIsAnalystChatOpen((isOpen) => !isOpen)}
@@ -1899,7 +1899,7 @@ function App() {
 
       <button
         onClick={startGuideTour}
-        className="fixed bottom-4 right-4 z-[80] rounded-full border border-orange-400/30 bg-orange-500 px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-orange-500/25 transition hover:bg-orange-400"
+        className="fixed bottom-4 right-4 z-[80] rounded-full border border-accent/30 bg-accent px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-accent/25 transition hover:bg-accent"
       >
         Guide
       </button>
@@ -1907,7 +1907,7 @@ function App() {
       {isJudgeMode && (
         <div
           data-guide-panel="true"
-          className="fixed z-[70] w-[340px] rounded-[26px] border border-orange-400/30 bg-[#15100c]/95 p-4 shadow-2xl shadow-orange-500/20 backdrop-blur-xl ring-1 ring-white/10 transition-[top,left,transform] duration-500"
+          className="fixed z-[70] w-[340px] rounded-2xl border border-accent/30 bg-[#10161d]/95 p-4 shadow-2xl shadow-accent/20 backdrop-blur-xl ring-1 ring-white/10 transition-[top,left,transform] duration-500"
           style={{
             top: guidePanelPosition.top,
             left: guidePanelPosition.left,
@@ -1915,19 +1915,19 @@ function App() {
         >
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.24em] text-orange-200/70">
+              <p className="text-[10px] uppercase tracking-[0.24em] text-accent-200/70">
                 Guided tour
               </p>
               <h2 className="mt-1 text-sm font-semibold text-white">
                 GoalPulse guided tour
               </h2>
             </div>
-            <span className="rounded-full bg-orange-400/10 px-2.5 py-1 text-[10px] font-semibold text-orange-200">
+            <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-semibold text-accent-200">
               {judgeStep + 1}/{judgeDemoSteps.length}
             </span>
           </div>
 
-          <div className="rounded-2xl border border-orange-400/15 bg-black/30 p-3 shadow-inner">
+          <div className="rounded-xl border border-accent/15 bg-black/30 p-3 shadow-inner">
             <p className="text-sm font-semibold text-white">
               {judgeDemoSteps[judgeStep]?.title}
             </p>
@@ -1941,7 +1941,7 @@ function App() {
               <div
                 key={step.title}
                 className={`h-1.5 rounded-full ${
-                  index <= judgeStep ? "bg-orange-400" : "bg-white/10"
+                  index <= judgeStep ? "bg-accent" : "bg-white/10"
                 }`}
               />
             ))}
@@ -1950,13 +1950,13 @@ function App() {
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               onClick={skipGuideTour}
-              className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-medium text-stone-300 transition hover:bg-white/10 hover:text-white"
+              className="rounded-full border border-border bg-white/5 px-3 py-2 text-[11px] font-medium text-stone-300 transition hover:bg-white/10 hover:text-white"
             >
               Skip
             </button>
             <button
               onClick={nextGuideStep}
-              className="rounded-full border border-orange-400/30 bg-orange-500 px-3 py-2 text-[11px] font-bold text-white transition hover:bg-orange-400"
+              className="rounded-full border border-accent/30 bg-accent px-3 py-2 text-[11px] font-bold text-white transition hover:bg-accent"
             >
               {judgeStep + 1 >= judgeDemoSteps.length ? "Finish" : "Next"}
             </button>
@@ -1964,8 +1964,8 @@ function App() {
         </div>
       )}
       <div className="mx-auto grid max-w-[1380px] grid-cols-[70px_minmax(0,1fr)_300px] gap-4">
-        <aside className="sticky top-3 h-[calc(100vh-24px)] rounded-[26px] border border-white/10 bg-[#15100c] p-3">
-          <div className="mb-7 flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500 text-lg font-black text-[#07100b]">
+        <aside className="sticky top-3 h-[calc(100vh-24px)] rounded-2xl border border-border bg-[#10161d] p-3">
+          <div className="mb-7 flex h-11 w-11 items-center justify-center rounded-xl bg-positive-500 text-lg font-black text-[#0a0e13]">
             GP
           </div>
 
@@ -1973,9 +1973,9 @@ function App() {
             <button
               onClick={() => goToSection("overview")}
               title="Overview"
-              className={`flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-300 ${
+              className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-300 ${
                 activeSection === "overview"
-                  ? "bg-orange-500 text-white scale-105 shadow-lg shadow-orange-500/30"
+                  ? "bg-accent text-white scale-105 shadow-lg shadow-accent/30"
                   : "text-stone-500 hover:bg-white/8 hover:text-white"
               }`}
             >
@@ -1985,9 +1985,9 @@ function App() {
             <button
               onClick={() => goToSection("markets")}
               title="Markets"
-              className={`flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-300 ${
+              className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-300 ${
                 activeSection === "markets"
-                  ? "bg-orange-500 text-white scale-105 shadow-lg shadow-orange-500/30"
+                  ? "bg-accent text-white scale-105 shadow-lg shadow-accent/30"
                   : "text-stone-500 hover:bg-white/8 hover:text-white"
               }`}
             >
@@ -1997,9 +1997,9 @@ function App() {
             <button
               onClick={() => goToSection("agent")}
               title="Agent"
-              className={`flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-300 ${
+              className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-300 ${
                 activeSection === "agent"
-                  ? "bg-orange-500 text-white scale-105 shadow-lg shadow-orange-500/30"
+                  ? "bg-accent text-white scale-105 shadow-lg shadow-accent/30"
                   : "text-stone-500 hover:bg-white/8 hover:text-white"
               }`}
             >
@@ -2009,9 +2009,9 @@ function App() {
             <button
               onClick={() => goToSection("compliance")}
               title="Compliance"
-              className={`flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-300 ${
+              className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-300 ${
                 activeSection === "compliance"
-                  ? "bg-orange-500 text-white scale-105 shadow-lg shadow-orange-500/30"
+                  ? "bg-accent text-white scale-105 shadow-lg shadow-accent/30"
                   : "text-stone-500 hover:bg-white/8 hover:text-white"
               }`}
             >
@@ -2031,7 +2031,7 @@ function App() {
                     document.getElementById(stage.id)?.scrollIntoView({ behavior: "smooth", block: "start" })
                   }
                   title={`${index + 1}. ${stage.label}`}
-                  className={`relative flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-300 ${
+                  className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-300 ${
                     isActive
                       ? "bg-accent text-white scale-105 shadow-lg shadow-accent/30"
                       : "text-stone-500 hover:bg-white/8 hover:text-white"
@@ -2050,7 +2050,7 @@ function App() {
             <button
               onClick={loadDashboard}
               title="Refresh data"
-              className="flex h-11 w-11 items-center justify-center rounded-2xl text-stone-500 hover:bg-white/8 hover:text-white"
+              className="flex h-11 w-11 items-center justify-center rounded-xl text-stone-500 hover:bg-white/8 hover:text-white"
             >
               <RefreshCw className="h-5 w-5" />
             </button>
@@ -2058,8 +2058,8 @@ function App() {
         </aside>
 
         <section className="space-y-4">
-          <header className="flex items-center justify-between rounded-[28px] border border-white/10 bg-[#15100c] px-5 py-4">
-            <div className="flex min-w-[320px] items-center gap-3 rounded-2xl bg-black/25 px-4 py-3 text-sm text-stone-400">
+          <header className="flex items-center justify-between rounded-2xl border border-border bg-[#10161d] px-5 py-4">
+            <div className="flex min-w-[320px] items-center gap-3 rounded-xl bg-black/25 px-4 py-3 text-sm text-stone-400">
               <Search className="h-4 w-4" />
               <input
                 value={searchTerm}
@@ -2070,11 +2070,11 @@ function App() {
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-medium text-emerald-200">
+              <span className="rounded-full border border-positive/20 bg-positive/10 px-3 py-2 text-xs font-medium text-positive-200">
                 {isConnecting ? "Connecting agent" : "Agent running"}
               </span>
 
-              <span className="rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-2 text-xs font-medium text-orange-200">
+              <span className="rounded-full border border-accent/20 bg-accent/10 px-3 py-2 text-xs font-medium text-accent-200">
                 {isConnecting
                   ? "Waking backend"
                   : health === null
@@ -2083,20 +2083,20 @@ function App() {
                       ? "Sandbox feed"
                       : "Real TxLINE feed"}
               </span>
-              <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-2 text-xs font-medium text-sky-200">
+              <span className="rounded-full border border-info/20 bg-info/10 px-3 py-2 text-xs font-medium text-info-200">
                 TxLINE-ready
               </span>
 
-              <span className="rounded-full border border-white/10 bg-black/25 px-3 py-2 text-xs text-stone-400">
+              <span className="rounded-full border border-border bg-black/25 px-3 py-2 text-xs text-stone-400">
                 Updated {lastRefresh || "waiting"}
               </span>
 
               <div className="relative">
                 <button
                   onClick={() => setIsProfileOpen((value) => !value)}
-                  className="flex items-center gap-3 rounded-2xl bg-black/25 px-3 py-2"
+                  className="flex items-center gap-3 rounded-xl bg-black/25 px-3 py-2"
                 >
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-orange-300 to-emerald-400" />
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-accent-300 to-positive" />
                   <div className="text-left">
                     <p className="text-xs font-semibold text-white">GoalPulse</p>
                     <p className="text-[11px] text-stone-500">Hackathon build</p>
@@ -2105,25 +2105,25 @@ function App() {
                 </button>
 
                 {isProfileOpen && (
-                  <div className="absolute right-0 top-12 z-20 w-56 rounded-2xl border border-white/10 bg-[#15100c] p-3 shadow-2xl shadow-black/40">
+                  <div className="absolute right-0 top-12 z-20 w-56 rounded-xl border border-border bg-[#10161d] p-3 shadow-2xl shadow-black/40">
                     <p className="text-xs font-semibold text-white">GoalPulse Agent</p>
                     <p className="mt-1 text-[11px] leading-4 text-stone-500">
                       TxLINE-ready autonomous odds intelligence dashboard.
                     </p>
-                    <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-black/20 p-3 text-[11px]">
+                    <div className="mt-3 space-y-2 rounded-xl border border-border bg-black/20 p-3 text-[11px]">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-stone-500">Feed mode</span>
-                        <span className="font-medium text-orange-200">
+                        <span className="font-medium text-accent-200">
                           {health?.useSimulatedFeed ? "Sandbox" : "Live"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-stone-500">Adapter</span>
-                        <span className="font-medium text-sky-200">TxLINE-ready</span>
+                        <span className="font-medium text-info-200">TxLINE-ready</span>
                       </div>
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-stone-500">Schema</span>
-                        <span className="font-medium text-emerald-200">Compatible</span>
+                        <span className="font-medium text-positive-200">Compatible</span>
                       </div>
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-stone-500">Switch</span>
@@ -2144,10 +2144,10 @@ function App() {
 
           {(error || isConnecting) && (
             <div
-              className={`rounded-2xl border px-4 py-3 text-sm ${
+              className={`rounded-xl border px-4 py-3 text-sm ${
                 error
-                  ? "border-red-400/20 bg-red-500/10 text-red-200"
-                  : "border-orange-400/20 bg-orange-400/10 text-orange-100"
+                  ? "border-danger/20 bg-danger-500/10 text-danger-200"
+                  : "border-accent/20 bg-accent/10 text-accent-100"
               }`}
             >
               {error
@@ -2158,16 +2158,16 @@ function App() {
 
                                                             <section
             id="overview"
-            className={`scroll-mt-4 rounded-[28px] border p-1.5 transition-all duration-500 ${
+            className={`scroll-mt-4 rounded-2xl border p-1.5 transition-all duration-500 ${
               activeSection === "overview"
-                ? "border-orange-400/40 bg-orange-400/5 shadow-[0_0_28px_rgba(251,146,60,0.10)]"
+                ? "border-accent/40 bg-accent/5 shadow-[0_0_28px_rgba(251,146,60,0.10)]"
                 : "border-transparent"
             }`}
           >
-            <div className="rounded-[26px] border border-white/10 bg-[#15100c] p-4">
+            <div className="rounded-2xl border border-border bg-[#10161d] p-4">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3 animate-fade-in-up">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 shadow-[0_0_24px_rgba(251,146,60,0.4)]">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent-600 shadow-[0_0_24px_rgba(251,146,60,0.4)]">
                     <Zap className="h-5 w-5 text-white" fill="white" />
                   </div>
                   <div>
@@ -2180,34 +2180,34 @@ function App() {
 
                 <div className="flex flex-1 flex-wrap items-stretch gap-2 sm:flex-none sm:justify-end">
                   <div
-                    className={`flex min-w-[172px] items-center gap-2.5 rounded-2xl border px-3.5 py-2.5 transition-shadow ${
+                    className={`flex min-w-[172px] items-center gap-2.5 rounded-xl border px-3.5 py-2.5 transition-shadow ${
                       health?.useSimulatedFeed
-                        ? "border-amber-400/30 bg-gradient-to-br from-amber-400/15 to-amber-600/5 animate-glow-pulse-amber"
-                        : "border-emerald-400/30 bg-gradient-to-br from-emerald-400/15 to-emerald-600/5 animate-glow-pulse"
+                        ? "border-warning/30 bg-gradient-to-br from-warning/15 to-warning-600/5 animate-glow-pulse-amber"
+                        : "border-positive/30 bg-gradient-to-br from-positive/15 to-positive-600/5 animate-glow-pulse"
                     }`}
                   >
                     <div
                       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
-                        health?.useSimulatedFeed ? "bg-amber-400/20" : "bg-emerald-400/20"
+                        health?.useSimulatedFeed ? "bg-warning/20" : "bg-positive/20"
                       }`}
                     >
-                      <Wifi className={`h-4 w-4 ${health?.useSimulatedFeed ? "text-amber-300" : "text-emerald-300"}`} />
+                      <Wifi className={`h-4 w-4 ${health?.useSimulatedFeed ? "text-warning-300" : "text-positive-300"}`} />
                     </div>
                     <div>
                       <p
                         className={`flex items-center gap-1.5 text-xs font-bold uppercase leading-tight tracking-[0.1em] ${
-                          health?.useSimulatedFeed ? "text-amber-200" : "text-emerald-200"
+                          health?.useSimulatedFeed ? "text-warning-200" : "text-positive-200"
                         }`}
                       >
                         <span className="relative flex h-1.5 w-1.5">
                           <span
                             className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${
-                              health?.useSimulatedFeed ? "bg-amber-400" : "bg-emerald-400"
+                              health?.useSimulatedFeed ? "bg-warning" : "bg-positive"
                             }`}
                           />
                           <span
                             className={`relative inline-flex h-1.5 w-1.5 rounded-full ${
-                              health?.useSimulatedFeed ? "bg-amber-400" : "bg-emerald-400"
+                              health?.useSimulatedFeed ? "bg-warning" : "bg-positive"
                             }`}
                           />
                         </span>
@@ -2220,9 +2220,9 @@ function App() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 sm:flex sm:items-stretch">
-                    <div className="flex min-w-[104px] items-center gap-2.5 rounded-2xl border border-sky-400/20 bg-gradient-to-br from-sky-400/10 to-transparent px-3.5 py-2.5 transition-all hover:scale-[1.03] hover:border-sky-400/40">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-400/15">
-                        <Activity className="h-4 w-4 text-sky-300" />
+                    <div className="flex min-w-[104px] items-center gap-2.5 rounded-xl border border-info/20 bg-gradient-to-br from-info/10 to-transparent px-3.5 py-2.5 transition-all hover:scale-[1.03] hover:border-info/40">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-info/15">
+                        <Activity className="h-4 w-4 text-info-300" />
                       </div>
                       <div>
                         <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Updates</p>
@@ -2232,9 +2232,9 @@ function App() {
                       </div>
                     </div>
 
-                    <div className="flex min-w-[104px] items-center gap-2.5 rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-400/10 to-transparent px-3.5 py-2.5 transition-all hover:scale-[1.03] hover:border-violet-400/40">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet-400/15">
-                        <Zap className="h-4 w-4 text-violet-300" />
+                    <div className="flex min-w-[104px] items-center gap-2.5 rounded-xl border border-proof/20 bg-gradient-to-br from-proof/10 to-transparent px-3.5 py-2.5 transition-all hover:scale-[1.03] hover:border-proof/40">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-proof/15">
+                        <Zap className="h-4 w-4 text-proof-300" />
                       </div>
                       <div>
                         <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Signals</p>
@@ -2245,14 +2245,14 @@ function App() {
                     </div>
 
                     <div
-                      className={`flex min-w-[104px] items-center gap-2.5 rounded-2xl border px-3.5 py-2.5 transition-all hover:scale-[1.03] ${
+                      className={`flex min-w-[104px] items-center gap-2.5 rounded-xl border px-3.5 py-2.5 transition-all hover:scale-[1.03] ${
                         !hasMeaningfulAccuracySample
                           ? "border-stone-500/20 bg-gradient-to-br from-stone-500/10 to-transparent hover:border-stone-400/40"
                           : (stats?.strategyAccuracy ?? 0) >= 60
-                            ? "border-emerald-400/20 bg-gradient-to-br from-emerald-400/10 to-transparent hover:border-emerald-400/40"
+                            ? "border-positive/20 bg-gradient-to-br from-positive/10 to-transparent hover:border-positive/40"
                             : (stats?.strategyAccuracy ?? 0) >= 40
-                              ? "border-amber-400/20 bg-gradient-to-br from-amber-400/10 to-transparent hover:border-amber-400/40"
-                              : "border-red-400/20 bg-gradient-to-br from-red-400/10 to-transparent hover:border-red-400/40"
+                              ? "border-warning/20 bg-gradient-to-br from-warning/10 to-transparent hover:border-warning/40"
+                              : "border-danger/20 bg-gradient-to-br from-danger/10 to-transparent hover:border-danger/40"
                       }`}
                     >
                       <div
@@ -2260,10 +2260,10 @@ function App() {
                           !hasMeaningfulAccuracySample
                             ? "bg-stone-500/15"
                             : (stats?.strategyAccuracy ?? 0) >= 60
-                              ? "bg-emerald-400/15"
+                              ? "bg-positive/15"
                               : (stats?.strategyAccuracy ?? 0) >= 40
-                                ? "bg-amber-400/15"
-                                : "bg-red-400/15"
+                                ? "bg-warning/15"
+                                : "bg-danger/15"
                         }`}
                       >
                         <Target
@@ -2271,10 +2271,10 @@ function App() {
                             !hasMeaningfulAccuracySample
                               ? "text-stone-400"
                               : (stats?.strategyAccuracy ?? 0) >= 60
-                                ? "text-emerald-300"
+                                ? "text-positive-300"
                                 : (stats?.strategyAccuracy ?? 0) >= 40
-                                  ? "text-amber-300"
-                                  : "text-red-300"
+                                  ? "text-warning-300"
+                                  : "text-danger-300"
                           }`}
                         />
                       </div>
@@ -2286,10 +2286,10 @@ function App() {
                               !hasMeaningfulAccuracySample
                                 ? "text-stone-300"
                                 : (stats?.strategyAccuracy ?? 0) >= 60
-                                  ? "text-emerald-300"
+                                  ? "text-positive-300"
                                   : (stats?.strategyAccuracy ?? 0) >= 40
-                                    ? "text-amber-300"
-                                    : "text-red-300"
+                                    ? "text-warning-300"
+                                    : "text-danger-300"
                             }`}
                           >
                             {formatPercent(stats?.strategyAccuracy)}
@@ -2309,16 +2309,16 @@ function App() {
                       </div>
                     </div>
 
-                    <div className="flex min-w-[104px] items-center gap-2.5 rounded-2xl border border-teal-400/20 bg-gradient-to-br from-teal-400/10 to-transparent px-3.5 py-2.5 transition-all hover:scale-[1.03] hover:border-teal-400/40">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-teal-400/15">
-                        <Server className="h-4 w-4 text-teal-300" />
+                    <div className="flex min-w-[104px] items-center gap-2.5 rounded-xl border border-positive/20 bg-gradient-to-br from-positive/10 to-transparent px-3.5 py-2.5 transition-all hover:scale-[1.03] hover:border-positive/40">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-positive/15">
+                        <Server className="h-4 w-4 text-positive-300" />
                       </div>
                       <div>
                         <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Backend</p>
-                        <p className="flex items-center gap-1.5 text-sm font-bold text-teal-200">
+                        <p className="flex items-center gap-1.5 text-sm font-bold text-positive-200">
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
-                              health?.ok ? "bg-teal-400" : "bg-stone-500"
+                              health?.ok ? "bg-positive" : "bg-stone-500"
                             }`}
                           />
                           {health?.ok ? "Online" : "Checking"}
@@ -2329,12 +2329,12 @@ function App() {
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(251,146,60,0.22),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.055),rgba(0,0,0,0.18))] p-4">
+              <div className="overflow-hidden rounded-2xl border border-border bg-[radial-gradient(circle_at_top_left,rgba(251,146,60,0.22),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.055),rgba(0,0,0,0.18))] p-4">
                 <div className="mb-3 flex items-start justify-between gap-4">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-xs text-stone-400">Selected market</p>
-                      <span className="rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-300">
+                      <span className="rounded-full border border-border bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-300">
                         {isReplayStreamMode
                           ? "Demo replay"
                           : selectedMatch?.status === "scheduled"
@@ -2350,7 +2350,7 @@ function App() {
                       <p className="text-3xl font-semibold tracking-tight text-white">
                         {formatOdds(chartData[chartData.length - 1]?.home)}
                       </p>
-                      <span className="mb-1 rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
+                      <span className="mb-1 rounded-full bg-positive/10 px-2.5 py-1 text-xs font-medium text-positive-300">
                         {isReplayStreamMode
                           ? "Demo replay tracked odds"
                           : selectedMatch?.status === "scheduled"
@@ -2372,7 +2372,7 @@ function App() {
                     </p>
                   </div>
 
-                  <div className="max-w-[260px] rounded-2xl border border-white/10 bg-black/25 px-3 py-2 text-right">
+                  <div className="max-w-[260px] rounded-xl border border-border bg-black/25 px-3 py-2 text-right">
                     <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
                       Timeline view
                     </p>
@@ -2382,7 +2382,7 @@ function App() {
                     <p className="mt-1 text-[10px] leading-4 text-stone-500">
                       S1-S{chartData.length} are odds captures, not match minutes.
                     </p>
-                    <p className={`mt-2 text-[10px] font-semibold ${isReplayStreamMode ? "text-sky-200" : isOddsStreamLive ? "text-emerald-200" : "text-amber-200"}`}>
+                    <p className={`mt-2 text-[10px] font-semibold ${isReplayStreamMode ? "text-info-200" : isOddsStreamLive ? "text-positive-200" : "text-warning-200"}`}>
                       {isReplayStreamMode ? "DEMO REPLAY STREAM" : isOddsStreamLive ? "DATA STREAM ACTIVE" : "CONNECTING DATA STREAM"}
                     </p>
                     {oddsStreamLastUpdate && (
@@ -2393,7 +2393,7 @@ function App() {
                     {health?.liveStream && (
                       <p
                         className={`mt-2 text-[10px] font-semibold ${
-                          health.liveStream.connected ? "text-emerald-200" : "text-stone-500"
+                          health.liveStream.connected ? "text-positive-200" : "text-stone-500"
                         }`}
                         title={health.liveStream.lastError ?? undefined}
                       >
@@ -2407,14 +2407,14 @@ function App() {
                       onClick={() => setIsReplayStreamMode((current) => !current)}
                       className={`mt-3 w-full rounded-xl border px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] transition ${
                         isReplayStreamMode
-                          ? "border-sky-400/40 bg-sky-500/15 text-sky-100"
-                          : "border-white/10 bg-white/5 text-stone-300 hover:border-white/20"
+                          ? "border-info/40 bg-info-500/15 text-info-100"
+                          : "border-border bg-white/5 text-stone-300 hover:border-white/20"
                       }`}
                     >
                       {isReplayStreamMode ? "Stop demo replay" : "Start demo replay"}
                     </button>
                     {isReplayStreamMode && (
-                      <p className="mt-2 rounded-xl border border-sky-400/20 bg-sky-500/10 px-3 py-2 text-[10px] leading-4 text-sky-100">
+                      <p className="mt-2 rounded-xl border border-info/20 bg-info-500/10 px-3 py-2 text-[10px] leading-4 text-info-100">
                         {replayStreamProgress || "Demo replay using saved real TxLINE snapshots"}
                       </p>
                     )}
@@ -2422,7 +2422,7 @@ function App() {
                 </div>
 
                 <div className="mb-3 space-y-2 animate-fade-in-up">
-                  <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3.5 transition-all duration-500 ${chartReadout.severity.cardClass}`}>
+                  <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5 transition-all duration-500 ${chartReadout.severity.cardClass}`}>
                     <div className="flex items-center gap-3">
                       <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/20">
                         {(chartReadout.severity.tier === "Sharp move" || chartReadout.severity.tier === "Momentum") && (
@@ -2455,21 +2455,21 @@ function App() {
                   </p>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-2xl border border-orange-400/15 bg-gradient-to-br from-orange-400/10 to-black/30 p-3">
+                    <div className="rounded-xl border border-accent/15 bg-gradient-to-br from-accent/10 to-black/30 p-3">
                       <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
                         {selectedMatch?.homeTeam ?? "Home"} odds now
                       </p>
-                      <p className="mt-2 text-2xl font-bold text-orange-200">
+                      <p className="mt-2 text-2xl font-bold text-accent-200">
                         {chartReadout.homeCurrent}
 
                       </p>
                     </div>
 
-                    <div className="rounded-2xl border border-emerald-400/15 bg-gradient-to-br from-emerald-400/10 to-black/30 p-3">
+                    <div className="rounded-xl border border-positive/15 bg-gradient-to-br from-positive/10 to-black/30 p-3">
                       <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
                         {selectedMatch?.awayTeam ?? "Away"} odds now
                       </p>
-                      <p className="mt-2 text-2xl font-bold text-emerald-200">
+                      <p className="mt-2 text-2xl font-bold text-positive-200">
                         {chartReadout.awayCurrent}
                       </p>
                     </div>
@@ -2496,13 +2496,13 @@ function App() {
                       >
                         <defs>
                           <linearGradient id="referenceHome" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#fb923c" stopOpacity={0.78} />
-                            <stop offset="45%" stopColor="#fb923c" stopOpacity={0.28} />
-                            <stop offset="100%" stopColor="#fb923c" stopOpacity={0.02} />
+                            <stop offset="0%" stopColor="#ffb020" stopOpacity={0.78} />
+                            <stop offset="45%" stopColor="#ffb020" stopOpacity={0.28} />
+                            <stop offset="100%" stopColor="#ffb020" stopOpacity={0.02} />
                           </linearGradient>
                           <linearGradient id="referenceAway" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#34d399" stopOpacity={0.30} />
-                            <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
+                            <stop offset="0%" stopColor="#2fd6b4" stopOpacity={0.30} />
+                            <stop offset="100%" stopColor="#2fd6b4" stopOpacity={0} />
                           </linearGradient>
                         </defs>
 
@@ -2553,10 +2553,10 @@ function App() {
                             if (!point) return null;
 
                             return (
-                              <div className="w-[240px] rounded-2xl border border-white/10 bg-[#11100f]/95 p-3 text-xs text-stone-100 shadow-2xl shadow-black/50">
+                              <div className="w-[240px] rounded-xl border border-border bg-[#10161d]/95 p-3 text-xs text-stone-100 shadow-2xl shadow-black/50">
                                 <div className="flex items-start justify-between gap-2">
                                   <div>
-                                    <p className="text-[10px] uppercase tracking-[0.18em] text-sky-200/70">
+                                    <p className="text-[10px] uppercase tracking-[0.18em] text-info-200/70">
                                       {point.snapshotLabel ?? "TxLINE snapshot"}
                                     </p>
                                     <p className="mt-1 text-[11px] text-stone-400">
@@ -2564,7 +2564,7 @@ function App() {
                                     </p>
                                   </div>
                                   {marker && (
-                                    <span className="rounded-full bg-orange-400/15 px-2 py-1 text-[10px] font-semibold text-orange-100">
+                                    <span className="rounded-full bg-accent/15 px-2 py-1 text-[10px] font-semibold text-accent-100">
                                       Signal
                                     </span>
                                   )}
@@ -2573,21 +2573,21 @@ function App() {
                                 <div className="mt-3 grid gap-1.5">
                                   <div className="flex justify-between rounded-xl bg-white/5 px-3 py-2">
                                     <span className="text-stone-400">{selectedMatch?.homeTeam ?? "Home"}</span>
-                                    <span className="font-semibold text-orange-200">{formatOdds(point.home)}</span>
+                                    <span className="font-semibold text-accent-200">{formatOdds(point.home)}</span>
                                   </div>
                                   <div className="flex justify-between rounded-xl bg-white/5 px-3 py-2">
                                     <span className="text-stone-400">{selectedMatch?.awayTeam ?? "Away"}</span>
-                                    <span className="font-semibold text-emerald-200">{formatOdds(point.away)}</span>
+                                    <span className="font-semibold text-positive-200">{formatOdds(point.away)}</span>
                                   </div>
                                 </div>
 
-                                <p className="mt-2 rounded-xl bg-sky-400/10 px-3 py-2 text-[11px] leading-5 text-sky-100">
+                                <p className="mt-2 rounded-xl bg-info/10 px-3 py-2 text-[11px] leading-5 text-info-100">
                                   Lower odds = stronger market confidence.
                                 </p>
 
                                 {marker && (
-                                  <div className="mt-2 rounded-xl border border-orange-400/20 bg-orange-400/10 px-3 py-2 text-[11px] leading-5 text-orange-50/90">
-                                    <p className="font-semibold text-orange-100">{marker.label}</p>
+                                  <div className="mt-2 rounded-xl border border-accent/20 bg-accent/10 px-3 py-2 text-[11px] leading-5 text-orange-50/90">
+                                    <p className="font-semibold text-accent-100">{marker.label}</p>
                                     <p>Target: {marker.target ?? "Tracked side"}</p>
                                     <p>
                                       Odds: {formatOdds(marker.oddsBefore)} → {formatOdds(marker.oddsAfter)}
@@ -2614,7 +2614,7 @@ function App() {
                         <Area
                           type="monotone"
                           dataKey="home"
-                          stroke="#fb923c"
+                          stroke="#ffb020"
                           strokeWidth={2.8}
                           fill="url(#referenceHome)"
                           dot={false}
@@ -2628,7 +2628,7 @@ function App() {
                         <Area
                           type="monotone"
                           dataKey="away"
-                          stroke="#34d399"
+                          stroke="#2fd6b4"
                           strokeWidth={2}
                           fill="url(#referenceAway)"
                           dot={false}
@@ -2647,13 +2647,13 @@ function App() {
                               x={marker.x}
                               y={marker.y}
                               r={markerStyle.radius}
-                              stroke="#fff7ed"
+                              stroke="#ffecc7"
                               strokeWidth={2}
                               fill={markerStyle.fill}
                               label={{
                                 value: "Signal",
                                 position: "top",
-                                fill: "#fed7aa",
+                                fill: "#ffd98f",
                                 fontSize: 10,
                               }}
                             />
@@ -2673,7 +2673,7 @@ function App() {
                   <div className="flex items-center gap-2">
                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/8">
                       <div
-                        className="h-2 rounded-full bg-gradient-to-r from-orange-500 to-emerald-400 transition-all duration-700 ease-out"
+                        className="h-2 rounded-full bg-gradient-to-r from-accent to-positive transition-all duration-700 ease-out"
                         style={{
                           width: isReplayStreamMode
                             ? `${streamProgressPercent}%`
@@ -2695,23 +2695,23 @@ function App() {
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 rounded-xl bg-black/15 px-3 py-2 text-[10px] text-stone-400">
                     <div className="flex flex-wrap items-center gap-3">
                       <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-orange-400" />
+                        <span className="h-2 w-2 rounded-full bg-accent" />
                         {selectedMatch?.homeTeam ?? "Home"} odds
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                        <span className="h-2 w-2 rounded-full bg-positive" />
                         {selectedMatch?.awayTeam ?? "Away"} odds
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full border border-orange-100 bg-[#f87171]" />
+                        <span className="h-2 w-2 rounded-full border border-accent-100 bg-[#ff6161]" />
                         High severity
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full border border-orange-100 bg-[#fbbf24]" />
+                        <span className="h-2 w-2 rounded-full border border-accent-100 bg-[#f2c14e]" />
                         Medium severity
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full border border-orange-100 bg-[#94a3b8]" />
+                        <span className="h-2 w-2 rounded-full border border-accent-100 bg-[#7c8ba1]" />
                         Low severity
                       </span>
                     </div>
@@ -2730,10 +2730,10 @@ function App() {
           />
           <section id="markets" className="scroll-mt-4 grid grid-cols-1 gap-3 2xl:grid-cols-2">
             <div
-              className={`rounded-[24px] border p-4 transition-all duration-500 ${
+              className={`rounded-2xl border p-4 transition-all duration-500 ${
                 activeSection === "markets"
-                  ? "border-orange-400/50 bg-orange-400/10 shadow-[0_0_35px_rgba(251,146,60,0.16)]"
-                  : "border-white/10 bg-[#15100c]"
+                  ? "border-accent/50 bg-accent/10 shadow-[0_0_35px_rgba(251,146,60,0.16)]"
+                  : "border-border bg-[#10161d]"
               }`}
             >
               <div className="mb-3 flex items-center justify-between">
@@ -2741,22 +2741,22 @@ function App() {
                   <p className="text-xs text-stone-500">Market feed</p>
                   <h2 className="text-xl font-semibold">Market board</h2>
                 </div>
-                <Radio className="h-4 w-4 text-emerald-300" />
+                <Radio className="h-4 w-4 text-positive-300" />
               </div>
 
 
-              <p className="mb-3 rounded-2xl border border-white/10 bg-black/25 px-3 py-2 text-[11px] leading-5 text-stone-400">
+              <p className="mb-3 rounded-xl border border-border bg-black/25 px-3 py-2 text-[11px] leading-5 text-stone-400">
                 Odds shown here are market prices, not match scores. Upcoming matches show pre-match odds before kickoff.
               </p>
 
-              <div className="mb-3 grid grid-cols-4 gap-1.5 rounded-2xl bg-black/20 p-1">
+              <div className="mb-3 grid grid-cols-4 gap-1.5 rounded-xl bg-black/20 p-1">
                 {(["all", "live", "scheduled", "finished"] as const).map((status) => (
                   <button
                     key={status}
                     onClick={() => setMatchStatusFilter(status)}
                     className={`rounded-xl px-2 py-2 text-[10px] font-semibold transition ${
                       matchStatusFilter === status
-                        ? "bg-orange-400/15 text-orange-200"
+                        ? "bg-accent/15 text-accent-200"
                         : "text-stone-500 hover:bg-white/6 hover:text-stone-200"
                     }`}
                   >
@@ -2776,7 +2776,7 @@ function App() {
 
               <div className="space-y-2">
                 {filteredMatches.length === 0 && (
-                  <div className="rounded-2xl bg-black/25 p-4 text-sm text-stone-500">
+                  <div className="rounded-xl bg-black/25 p-4 text-sm text-stone-500">
                     No matches found
                   </div>
                 )}
@@ -2789,7 +2789,7 @@ function App() {
                       onClick={() => setSelectedMatchId(match.id)}
                       className={`w-full rounded-xl border p-2.5 text-left transition ${
                         selectedMatchId === match.id
-                          ? "border-orange-400/30 bg-orange-400/10"
+                          ? "border-accent/30 bg-accent/10"
                           : "border-white/8 bg-black/20 hover:bg-white/6"
                       }`}
                     >
@@ -2821,7 +2821,7 @@ function App() {
                       <div className="mt-2 grid grid-cols-3 gap-1.5 text-center text-[10px]">
                         <div className="rounded-lg bg-black/25 px-2 py-1.5">
                           <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Home" : "Home"}</p>
-                          <p className="font-semibold text-orange-200">
+                          <p className="font-semibold text-accent-200">
                             {formatOdds(odds.homeOdds)}
                           </p>
                         </div>
@@ -2833,7 +2833,7 @@ function App() {
                         </div>
                         <div className="rounded-lg bg-black/25 px-2 py-1.5">
                           <p className="text-stone-500">{match.status === "scheduled" ? "Pre-match Away" : "Away"}</p>
-                          <p className="font-semibold text-emerald-200">
+                          <p className="font-semibold text-positive-200">
                             {formatOdds(odds.awayOdds)}
                           </p>
                         </div>
@@ -2894,10 +2894,10 @@ function App() {
 
             <div
               id="agent"
-              className={`scroll-mt-4 rounded-[24px] border p-4 transition-all duration-500 ${
+              className={`scroll-mt-4 rounded-2xl border p-4 transition-all duration-500 ${
                 activeSection === "agent"
-                  ? "border-orange-400/50 bg-orange-400/10 shadow-[0_0_35px_rgba(251,146,60,0.16)]"
-                  : "border-white/10 bg-[#15100c]"
+                  ? "border-accent/50 bg-accent/10 shadow-[0_0_35px_rgba(251,146,60,0.16)]"
+                  : "border-border bg-[#10161d]"
               }`}
             >
               <div className="mb-3 flex items-center justify-between">
@@ -2905,7 +2905,7 @@ function App() {
                   <p className="text-xs text-stone-500">Signal engine</p>
                   <h2 className="text-xl font-semibold">Latest signals</h2>
                 </div>
-                <Gauge className="h-4 w-4 text-orange-300" />
+                <Gauge className="h-4 w-4 text-accent-300" />
               </div>
 
               <div className="space-y-2">
@@ -2914,7 +2914,7 @@ function App() {
                     <button
                       key={signal.id ?? index}
                       onClick={() => setSelectedSignal(signal)}
-                      className="w-full rounded-xl border border-white/8 bg-black/20 p-2.5 text-left transition hover:border-orange-400/40 hover:bg-orange-400/10"
+                      className="w-full rounded-xl border border-white/8 bg-black/20 p-2.5 text-left transition hover:border-accent/40 hover:bg-accent/10"
                     >
                       <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
@@ -2926,7 +2926,7 @@ function App() {
                             {(signal.severity ?? "LOW").toUpperCase()}
                           </span>
                           {marketTypeLabel(signal.evidence?.marketType) && (
-                            <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-2 py-1 text-[10px] font-semibold text-sky-200">
+                            <span className="rounded-full border border-info/20 bg-info/10 px-2 py-1 text-[10px] font-semibold text-info-200">
                               {marketTypeLabel(signal.evidence?.marketType)}
                             </span>
                           )}
@@ -2956,26 +2956,26 @@ function App() {
                           "Agent detected meaningful market movement."}
                       </p>
 
-                      <p className="mt-1.5 text-[10px] font-medium text-orange-200">
+                      <p className="mt-1.5 text-[10px] font-medium text-accent-200">
                         View details
                       </p>
                     </button>
                   ))
                 ) : (
-                  <div className="rounded-2xl bg-black/25 p-4 text-sm text-stone-500">
+                  <div className="rounded-xl bg-black/25 p-4 text-sm text-stone-500">
                     No signals found
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-white/10 bg-[#15100c] p-4">
+            <div className="rounded-2xl border border-border bg-[#10161d] p-4">
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-stone-500">Post-signal audit</p>
                   <h2 className="text-xl font-semibold">Outcome verification</h2>
                 </div>
-                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-medium text-emerald-200">
+                <span className="rounded-full border border-positive/20 bg-positive/10 px-3 py-1.5 text-[11px] font-medium text-positive-200">
                   Verifiable
                 </span>
               </div>
@@ -2994,7 +2994,7 @@ function App() {
                       <button
                         key={`${item.source}-${item.signal.id ?? index}`}
                         onClick={() => setSelectedSignal(item.signal)}
-                        className="w-full rounded-xl border border-white/8 bg-black/20 p-3 text-left transition hover:border-emerald-400/30 hover:bg-emerald-400/10"
+                        className="w-full rounded-xl border border-white/8 bg-black/20 p-3 text-left transition hover:border-positive/30 hover:bg-positive/10"
                       >
                         <div className="mb-2 flex items-center justify-between gap-3">
                           <div className="min-w-0">
@@ -3016,10 +3016,10 @@ function App() {
                           <span
                             className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
                               isCorrect
-                                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                                ? "border-positive/30 bg-positive/10 text-positive-200"
                                 : isIncorrect
-                                  ? "border-red-400/30 bg-red-400/10 text-red-200"
-                                  : "border-orange-400/30 bg-orange-400/10 text-orange-200"
+                                  ? "border-danger/30 bg-danger/10 text-danger-200"
+                                  : "border-accent/30 bg-accent/10 text-accent-200"
                             }`}
                           >
                             {outcome}
@@ -3043,7 +3043,7 @@ function App() {
 
                           <div className="rounded-lg bg-black/25 p-2">
                             <p className="text-stone-500">Move</p>
-                            <p className="mt-1 font-semibold text-orange-200">
+                            <p className="mt-1 font-semibold text-accent-200">
                               {formatOddsChange(item.signal.oddsChangePct)}
                             </p>
                           </div>
@@ -3058,7 +3058,7 @@ function App() {
                   })}
                 </div>
               ) : (
-                <div className="rounded-2xl bg-black/25 p-4 text-sm text-stone-500">
+                <div className="rounded-xl bg-black/25 p-4 text-sm text-stone-500">
                   Run the backtest or wait for live signals to verify outcomes.
                 </div>
               )}
@@ -3067,7 +3067,7 @@ function App() {
         </section>
 
         <aside className="space-y-2">
-          <div className="rounded-[24px] border border-white/10 bg-gradient-to-br from-orange-400 to-[#2a1810] p-4 text-white">
+          <div className="rounded-2xl border border-border bg-gradient-to-br from-accent to-[#0a0e13] p-4 text-white">
             <p className="text-sm text-orange-50/80">Selected match</p>
             <h2 className="mt-1 text-xl font-semibold leading-tight">
               {selectedMatch
@@ -3075,7 +3075,7 @@ function App() {
                 : "No match yet"}
             </h2>
 
-            <div className="mt-4 rounded-2xl bg-[#17100c]/80 p-3">
+            <div className="mt-4 rounded-xl bg-[#10161d]/80 p-3">
               <div className="flex items-center justify-between text-sm text-stone-300">
                 <span>{selectedMatch?.homeTeam ?? "Home"}</span>
                 <span className="text-xl font-semibold text-white">
@@ -3104,7 +3104,7 @@ function App() {
                 <p className="text-sm font-semibold">{preciseStatusLabel(selectedMatch)}</p>
               </div>
             </div>
-            <div className="mt-3 rounded-2xl bg-[#17100c]/75 p-3">
+            <div className="mt-3 rounded-xl bg-[#10161d]/75 p-3">
               <div className="mb-2 flex items-center justify-between">
                 <div>
                   <p className="text-[11px] text-white/60">Market pressure</p>
@@ -3123,7 +3123,7 @@ function App() {
                   </div>
                   <div className="h-2 rounded-full bg-white/15">
                     <div
-                      className="h-2 rounded-full bg-orange-200"
+                      className="h-2 rounded-full bg-accent-200"
                       style={{
                         width: `${selectedMatchMarketPressure.homePressure}%`,
                       }}
@@ -3138,7 +3138,7 @@ function App() {
                   </div>
                   <div className="h-2 rounded-full bg-white/15">
                     <div
-                      className="h-2 rounded-full bg-emerald-300"
+                      className="h-2 rounded-full bg-positive-300"
                       style={{
                         width: `${selectedMatchMarketPressure.awayPressure}%`,
                       }}
@@ -3149,7 +3149,7 @@ function App() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-[#15100c] p-4">
+          <div className="rounded-2xl border border-border bg-[#10161d] p-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-xs text-stone-500">Autonomous flow</p>
@@ -3157,7 +3157,7 @@ function App() {
               </div>
               <button
                 onClick={startAgentReplay}
-                className="rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1.5 text-[11px] font-medium text-orange-200 transition hover:border-orange-300/40 hover:bg-orange-400/20"
+                className="rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-[11px] font-medium text-accent-200 transition hover:border-accent-300/40 hover:bg-accent/20"
               >
                 Replay cycle
               </button>
@@ -3169,7 +3169,7 @@ function App() {
                   key={item.title}
                   className={`flex gap-2 rounded-xl border p-2.5 transition-all duration-300 ${
                     replayStep === index
-                      ? "border-orange-300/60 bg-orange-400/15 shadow-[0_0_24px_rgba(251,146,60,0.2)]"
+                      ? "border-accent-300/60 bg-accent/15 shadow-[0_0_24px_rgba(251,146,60,0.2)]"
                       : "border-white/8 bg-black/20"
                   }`}
                 >
@@ -3177,8 +3177,8 @@ function App() {
                     <div
                       className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold transition-all duration-300 ${
                         replayStep === index
-                          ? "bg-orange-300 text-black"
-                          : "bg-orange-400/15 text-orange-200"
+                          ? "bg-accent-300 text-black"
+                          : "bg-accent/15 text-accent-200"
                       }`}
                     >
                       {index + 1}
@@ -3206,11 +3206,11 @@ function App() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-[#15100c] p-4">
+          <div className="rounded-2xl border border-border bg-[#10161d] p-4">
             <div
               id="guide-backtest-card"
               className={`transition-all ${
-                isJudgeMode && judgeStep === 11 ? "relative z-[60] scale-[1.01] rounded-2xl ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                isJudgeMode && judgeStep === 11 ? "relative z-[60] scale-[1.01] rounded-xl ring-2 ring-accent/70 shadow-2xl shadow-accent/30" : ""
               }`}
             >
               <div className="mb-3 flex items-center justify-between gap-3">
@@ -3225,14 +3225,14 @@ function App() {
                 <button
                   onClick={runReplayBacktest}
                   disabled={isReplayRunning}
-                  className="rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1.5 text-[11px] font-medium text-orange-200 transition hover:border-orange-300/40 hover:bg-orange-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-[11px] font-medium text-accent-200 transition hover:border-accent-300/40 hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isReplayRunning ? "Running..." : "Run audit"}
                 </button>
               </div>
 
               {pnl && (
-                <div className="mb-3 rounded-2xl border border-white/10 bg-black/25 p-3.5">
+                <div className="mb-3 rounded-xl border border-border bg-black/25 p-3.5">
                   <div className="mb-2 flex items-center justify-between">
                     <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
                       Simulated P&amp;L — flat 1 unit per signal
@@ -3240,10 +3240,10 @@ function App() {
                     <span
                       className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${
                         pnl.netUnits > 0
-                          ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                          ? "border-positive/30 bg-positive/10 text-positive-200"
                           : pnl.netUnits < 0
-                            ? "border-red-400/30 bg-red-400/10 text-red-200"
-                            : "border-white/10 bg-white/5 text-stone-300"
+                            ? "border-danger/30 bg-danger/10 text-danger-200"
+                            : "border-border bg-white/5 text-stone-300"
                       }`}
                     >
                       {pnl.netUnits > 0 ? "+" : ""}
@@ -3261,7 +3261,7 @@ function App() {
                       <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Total staked</p>
                     </div>
                     <div>
-                      <p className="text-lg font-bold tabular-nums text-amber-200">{pnl.openPositions}</p>
+                      <p className="text-lg font-bold tabular-nums text-warning-200">{pnl.openPositions}</p>
                       <p className="text-[9px] uppercase tracking-[0.1em] text-stone-500">Open positions</p>
                     </div>
                   </div>
@@ -3293,24 +3293,24 @@ function App() {
                     </div>
                     <div className="rounded-xl bg-black/20 p-2.5">
                       <p className="text-[10px] text-stone-500">Settled checks</p>
-                      <p className="mt-1 text-sm font-semibold text-emerald-200">
+                      <p className="mt-1 text-sm font-semibold text-positive-200">
                         {(replayBacktest.summary?.correctSignals ?? 0) +
                           (replayBacktest.summary?.incorrectSignals ?? 0)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-red-400/20 bg-red-400/10 p-3">
+                  <div className="rounded-xl border border-danger/20 bg-danger/10 p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-red-200/70">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-danger-200/70">
                           Failed Continuation Detector
                         </p>
                         <p className="mt-1 text-sm font-semibold text-white">
                           {replayBacktest.summary?.smartMoneyTraps ?? 0} trap pattern(s) detected
                         </p>
                       </div>
-                      <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-red-100">
+                      <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-danger-100">
                         {(replayBacktest.summary?.confirmedTraps ?? 0)} rejected •{" "}
                         {(replayBacktest.summary?.possibleTraps ?? 0)} possible
                       </span>
@@ -3334,17 +3334,17 @@ function App() {
                           <button
                             key={`${signal.id ?? "trap"}-${index}`}
                             onClick={() => setSelectedSignal(signal)}
-                            className="w-full rounded-lg bg-black/25 p-2 text-left transition hover:bg-red-400/10"
+                            className="w-full rounded-lg bg-black/25 p-2 text-left transition hover:bg-danger/10"
                           >
                             <div className="flex items-center justify-between gap-3">
                               <p className="truncate text-[11px] font-semibold text-white">
                                 #{index + 1} · {signal.match ?? signal.matchId ?? "Unknown match"} · {getSignalTarget(signal)}
                               </p>
-                              <span className="shrink-0 rounded-full bg-red-400/10 px-2 py-0.5 text-[10px] font-semibold text-red-100">
+                              <span className="shrink-0 rounded-full bg-danger/10 px-2 py-0.5 text-[10px] font-semibold text-danger-100">
                                 Reversal score {signal.trapScore ?? 0}
                               </span>
                             </div>
-                            <p className="mt-1 text-[10px] font-semibold text-purple-200">
+                            <p className="mt-1 text-[10px] font-semibold text-proof-200">
                               {(signal.reversalRisk ?? "REVERSAL_SCAN").replaceAll("_", " ")}
                             </p>
                             <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-stone-400">
@@ -3362,13 +3362,13 @@ function App() {
               <div className="mt-3 space-y-3">
                 <div
                   id="guide-proof-readiness"
-                  className={`rounded-xl border border-emerald-400/15 bg-emerald-400/10 p-3 transition-all ${
-                    isJudgeMode && judgeStep === 14 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                  className={`rounded-xl border border-positive/15 bg-positive/10 p-3 transition-all ${
+                    isJudgeMode && judgeStep === 14 ? "relative z-[60] scale-[1.01] ring-2 ring-accent/70 shadow-2xl shadow-accent/30" : ""
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3 text-[11px]">
                     <span className="text-stone-400">Outcome audit</span>
-                    <span className="font-medium text-emerald-200">
+                    <span className="font-medium text-positive-200">
                       {replayBacktest.summary?.correctSignals ?? 0} confirmed •{" "}
                       {replayBacktest.summary?.incorrectSignals ?? 0} rejected
                     </span>
@@ -3377,14 +3377,14 @@ function App() {
                   <div className="mt-3 rounded-lg bg-black/20 p-2">
                     <div className="flex items-center justify-between gap-3 text-[10px]">
                       <span className="text-stone-500">Proof network</span>
-                      <span className="font-medium text-sky-200">
+                      <span className="font-medium text-info-200">
                         {replayBacktest.proof?.network ?? "solana-devnet"}
                       </span>
                     </div>
 
                     <div className="mt-1 flex items-center justify-between gap-3 text-[10px]">
                       <span className="text-stone-500">Anchoring</span>
-                      <span className="font-medium text-orange-200">
+                      <span className="font-medium text-accent-200">
                         {(replayBacktest.proof?.anchoringStatus ?? "pending_wallet_configuration")
                           .replaceAll("_", " ")}
                       </span>
@@ -3404,18 +3404,18 @@ function App() {
                 {(replayBacktest.events ?? []).length > 0 && (
                   <div
                     id="guide-event-correlation"
-                    className={`rounded-xl border border-orange-400/15 bg-orange-400/10 p-3 transition-all ${
-                      isJudgeMode && judgeStep === 12 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                    className={`rounded-xl border border-accent/15 bg-accent/10 p-3 transition-all ${
+                      isJudgeMode && judgeStep === 12 ? "relative z-[60] scale-[1.01] ring-2 ring-accent/70 shadow-2xl shadow-accent/30" : ""
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[10px] text-orange-200/80">Evidence chain</p>
+                        <p className="text-[10px] text-accent-200/80">Evidence chain</p>
                         <p className="text-xs font-semibold text-white">
                           {(replayBacktest.events ?? []).length} supporting event(s)
                         </p>
                       </div>
-                      <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-medium text-orange-100">
+                      <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-medium text-accent-100">
                         Dual-feed
                       </span>
                     </div>
@@ -3427,7 +3427,7 @@ function App() {
                             <p className="truncate text-[11px] font-semibold text-stone-100">
                               {event.type?.replaceAll("_", " ").toUpperCase()}
                             </p>
-                            <span className="shrink-0 text-[10px] text-orange-200">
+                            <span className="shrink-0 text-[10px] text-accent-200">
                               {event.minute}'
                             </span>
                           </div>
@@ -3443,19 +3443,19 @@ function App() {
                 {(replayBacktest.councilVotes ?? []).length > 0 && (
                   <div
                     id="guide-oracle-council"
-                    className={`rounded-xl border border-sky-400/15 bg-sky-400/10 p-3 transition-all ${
-                      isJudgeMode && judgeStep === 13 ? "relative z-[60] scale-[1.01] ring-2 ring-orange-400/70 shadow-2xl shadow-orange-500/30" : ""
+                    className={`rounded-xl border border-info/15 bg-info/10 p-3 transition-all ${
+                      isJudgeMode && judgeStep === 13 ? "relative z-[60] scale-[1.01] ring-2 ring-accent/70 shadow-2xl shadow-accent/30" : ""
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[10px] text-sky-200/80">Signal review council</p>
+                        <p className="text-[10px] text-info-200/80">Signal review council</p>
                         <p className="text-xs font-semibold text-white">
                           {(replayBacktest.councilVotes ?? [])[0]?.decision?.toUpperCase() ??
                             "PENDING"}
                         </p>
                       </div>
-                      <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-medium text-sky-100">
+                      <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-medium text-info-100">
                         {(replayBacktest.councilVotes ?? [])[0]?.approvals ?? 0}/
                         {(replayBacktest.councilVotes ?? [])[0]?.totalAgents ?? 3} approvals
                       </span>
@@ -3472,10 +3472,10 @@ function App() {
                               <span
                                 className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${
                                   vote.vote === "approve"
-                                    ? "bg-emerald-400/10 text-emerald-200"
+                                    ? "bg-positive/10 text-positive-200"
                                     : vote.vote === "reject"
-                                      ? "bg-red-400/10 text-red-200"
-                                      : "bg-orange-400/10 text-orange-200"
+                                      ? "bg-danger/10 text-danger-200"
+                                      : "bg-accent/10 text-accent-200"
                                 }`}
                               >
                                 {vote.vote}
@@ -3510,13 +3510,13 @@ function App() {
               </p>
             )}
           </div>
-          <div className="rounded-[24px] border border-white/10 bg-[#15100c] p-4">
+          <div className="rounded-2xl border border-border bg-[#10161d] p-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-xs text-stone-500">Detection rules</p>
                 <h2 className="text-base font-semibold">Signal thresholds</h2>
               </div>
-              <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-medium text-emerald-200">
+              <span className="rounded-full border border-positive/20 bg-positive/10 px-2.5 py-1 text-[10px] font-medium text-positive-200">
                 Active
               </span>
             </div>
@@ -3525,7 +3525,7 @@ function App() {
               <div className="rounded-xl bg-black/20 p-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-stone-100">WATCH</span>
-                  <span className="text-orange-200">≥ 4%</span>
+                  <span className="text-accent-200">≥ 4%</span>
                 </div>
                 <p className="mt-1 text-[11px] text-stone-500">
                   Early movement detected, but not yet strong enough for a major alert.
@@ -3535,7 +3535,7 @@ function App() {
               <div className="rounded-xl bg-black/20 p-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-stone-100">MOMENTUM SHIFT</span>
-                  <span className="text-orange-200">≥ 8%</span>
+                  <span className="text-accent-200">≥ 8%</span>
                 </div>
                 <p className="mt-1 text-[11px] text-stone-500">
                   Odds compression suggests meaningful market pressure.
@@ -3545,7 +3545,7 @@ function App() {
               <div className="rounded-xl bg-black/20 p-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-stone-100">SHARP MOVE</span>
-                  <span className="text-orange-200">≥ 15%</span>
+                  <span className="text-accent-200">≥ 15%</span>
                 </div>
                 <p className="mt-1 text-[11px] text-stone-500">
                   High-severity movement that the agent flags for review.
@@ -3555,14 +3555,14 @@ function App() {
           </div>
           <div
             id="compliance"
-            className={`scroll-mt-4 rounded-[24px] border p-4 transition-all duration-500 ${
+            className={`scroll-mt-4 rounded-2xl border p-4 transition-all duration-500 ${
               activeSection === "compliance"
-                ? "border-orange-400/40 bg-orange-400/10 shadow-[0_0_35px_rgba(251,146,60,0.12)]"
-                : "border-white/10 bg-[#15100c]"
+                ? "border-accent/40 bg-accent/10 shadow-[0_0_35px_rgba(251,146,60,0.12)]"
+                : "border-border bg-[#10161d]"
             }`}
           >
             <div className="mb-3 flex items-center gap-2">
-              <div className="rounded-xl bg-emerald-400/10 p-2 text-emerald-200">
+              <div className="rounded-xl bg-positive/10 p-2 text-positive-200">
                 <ShieldCheck className="h-4 w-4" />
               </div>
               <div>
@@ -3582,7 +3582,7 @@ function App() {
 
       {selectedSignal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[24px] border border-white/10 bg-[#15100c] p-4 shadow-2xl shadow-black/50">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-border bg-[#10161d] p-4 shadow-2xl shadow-black/50">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs text-stone-500">Signal details</p>
@@ -3593,7 +3593,7 @@ function App() {
 
               <button
                 onClick={() => setSelectedSignal(null)}
-                className="rounded-2xl bg-white/8 p-2 text-stone-400 transition hover:bg-white/12 hover:text-white"
+                className="rounded-xl bg-white/8 p-2 text-stone-400 transition hover:bg-white/12 hover:text-white"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -3608,14 +3608,14 @@ function App() {
                 {(selectedSignal.severity ?? "LOW").toUpperCase()}
               </span>
 
-              <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs text-stone-300">
+              <span className="rounded-full border border-border bg-black/25 px-3 py-1 text-xs text-stone-300">
                 {formatTime(selectedSignal.createdAt)}
               </span>
             </div>
 
             {(selectedSignal.trapStatus || selectedSignal.scoreRealityStatus) && (
-              <div className="mb-4 rounded-2xl border border-orange-400/25 bg-orange-400/10 p-4">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-orange-200/70">
+              <div className="mb-4 rounded-xl border border-accent/25 bg-accent/10 p-4">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-accent-200/70">
                   Agent verdict
                 </p>
                 <h3 className="mt-1 text-lg font-black text-white">
@@ -3638,7 +3638,7 @@ function App() {
               </div>
             )}
             {(selectedSignal.trapStatus || selectedSignal.reversalRisk || selectedSignal.scoreRealityStatus) && (
-              <div className="mb-4 rounded-2xl border border-white/10 bg-black/25 p-4">
+              <div className="mb-4 rounded-xl border border-border bg-black/25 p-4">
                 <p className="text-[11px] uppercase tracking-[0.22em] text-stone-400">
                   Autonomous decision chain
                 </p>
@@ -3678,17 +3678,17 @@ function App() {
                 </div>
               </div>
             )}
-            <div className="mb-4 rounded-2xl border border-sky-400/15 bg-sky-400/10 p-4">
+            <div className="mb-4 rounded-xl border border-info/15 bg-info/10 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-sky-200/70">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-info-200/70">
                     How to read this signal
                   </p>
                   <h3 className="mt-1 text-sm font-semibold text-white">
                     The agent detected a meaningful odds movement for {getSignalTarget(selectedSignal)}.
                   </h3>
                 </div>
-                <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-sky-100">
+                <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-info-100">
                   Analytics only
                 </span>
               </div>
@@ -3696,7 +3696,7 @@ function App() {
               <p className="mt-3 text-xs leading-5 text-stone-300">
                 Previous odds were <span className="font-semibold text-white">{formatOdds(selectedSignal.oddsBefore)}</span>, then moved to{" "}
                 <span className="font-semibold text-white">{formatOdds(selectedSignal.oddsAfter)}</span>. That creates a{" "}
-                <span className="font-semibold text-sky-100">{formatOddsChange(selectedSignal.oddsChangePct)}</span> movement, which crossed the
+                <span className="font-semibold text-info-100">{formatOddsChange(selectedSignal.oddsChangePct)}</span> movement, which crossed the
                 configured signal threshold. This does not recommend a bet; it explains what changed in the market and why the agent flagged it.
               </p>
             </div>
@@ -3742,17 +3742,17 @@ function App() {
             </div>
 
             {selectedSignal.trapStatus && (
-              <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-400/10 p-4">
+              <div className="mt-4 rounded-xl border border-danger/20 bg-danger/10 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-red-200/70">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-danger-200/70">
                       Failed Continuation Assessment
                     </p>
                     <h3 className="mt-1 text-sm font-semibold text-white">
                       {selectedSignal.trapStatus.replaceAll("_", " ")}
                     </h3>
                   </div>
-                  <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-red-100">
+                  <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-danger-100">
                     Reversal score {selectedSignal.trapScore ?? 0}
                   </span>
                 </div>
@@ -3764,17 +3764,17 @@ function App() {
               </div>
             )}
             {selectedSignal.reversalRisk && (
-              <div className="mt-4 rounded-2xl border border-purple-400/20 bg-purple-400/10 p-4">
+              <div className="mt-4 rounded-xl border border-proof/20 bg-proof/10 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-purple-200/70">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-proof-200/70">
                       Market Reversal Radar
                     </p>
                     <h3 className="mt-1 text-sm font-semibold text-white">
                       {selectedSignal.reversalRisk.replaceAll("_", " ")}
                     </h3>
                   </div>
-                  <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-purple-100">
+                  <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-proof-100">
                     Reversal scan
                   </span>
                 </div>
@@ -3786,17 +3786,17 @@ function App() {
               </div>
             )}
             {selectedSignal.scoreRealityStatus && (
-              <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+              <div className="mt-4 rounded-xl border border-warning/20 bg-warning/10 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/70">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-warning-200/70">
                       Score Reality Check
                     </p>
                     <h3 className="mt-1 text-sm font-semibold text-white">
                       {selectedSignal.scoreRealityStatus.replaceAll("_", " ")}
                     </h3>
                   </div>
-                  <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-amber-100">
+                  <span className="rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-semibold text-warning-100">
                     {selectedSignal.finalScore ?? "Final score pending"}
                   </span>
                 </div>
@@ -3807,7 +3807,7 @@ function App() {
                 </p>
               </div>
             )}
-            <div className="mt-4 rounded-2xl bg-black/25 p-4">
+            <div className="mt-4 rounded-xl bg-black/25 p-4">
               <p className="text-[11px] text-stone-500">Agent explanation</p>
               <p className="mt-2 text-sm leading-6 text-stone-200">
                 {selectedSignal.explanation ??
@@ -3816,48 +3816,48 @@ function App() {
               </p>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-emerald-400/15 bg-emerald-400/10 p-4">
+            <div className="mt-4 rounded-xl border border-positive/15 bg-positive/10 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] text-emerald-200/80">Confidence explanation</p>
+                  <p className="text-[11px] text-positive-200/80">Confidence explanation</p>
                   <h3 className="mt-1 text-sm font-semibold text-white">
                     Why the agent trusted this signal
                   </h3>
                 </div>
-                <span className="rounded-full bg-black/25 px-3 py-1 text-[11px] text-emerald-100">
+                <span className="rounded-full bg-black/25 px-3 py-1 text-[11px] text-positive-100">
                   Explainable signal
                 </span>
               </div>
 
               <div className="mt-3 grid gap-2 text-xs text-stone-300">
                 <div className="rounded-xl bg-black/20 p-3">
-                  <span className="font-semibold text-emerald-200">+ Compression rule:</span>{" "}
+                  <span className="font-semibold text-positive-200">+ Compression rule:</span>{" "}
                   Odds movement reached {formatOddsChange(selectedSignal.oddsChangePct)}, so the
                   signal crossed the configured trigger level.
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3">
-                  <span className="font-semibold text-emerald-200">+ Momentum weight:</span>{" "}
+                  <span className="font-semibold text-positive-200">+ Momentum weight:</span>{" "}
                   Momentum score registered at{" "}
                   {Math.round(selectedSignal.momentumScore ?? selectedSignal.confidence ?? 0)},
                   giving the agent enough strength to classify the move.
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3">
-                  <span className="font-semibold text-emerald-200">+ Target tracked:</span>{" "}
+                  <span className="font-semibold text-positive-200">+ Target tracked:</span>{" "}
                   The agent attached the movement to {getSignalTarget(selectedSignal)} instead of
                   creating a generic market alert.
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3">
-                  <span className="font-semibold text-emerald-200">+ Audit status:</span>{" "}
+                  <span className="font-semibold text-positive-200">+ Audit status:</span>{" "}
                   Current outcome is {getSignalOutcome(selectedSignal)}, so the signal can be
                   reviewed after the market closes.
                 </div>
               </div>
             </div>
-            <div className="mt-4 rounded-2xl border border-orange-400/20 bg-orange-400/10 p-4">
-              <p className="text-[11px] text-orange-200/80">Decision path</p>
+            <div className="mt-4 rounded-xl border border-accent/20 bg-accent/10 p-4">
+              <p className="text-[11px] text-accent-200/80">Decision path</p>
               <ol className="mt-2 space-y-2 text-xs leading-5 text-stone-300">
                 <li>1. Agent received a new match and odds snapshot.</li>
                 <li>
@@ -3872,7 +3872,7 @@ function App() {
                 </li>
                 <li>
                   3. Odds compression reached{" "}
-                  <span className="font-semibold text-orange-100">
+                  <span className="font-semibold text-accent-100">
                     {formatOddsChange(selectedSignal.oddsChangePct)}
                   </span>.
                 </li>
@@ -3887,15 +3887,15 @@ function App() {
                 </li>
                 <li>
                   6. Evaluation status:{" "}
-                  <span className="font-semibold text-emerald-200">
+                  <span className="font-semibold text-positive-200">
                     {getSignalOutcome(selectedSignal)}
                   </span>.
                 </li>
               </ol>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-sky-400/15 bg-sky-400/5 p-4">
-              <p className="text-[11px] text-sky-200/80">Historical precedent</p>
+            <div className="mt-4 rounded-xl border border-info/15 bg-info/5 p-4">
+              <p className="text-[11px] text-info-200/80">Historical precedent</p>
               <h3 className="mt-1 text-sm font-semibold text-white">Similar past signals</h3>
 
               {isSimilarSignalsLoading ? (
@@ -3931,8 +3931,8 @@ function App() {
                         <span
                           className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
                             entry.resultStatus === "correct"
-                              ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-                              : "border-red-400/30 bg-red-400/10 text-red-200"
+                              ? "border-positive/30 bg-positive/10 text-positive-200"
+                              : "border-danger/30 bg-danger/10 text-danger-200"
                           }`}
                         >
                           {(entry.resultStatus ?? "unknown").toUpperCase()}
