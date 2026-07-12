@@ -122,7 +122,14 @@ export function LiveMarketsPage({
 }: LiveMarketsPageProps) {
   return (
     <div className="space-y-4">
-      <SelectedMatchPanel selectedMatch={selectedMatch} selectedMatchMarketPressure={selectedMatchMarketPressure} />
+      <SelectedMatchPanel
+        selectedMatch={selectedMatch}
+        selectedMatchMarketPressure={selectedMatchMarketPressure}
+        hasChartData={chartData.length > 0}
+        isReplayStreamMode={isReplayStreamMode}
+        isOddsStreamLive={isOddsStreamLive}
+        oddsStreamLastUpdate={oddsStreamLastUpdate}
+      />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <div className="xl:col-span-8">
@@ -134,7 +141,6 @@ export function LiveMarketsPage({
             onSelectSignalId={onSelectSignalId}
             isReplayStreamMode={isReplayStreamMode}
             isOddsStreamLive={isOddsStreamLive}
-            oddsStreamLastUpdate={oddsStreamLastUpdate}
             streamProgressPercent={streamProgressPercent}
             replayStreamProgress={replayStreamProgress}
           />

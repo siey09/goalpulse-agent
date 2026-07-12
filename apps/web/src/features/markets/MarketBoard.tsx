@@ -35,6 +35,8 @@ function matchStatusToTone(match: Match): StatusTone {
   return "neutral";
 }
 
+const STATUS_SCAN_ORDER: Record<string, number> = { live: 0, scheduled: 1, finished: 2 };
+
 /**
  * Desktop/tablet render a real <table> (horizontally scrollable if the
  * viewport can't fit it); below the sm breakpoint it switches to compact
@@ -55,6 +57,13 @@ export function MarketBoard({
   selectedMatchId,
   onSelectMatch,
 }: MarketBoardProps) {
+  // Single-status filters are already homogeneous; only the "All" view
+  // benefits from grouping live matches to the top for faster scanning.
+  const displayMatches =
+    !matchStatusFilter || matchStatusFilter === "all"
+      ? [...matches].sort((a, b) => (STATUS_SCAN_ORDER[a.status ?? ""] ?? 3) - (STATUS_SCAN_ORDER[b.status ?? ""] ?? 3))
+      : matches;
+
   return (
     <Card id="guide-market-board" className="p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -73,7 +82,7 @@ export function MarketBoard({
         Select a match to inspect its live prices and odds chart on the left.
       </p>
 
-      {matches.length === 0 ? (
+      {displayMatches.length === 0 ? (
         <EmptyState reason="No matches found for this filter." />
       ) : (
         <>
@@ -100,7 +109,7 @@ export function MarketBoard({
                 </tr>
               </thead>
               <tbody>
-                {matches.map((match) => {
+                {displayMatches.map((match) => {
                   const isSelected = selectedMatchId === match.id;
                   const isLive = match.status === "live";
                   const isFinished = match.status === "finished";
@@ -158,7 +167,7 @@ export function MarketBoard({
 
           {/* Mobile: compact cards */}
           <div className="space-y-2 sm:hidden">
-            {matches.map((match) => {
+            {displayMatches.map((match) => {
               const isSelected = selectedMatchId === match.id;
               const isLive = match.status === "live";
               const freshness = dataFreshnessLabel(match.lastUpdated);

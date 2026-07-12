@@ -1,5 +1,5 @@
 import { Area, AreaChart, CartesianGrid, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { TrendingDown, TrendingUp, Activity } from "lucide-react";
+import { ArrowDown, ArrowUp, TrendingDown, TrendingUp, Activity } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { formatOdds, formatOddsChange, severityMarkerStyle } from "../../lib/formatters";
 import type { Match } from "../../types";
@@ -13,42 +13,41 @@ export interface OddsMovementChartProps {
   onSelectSignalId: (signalId: string) => void;
   isReplayStreamMode: boolean;
   isOddsStreamLive: boolean;
-  oddsStreamLastUpdate?: string;
   streamProgressPercent: number;
   replayStreamProgress?: string;
 }
 
-type FreshnessState = "waiting" | "replay" | "live" | "stale" | "reconnecting";
+type TickDirection = "up" | "down" | "flat" | null;
 
-const FRESHNESS_COPY: Record<FreshnessState, { label: string; toneClass: string }> = {
-  waiting: { label: "Waiting", toneClass: "border-border bg-black/30 text-stone-400" },
-  replay: { label: "Replay", toneClass: "border-info/30 bg-info/10 text-info-200" },
-  live: { label: "Live", toneClass: "border-positive/30 bg-positive/10 text-positive-200" },
-  stale: { label: "Stale", toneClass: "border-warning/30 bg-warning/10 text-warning-200" },
-  reconnecting: { label: "Reconnecting", toneClass: "border-danger/30 bg-danger/10 text-danger-200" },
-};
+function tickDirection(chartData: LiveMarketsChartPoint[], key: "home" | "draw" | "away"): TickDirection {
+  const current = chartData[chartData.length - 1]?.[key];
+  const previous = chartData[chartData.length - 2]?.[key];
+  if (current == null || previous == null) return null;
+  if (current < previous) return "down";
+  if (current > previous) return "up";
+  return "flat";
+}
 
-/**
- * Honest 5-way read of what the chart is currently showing - distinct from
- * IntelligenceRail's fuller stream panel, this is just enough to answer
- * "is this live, replayed, stale, or not connected yet" at a glance.
- */
-function getFreshnessState(
-  hasData: boolean,
-  isReplayStreamMode: boolean,
-  isOddsStreamLive: boolean,
-  oddsStreamLastUpdate?: string
-): FreshnessState {
-  if (!hasData) return "waiting";
-  if (isReplayStreamMode) return "replay";
-  if (isOddsStreamLive) return "live";
-  return oddsStreamLastUpdate ? "stale" : "reconnecting";
+/** Odds shortening/lengthening since the previous real TxLINE snapshot - never a value judgement, just the raw tick-over-tick direction. */
+function TickIndicator({ direction }: { direction: TickDirection }) {
+  if (!direction || direction === "flat") return null;
+  const Icon = direction === "down" ? ArrowDown : ArrowUp;
+  const label = direction === "down" ? "shortened since previous tick" : "lengthened since previous tick";
+  return (
+    <span className="inline-flex items-center text-stone-500" title={label}>
+      <Icon className="h-3 w-3" aria-hidden="true" />
+      <span className="sr-only">{label}</span>
+    </span>
+  );
 }
 
 /**
- * The workspace's main visual focus - verdict, current odds, and the odds
- * chart itself, given the full column width now that stream/audit status
- * lives in the IntelligenceRail instead of sharing this card's header row.
+ * The workspace's main visual focus - current odds, market verdict, and the
+ * odds chart itself, given the full column width now that stream/audit
+ * status lives in the IntelligenceRail instead of sharing this card's
+ * header row. Live/replay/stale mode now lives once in SelectedMatchPanel's
+ * header, so this card's own header keeps only the market-phase label
+ * (pre-match / live / finished / demo replay) instead of repeating it.
  */
 export function OddsMovementChart({
   selectedMatch,
@@ -58,7 +57,6 @@ export function OddsMovementChart({
   onSelectSignalId,
   isReplayStreamMode,
   isOddsStreamLive,
-  oddsStreamLastUpdate,
   streamProgressPercent,
   replayStreamProgress,
 }: OddsMovementChartProps) {
@@ -72,29 +70,41 @@ export function OddsMovementChart({
           ? "Finished audit"
           : "Waiting";
 
-  const freshnessState = getFreshnessState(chartData.length > 0, isReplayStreamMode, isOddsStreamLive, oddsStreamLastUpdate);
-  const freshness = FRESHNESS_COPY[freshnessState];
-
   return (
     <Card id="guide-odds-chart" className="p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-stone-500">Selected market</p>
-        <div className="flex items-center gap-2">
-          <span
-            className={`flex items-center gap-1.5 rounded-md border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] ${freshness.toneClass}`}
-          >
-            {freshnessState === "live" && (
-              <span className="h-1.5 w-1.5 rounded-full bg-positive motion-safe:animate-pulse" aria-hidden="true" />
-            )}
-            {freshness.label}
-          </span>
-          <span className="rounded-md border border-border bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-stone-300">
-            {marketContextLabel}
-          </span>
-        </div>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.1em] text-stone-500">Selected market</h2>
+        <span className="rounded-md border border-border bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-stone-300">
+          {marketContextLabel}
+        </span>
       </div>
 
       <div className="mb-3 space-y-2">
+        <div className="grid grid-cols-3 divide-x divide-white/8 rounded-lg bg-black/20">
+          <div className="min-w-0 px-3 py-2.5">
+            <p className="truncate text-[10px] uppercase tracking-[0.14em] text-stone-500">{selectedMatch?.homeTeam ?? "Home"}</p>
+            <div className="mt-1 flex items-baseline gap-1.5">
+              <p className="truncate font-mono text-lg font-bold tabular-nums text-accent-200 sm:text-xl">{chartReadout.homeCurrent}</p>
+              <TickIndicator direction={tickDirection(chartData, "home")} />
+            </div>
+          </div>
+          <div className="min-w-0 px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-stone-500">Draw</p>
+            <div className="mt-1 flex items-baseline gap-1.5">
+              <p className="truncate font-mono text-lg font-bold tabular-nums text-proof-200 sm:text-xl">{chartReadout.drawCurrent}</p>
+              <TickIndicator direction={tickDirection(chartData, "draw")} />
+            </div>
+          </div>
+          <div className="min-w-0 px-3 py-2.5">
+            <p className="truncate text-[10px] uppercase tracking-[0.14em] text-stone-500">{selectedMatch?.awayTeam ?? "Away"}</p>
+            <div className="mt-1 flex items-baseline gap-1.5">
+              <p className="truncate font-mono text-lg font-bold tabular-nums text-positive-200 sm:text-xl">{chartReadout.awayCurrent}</p>
+              <TickIndicator direction={tickDirection(chartData, "away")} />
+            </div>
+          </div>
+        </div>
+        <p className="px-1 text-[10px] text-stone-500">Decimal odds — the lower number is the side the market currently favors.</p>
+
         <div
           className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 transition-colors duration-500 ${chartReadout.severity.cardClass}`}
         >
@@ -129,27 +139,11 @@ export function OddsMovementChart({
           {chartReadout.meaning}{" "}
           {chartReadout.signalStatus !== "No signal marker on this chart yet" ? `• ${chartReadout.signalStatus}` : ""}
         </p>
-
-        <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border border-accent/15 bg-black/20 p-2.5">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-stone-500">{selectedMatch?.homeTeam ?? "Home"} odds now</p>
-            <p className="mt-1 font-mono text-xl font-bold tabular-nums text-accent-200">{chartReadout.homeCurrent}</p>
-          </div>
-          <div className="rounded-lg border border-proof/15 bg-black/20 p-2.5">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-stone-500">Draw odds now</p>
-            <p className="mt-1 font-mono text-xl font-bold tabular-nums text-proof-200">{chartReadout.drawCurrent}</p>
-          </div>
-          <div className="rounded-lg border border-positive/15 bg-black/20 p-2.5">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-stone-500">{selectedMatch?.awayTeam ?? "Away"} odds now</p>
-            <p className="mt-1 font-mono text-xl font-bold tabular-nums text-positive-200">{chartReadout.awayCurrent}</p>
-          </div>
-        </div>
-        <p className="px-1 text-[10px] text-stone-500">Decimal odds — the lower number is the side the market currently favors.</p>
       </div>
 
       <div className="mb-2 flex items-end justify-between px-1">
         <div>
-          <p className="text-xs font-semibold text-white">Odds movement over time</p>
+          <h3 className="text-xs font-semibold text-white">Odds movement over time</h3>
           <p className="text-[10px] text-stone-500">
             Each point is a real TxLINE odds update, not a match minute. The line going down means the market favors that side more.
           </p>
@@ -318,7 +312,7 @@ export function OddsMovementChart({
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-black/15 px-3 py-2 text-[10px] text-stone-400">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border pt-2 text-[10px] text-stone-500">
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-accent" />
             {selectedMatch?.homeTeam ?? "Home"} odds

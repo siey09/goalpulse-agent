@@ -46,7 +46,7 @@ export function IntelligenceRail({
 
   return (
     <Card className="space-y-3 p-4 xl:sticky xl:top-4">
-      <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">Intelligence rail</p>
+      <h2 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500">Intelligence rail</h2>
 
       <StatusCapsule
         label={`Last ${chartDataCount} snapshots`}

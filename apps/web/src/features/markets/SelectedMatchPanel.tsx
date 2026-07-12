@@ -2,10 +2,15 @@ import { Card } from "../../components/ui/Card";
 import { matchClockLabel, preciseStatusLabel } from "../../lib/formatters";
 import type { Match } from "../../types";
 import type { LiveMarketsMarketPressure } from "./LiveMarketsPage";
+import { FRESHNESS_COPY, getFreshnessState } from "./freshness";
 
 export interface SelectedMatchPanelProps {
   selectedMatch?: Match;
   selectedMatchMarketPressure: LiveMarketsMarketPressure;
+  hasChartData: boolean;
+  isReplayStreamMode: boolean;
+  isOddsStreamLive: boolean;
+  oddsStreamLastUpdate?: string;
 }
 
 /**
@@ -14,10 +19,22 @@ export interface SelectedMatchPanelProps {
  * fill, so it reads as a command-console readout instead of a promo banner.
  * Home = amber, away = teal, matching the odds chart's own color coding
  * below so the two panels stay legible as "the same match" at a glance.
+ * Owns the workspace's one live/replay/stale/waiting mode readout - the
+ * chart below shows its own market-phase label instead of repeating this.
  */
-export function SelectedMatchPanel({ selectedMatch, selectedMatchMarketPressure }: SelectedMatchPanelProps) {
+export function SelectedMatchPanel({
+  selectedMatch,
+  selectedMatchMarketPressure,
+  hasChartData,
+  isReplayStreamMode,
+  isOddsStreamLive,
+  oddsStreamLastUpdate,
+}: SelectedMatchPanelProps) {
   const isLive = selectedMatch?.status === "live";
   const isScheduled = selectedMatch?.status === "scheduled";
+
+  const freshnessState = getFreshnessState(hasChartData, isReplayStreamMode, isOddsStreamLive, oddsStreamLastUpdate);
+  const freshness = FRESHNESS_COPY[freshnessState];
 
   return (
     <Card id="guide-selected-match" className="relative overflow-hidden p-4">
@@ -31,10 +48,21 @@ export function SelectedMatchPanel({ selectedMatch, selectedMatchMarketPressure 
           </h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1.5 rounded-md border border-border bg-black/25 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-stone-300">
-            {isLive && <span className="h-1.5 w-1.5 rounded-full bg-positive motion-safe:animate-pulse" aria-hidden="true" />}
-            {isLive ? "Clock" : "Timing"} {matchClockLabel(selectedMatch)}
+          <span
+            className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] ${freshness.toneClass}`}
+          >
+            {freshnessState === "live" && (
+              <span className="h-1.5 w-1.5 rounded-full bg-positive motion-safe:animate-pulse" aria-hidden="true" />
+            )}
+            {freshness.label}
+            {oddsStreamLastUpdate ? ` · ${oddsStreamLastUpdate}` : ""}
           </span>
+          {isLive && (
+            <span className="flex items-center gap-1.5 rounded-md border border-border bg-black/25 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-stone-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-positive motion-safe:animate-pulse" aria-hidden="true" />
+              Clock {matchClockLabel(selectedMatch)}
+            </span>
+          )}
           <span
             className={`rounded-md border px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] ${
               isLive
