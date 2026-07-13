@@ -72,6 +72,7 @@ export function CommandCenterPage({
   onNavigate,
 }: CommandCenterPageProps) {
   const [arena, setArena] = useState<ArenaResponse | null>(null);
+  const [isArenaUnavailable, setIsArenaUnavailable] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -84,8 +85,9 @@ export function CommandCenterPage({
         if (!mounted) return;
 
         setArena(payload.data ?? null);
-      } catch (error) {
-        console.error("Unable to load arena summary for Command Center overview", error);
+        setIsArenaUnavailable(false);
+      } catch {
+        if (mounted) setIsArenaUnavailable(true);
       }
     }
 
@@ -359,7 +361,9 @@ export function CommandCenterPage({
                   </p>
                 </div>
               ) : (
-                <p className="mt-2 text-xs text-stone-400">{recommendation.message}</p>
+                <p className="mt-2 text-xs text-stone-400">
+                  {isArenaUnavailable ? "Arena data unavailable." : recommendation.message}
+                </p>
               )}
             </div>
 
@@ -376,7 +380,9 @@ export function CommandCenterPage({
                   <p className="mt-0.5 truncate font-mono text-[10px] text-proof-200">Hash {arena.proof.hash.slice(0, 12)}…</p>
                 </div>
               ) : (
-                <p className="mt-2 text-xs text-stone-400">Waiting for arena data.</p>
+                <p className="mt-2 text-xs text-stone-400">
+                  {isArenaUnavailable ? "Arena data unavailable." : "Waiting for arena data."}
+                </p>
               )}
             </div>
 

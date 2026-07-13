@@ -154,9 +154,9 @@ describe("CommandCenterPage", () => {
     expect(screen.getByText(/Hash abc123def456/)).toBeInTheDocument();
   });
 
-  it("does not throw when the arena fetch fails", async () => {
+  it("shows an honest unavailable state when the arena fetch fails", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network disabled in tests")));
-    expect(() => render(<CommandCenterPage {...baseProps} />)).not.toThrow();
-    await waitFor(() => expect(screen.getAllByText("Waiting for arena data.")).toHaveLength(2));
+    render(<CommandCenterPage {...baseProps} />);
+    await waitFor(() => expect(screen.getAllByText("Arena data unavailable.")).toHaveLength(2));
   });
 });
