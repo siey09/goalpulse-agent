@@ -78,6 +78,7 @@ describe("TopStatusBar", () => {
     expect(screen.getByText("Command Center")).toBeInTheDocument();
     expect(screen.getByText("RUNNING")).toBeInTheDocument();
     expect(screen.getByText("LIVE TxLINE")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "System status" })).toBeInTheDocument();
   });
 
   it("does not render a mobile nav toggle when onOpenMobileNav is omitted", () => {
