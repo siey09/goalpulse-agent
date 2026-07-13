@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CommandCenterPage } from "./CommandCenterPage";
 
 const arenaResponse = {
@@ -100,6 +100,28 @@ describe("CommandCenterPage", () => {
     expect(screen.getByText("Field-backed")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Inspect signal" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Open verification" })).toBeEnabled();
+    expect(screen.getByRole("region", { name: "Priority signal" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("complementary", { name: "Command actions and live context" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Market evidence" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Decision audit" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Trust and system status" })).toBeInTheDocument();
+    expect(screen.getByTestId("command-workbench")).toHaveAttribute(
+      "data-layout",
+      "independent-columns"
+    );
+  });
+
+  it("routes the operator from the priority signal to evidence and verification", () => {
+    const onNavigate = vi.fn();
+    render(<CommandCenterPage {...baseProps} onNavigate={onNavigate} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Inspect signal" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open verification" }));
+
+    expect(onNavigate).toHaveBeenNthCalledWith(1, "signals");
+    expect(onNavigate).toHaveBeenNthCalledWith(2, "verification");
   });
 
   it("shows an honest empty state instead of a fake chart when fewer than two points exist", () => {
