@@ -33,6 +33,14 @@ describe("SystemHealthPage", () => {
     expect(screen.getByText("Waiting for the first health check to complete.")).toBeInTheDocument();
   });
 
+  it("keeps the static threshold glossary visible even before the first health check completes", () => {
+    // Regression check: this card is static reference copy that never depended on
+    // `health` - it must never be hidden behind the loading state, since the guided
+    // tour's "Signal Thresholds" step can land here before the first poll resolves.
+    render(<SystemHealthPage health={null} feedHealth={null} />);
+    expect(screen.getByText("Signal Thresholds")).toBeInTheDocument();
+  });
+
   it("shows basic connectivity and an explicit unavailable reason when feed health hasn't loaded yet", () => {
     render(<SystemHealthPage health={health} feedHealth={null} />);
     // Existing liveStream information must still render even without feedHealth.

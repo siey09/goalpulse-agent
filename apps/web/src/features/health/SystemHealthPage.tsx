@@ -46,17 +46,6 @@ export function SystemHealthPage({ health, feedHealth }: SystemHealthPageProps) 
   const fixtureCoverage = feedHealth?.fixtureCoverage;
   const staleMatches = oddsFreshness?.staleLiveMatches ?? [];
 
-  if (!health) {
-    return (
-      <div className="space-y-4">
-        <Card className="p-4">
-          <SectionHeader eyebrow="Live status" title="System Health" />
-          <EmptyState reason="Waiting for the first health check to complete." />
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <Card className="p-4">
@@ -66,107 +55,113 @@ export function SystemHealthPage({ health, feedHealth }: SystemHealthPageProps) 
           action={status && <StatusBadge label={STATUS_LABEL[status]} tone={STATUS_TONE[status]} withDot />}
         />
 
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <h3 className="text-xs font-semibold text-white">TxLINE push feed</h3>
-            <div className="flex flex-wrap items-center gap-3">
-              <StatusBadge label={connected ? "Connected" : "Reconnecting"} tone={connected ? "positive" : "warning"} withDot />
-              <span className="text-xs text-stone-400">
-                {health.liveStream?.totalEventsReceived ?? 0} events received
-                {health.liveStream?.totalReconnects ? ` · ${health.liveStream.totalReconnects} reconnect(s)` : ""}
-              </span>
-            </div>
-            {health.liveStream?.lastError && <p className="text-xs text-danger">{health.liveStream.lastError}</p>}
-          </div>
-
-          <div className="space-y-1">
-            <h3 className="text-xs font-semibold text-white">Backend</h3>
-            <div className="flex flex-wrap items-center gap-3">
-              <StatusBadge label={health.ok ? "Online" : "Checking"} tone={health.ok ? "positive" : "neutral"} withDot />
-              {health.useSimulatedFeed !== undefined && (
-                <span className="text-xs text-stone-400">
-                  Feed mode: {health.useSimulatedFeed ? "Sandbox (simulated)" : "Real TxLINE"}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {!feedHealth ? (
-          <div className="mt-4">
-            <EmptyState reason="Feed-health metrics (cycle health, odds freshness, fixture coverage) are not available yet — showing basic connectivity only." />
-          </div>
+        {!health ? (
+          <EmptyState reason="Waiting for the first health check to complete." />
         ) : (
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="rounded-xl bg-black/20 p-3">
-              <h3 className="mb-2 text-xs font-semibold text-white">Agent cycle</h3>
-              <div className="flex flex-wrap gap-2">
-                <StatusCapsule
-                  label="Last run"
-                  value={cycleHealth?.lastRunAt ? (dataFreshnessLabel(cycleHealth.lastRunAt) ?? "just now") : "No runs yet"}
-                  tone={cycleHealth?.isCurrentGapExceeded ? "danger" : "neutral"}
-                />
-                <StatusCapsule
-                  label="Expected interval"
-                  value={cycleHealth?.expectedIntervalMs ? `${Math.round(cycleHealth.expectedIntervalMs / 1000)}s` : "—"}
-                  tone="neutral"
-                />
-                <StatusCapsule
-                  label="Missed cycles"
-                  value={cycleHealth?.recentMissedCycles ?? 0}
-                  tone={cycleHealth?.recentMissedCycles ? "warning" : "positive"}
-                />
+          <>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <h3 className="text-xs font-semibold text-white">TxLINE push feed</h3>
+                <div className="flex flex-wrap items-center gap-3">
+                  <StatusBadge label={connected ? "Connected" : "Reconnecting"} tone={connected ? "positive" : "warning"} withDot />
+                  <span className="text-xs text-stone-400">
+                    {health.liveStream?.totalEventsReceived ?? 0} events received
+                    {health.liveStream?.totalReconnects ? ` · ${health.liveStream.totalReconnects} reconnect(s)` : ""}
+                  </span>
+                </div>
+                {health.liveStream?.lastError && <p className="text-xs text-danger">{health.liveStream.lastError}</p>}
+              </div>
+
+              <div className="space-y-1">
+                <h3 className="text-xs font-semibold text-white">Backend</h3>
+                <div className="flex flex-wrap items-center gap-3">
+                  <StatusBadge label={health.ok ? "Online" : "Checking"} tone={health.ok ? "positive" : "neutral"} withDot />
+                  {health.useSimulatedFeed !== undefined && (
+                    <span className="text-xs text-stone-400">
+                      Feed mode: {health.useSimulatedFeed ? "Sandbox (simulated)" : "Real TxLINE"}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="rounded-xl bg-black/20 p-3">
-              <h3 className="mb-2 text-xs font-semibold text-white">Odds freshness</h3>
-              <div className="flex flex-wrap gap-2">
-                <StatusCapsule
-                  label="Stale live matches"
-                  value={oddsFreshness?.staleLiveMatchCount ?? 0}
-                  tone={oddsFreshness?.staleLiveMatchCount ? "warning" : "positive"}
-                />
+            {!feedHealth ? (
+              <div className="mt-4">
+                <EmptyState reason="Feed-health metrics (cycle health, odds freshness, fixture coverage) are not available yet — showing basic connectivity only." />
               </div>
-              {staleMatches.length > 0 ? (
-                <ul className="mt-2 space-y-1">
-                  {staleMatches.map((match) => (
-                    <li key={match.matchId ?? match.match} className="text-[11px] text-stone-400">
-                      {match.match ?? "Unknown match"} — stale for {formatDurationMs(match.staleForMs ?? 0)}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-2 text-[11px] text-stone-500">No stale live matches.</p>
-              )}
-            </div>
+            ) : (
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="rounded-xl bg-black/20 p-3">
+                  <h3 className="mb-2 text-xs font-semibold text-white">Agent cycle</h3>
+                  <div className="flex flex-wrap gap-2">
+                    <StatusCapsule
+                      label="Last run"
+                      value={cycleHealth?.lastRunAt ? (dataFreshnessLabel(cycleHealth.lastRunAt) ?? "just now") : "No runs yet"}
+                      tone={cycleHealth?.isCurrentGapExceeded ? "danger" : "neutral"}
+                    />
+                    <StatusCapsule
+                      label="Expected interval"
+                      value={cycleHealth?.expectedIntervalMs ? `${Math.round(cycleHealth.expectedIntervalMs / 1000)}s` : "—"}
+                      tone="neutral"
+                    />
+                    <StatusCapsule
+                      label="Missed cycles"
+                      value={cycleHealth?.recentMissedCycles ?? 0}
+                      tone={cycleHealth?.recentMissedCycles ? "warning" : "positive"}
+                    />
+                  </div>
+                </div>
 
-            <div className="rounded-xl bg-black/20 p-3 md:col-span-2">
-              <h3 className="mb-2 text-xs font-semibold text-white">Fixture coverage</h3>
-              <div className="flex flex-wrap items-center gap-3">
-                <StatusCapsule
-                  label="Raw fixtures"
-                  value={fixtureCoverage?.lastRunRawFixtureCount ?? "—"}
-                  tone="neutral"
-                />
-                <StatusCapsule
-                  label="Processed"
-                  value={fixtureCoverage?.lastRunProcessedCount ?? "—"}
-                  tone="neutral"
-                />
-                <StatusCapsule
-                  label="Recent coverage drops"
-                  value={fixtureCoverage?.recentCoverageDrops ?? 0}
-                  tone={fixtureCoverage?.isCoverageDropped ? "danger" : "positive"}
-                />
+                <div className="rounded-xl bg-black/20 p-3">
+                  <h3 className="mb-2 text-xs font-semibold text-white">Odds freshness</h3>
+                  <div className="flex flex-wrap gap-2">
+                    <StatusCapsule
+                      label="Stale live matches"
+                      value={oddsFreshness?.staleLiveMatchCount ?? 0}
+                      tone={oddsFreshness?.staleLiveMatchCount ? "warning" : "positive"}
+                    />
+                  </div>
+                  {staleMatches.length > 0 ? (
+                    <ul className="mt-2 space-y-1">
+                      {staleMatches.map((match) => (
+                        <li key={match.matchId ?? match.match} className="text-[11px] text-stone-400">
+                          {match.match ?? "Unknown match"} — stale for {formatDurationMs(match.staleForMs ?? 0)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-[11px] text-stone-500">No stale live matches.</p>
+                  )}
+                </div>
+
+                <div className="rounded-xl bg-black/20 p-3 md:col-span-2">
+                  <h3 className="mb-2 text-xs font-semibold text-white">Fixture coverage</h3>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <StatusCapsule
+                      label="Raw fixtures"
+                      value={fixtureCoverage?.lastRunRawFixtureCount ?? "—"}
+                      tone="neutral"
+                    />
+                    <StatusCapsule
+                      label="Processed"
+                      value={fixtureCoverage?.lastRunProcessedCount ?? "—"}
+                      tone="neutral"
+                    />
+                    <StatusCapsule
+                      label="Recent coverage drops"
+                      value={fixtureCoverage?.recentCoverageDrops ?? 0}
+                      tone={fixtureCoverage?.isCoverageDropped ? "danger" : "positive"}
+                    />
+                  </div>
+                  <p className="mt-2 text-[11px] text-stone-500">
+                    {fixtureCoverage?.isCoverageDropped
+                      ? "The most recent run processed fewer fixtures than TxLINE reported."
+                      : "The most recent run processed every fixture TxLINE reported."}
+                  </p>
+                </div>
               </div>
-              <p className="mt-2 text-[11px] text-stone-500">
-                {fixtureCoverage?.isCoverageDropped
-                  ? "The most recent run processed fewer fixtures than TxLINE reported."
-                  : "The most recent run processed every fixture TxLINE reported."}
-              </p>
-            </div>
-          </div>
+            )}
+          </>
         )}
       </Card>
 
