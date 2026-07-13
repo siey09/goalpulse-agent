@@ -144,12 +144,12 @@ export function CommandCenterPage({
 
               <div className="min-w-0 border-t border-border p-4 lg:border-l lg:border-t-0 lg:p-5">
                 <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">Signal rationale</p>
-                <p className="mt-2 text-sm leading-6 text-stone-200" title={latestSignal.explanation}>
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-stone-200" title={latestSignal.explanation}>
                   {latestSignal.target} compressed {latestSignal.priceMoveLabel}; {latestSignal.explanation}
                 </p>
               </div>
 
-              <div className="flex min-w-[13rem] flex-col justify-between gap-3 border-t border-border p-4 lg:border-l lg:border-t-0 lg:p-5">
+              <div className="flex min-w-52 flex-col justify-between gap-3 border-t border-border p-4 lg:border-l lg:border-t-0 lg:p-5">
                 <div>
                   <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">Confidence</p>
                   <p className="mt-1 font-mono text-xl font-bold tabular-nums text-white">{latestSignal.confidenceLabel}</p>

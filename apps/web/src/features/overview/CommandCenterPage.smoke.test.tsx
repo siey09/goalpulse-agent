@@ -98,6 +98,9 @@ describe("CommandCenterPage", () => {
     expect(screen.queryByText("What changed")).not.toBeInTheDocument();
     expect(screen.queryByText("Why it matters")).not.toBeInTheDocument();
     expect(screen.getByText("Field-backed")).toBeInTheDocument();
+    const rationale = screen.getByTitle(baseProps.latestSignal.explanation);
+    expect(rationale).toHaveClass("line-clamp-2");
+    expect(rationale).toHaveAttribute("title", baseProps.latestSignal.explanation);
     expect(screen.getByRole("button", { name: "Inspect signal" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Open verification" })).toBeEnabled();
     expect(screen.getByRole("region", { name: "Priority signal rail" })).toBeInTheDocument();
