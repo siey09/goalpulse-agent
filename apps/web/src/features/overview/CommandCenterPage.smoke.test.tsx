@@ -100,17 +100,12 @@ describe("CommandCenterPage", () => {
     expect(screen.getByText("Field-backed")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Inspect signal" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Open verification" })).toBeEnabled();
-    expect(screen.getByRole("region", { name: "Priority signal" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("complementary", { name: "Command actions and live context" })
-    ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Market evidence" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Decision audit" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Trust and system status" })).toBeInTheDocument();
-    expect(screen.getByTestId("command-workbench")).toHaveAttribute(
-      "data-layout",
-      "independent-columns"
-    );
+    expect(screen.getByRole("region", { name: "Priority signal rail" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Live status" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Market workspace" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Decision activity" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Trust evidence" })).toBeInTheDocument();
+    expect(screen.getByTestId("command-workbench")).toHaveAttribute("data-layout", "signal-rail");
   });
 
   it("routes the operator from the priority signal to evidence and verification", () => {
