@@ -2,7 +2,7 @@ import { Card } from "../../components/ui/Card";
 import { matchClockLabel, preciseStatusLabel } from "../../lib/formatters";
 import type { Match } from "../../types";
 import type { LiveMarketsMarketPressure } from "./LiveMarketsPage";
-import { FRESHNESS_COPY, getFreshnessState } from "./freshness";
+import { FRESHNESS_COPY, getFreshnessState } from "../../lib/freshness";
 
 export interface SelectedMatchPanelProps {
   selectedMatch?: Match;

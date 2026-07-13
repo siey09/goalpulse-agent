@@ -142,6 +142,34 @@ export type Health = {
   };
 };
 
+/** Mirrors apps/api/src/logic/feedHealth.ts's response shape exactly - verified against that source, not assumed. */
+export type FeedHealth = {
+  status?: "healthy" | "degraded" | "down";
+  cycleHealth?: {
+    lastRunAt?: string | null;
+    cycleGapMs?: number | null;
+    expectedIntervalMs?: number;
+    isCurrentGapExceeded?: boolean;
+    recentMissedCycles?: number;
+  };
+  oddsFreshness?: {
+    staleThresholdMs?: number;
+    staleLiveMatchCount?: number;
+    staleLiveMatches?: {
+      matchId?: string;
+      match?: string;
+      lastOddsAt?: string;
+      staleForMs?: number;
+    }[];
+  };
+  fixtureCoverage?: {
+    lastRunRawFixtureCount?: number | null;
+    lastRunProcessedCount?: number | null;
+    isCoverageDropped?: boolean;
+    recentCoverageDrops?: number;
+  };
+};
+
 export type SimilarSignalEntry = {
   matchId?: string;
   signalType?: string;
