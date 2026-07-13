@@ -231,19 +231,16 @@ export function CommandCenterPage({
       <div
         data-testid="command-workbench"
         data-layout="signal-rail"
-        className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-12 lg:gap-4"
+        className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-4"
       >
-        <div className="contents lg:col-span-8 lg:block lg:space-y-4">
-          <section aria-label="Market workspace" className="order-4 md:col-span-2 lg:order-none">
+        <section aria-label="Market workspace" className="min-w-0 lg:col-span-8">
             <Card className="p-4">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <SectionHeader
-                  eyebrow="Selected fixture"
-                  title="Market Pulse"
-                  subtitle={selectedFixtureLabel}
-                  size="standard"
-                />
-                <div className="flex items-center gap-3 text-[10px] text-stone-400">
+              <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                <div className="min-w-0">
+                  <h2 className="font-display text-lg font-bold tracking-tight text-white">Market Pulse</h2>
+                  <p className="mt-0.5 truncate text-xs text-stone-500">{selectedFixtureLabel}</p>
+                </div>
+                <div className="flex items-center gap-3 text-[10px] text-stone-400" aria-label="Odds legend">
                   <span className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
                     Home odds
@@ -255,7 +252,7 @@ export function CommandCenterPage({
                 </div>
               </div>
               {chartData.length >= 2 ? (
-                <div className="h-52 sm:h-60 lg:h-72">
+                <div className="h-56 sm:h-64 lg:h-[22rem]">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
                       <defs>
@@ -304,11 +301,10 @@ export function CommandCenterPage({
                 <EmptyState reason="Fewer than two comparable odds points yet - the chart will populate once the next tick arrives." />
               )}
             </Card>
-          </section>
-        </div>
+        </section>
 
-        <aside aria-label="Command actions and live context" className="contents lg:col-span-4 lg:block lg:space-y-4">
-          <Card className="order-2 p-3 sm:p-4 lg:order-none">
+        <aside aria-label="Command actions and live context" className="min-w-0 space-y-3 lg:col-span-4 lg:space-y-4">
+          <Card className="p-3 sm:p-4">
             <SectionHeader eyebrow="Next action" title="Operator brief" size="compact" />
             <div className="space-y-2">
               <button
@@ -341,18 +337,28 @@ export function CommandCenterPage({
           <section
             id="guide-decision-feed"
             aria-label="Decision activity"
-            className="order-5 md:col-span-2 lg:order-none"
           >
             <Card className="p-3 sm:p-4">
-              <SectionHeader eyebrow="Autonomous flow" title="Decision Feed" size="compact" />
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h2 className="font-display text-sm font-bold tracking-tight text-white">Decision Feed</h2>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("archive")}
+                  className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-stone-300 transition-colors hover:bg-white/5 hover:text-white"
+                >
+                  Open archive
+                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </div>
               <ol className="divide-y divide-border">
                 {decisionFeed.map((step) => (
-                  <li key={step.title} className="py-3 first:pt-0 last:pb-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-semibold text-white">{step.title}</p>
-                      <p className="shrink-0 font-mono text-[9px] uppercase tracking-[0.08em] text-stone-500">{step.time}</p>
+                  <li key={step.title} className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-2 py-2.5 first:pt-0 last:pb-0">
+                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-info" aria-hidden="true" />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-white" title={step.title}>{step.title}</p>
+                      <p className="mt-0.5 line-clamp-1 text-[11px] leading-4 text-stone-500" title={step.detail}>{step.detail}</p>
                     </div>
-                    <p className="mt-1 text-xs leading-5 text-stone-400">{step.detail}</p>
+                    <time className="shrink-0 font-mono text-[9px] tabular-nums text-stone-500">{step.time}</time>
                   </li>
                 ))}
               </ol>
@@ -361,10 +367,10 @@ export function CommandCenterPage({
         </aside>
       </div>
 
-      <section aria-label="Trust evidence" className="overflow-x-auto">
-        <Card className="min-w-[28rem] overflow-hidden p-0 md:min-w-0">
-          <div className="grid grid-cols-2 divide-x divide-border">
-            <div className="p-4">
+      <section aria-label="Trust evidence">
+        <Card className="overflow-hidden p-0">
+          <div className="grid grid-cols-1 divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
+            <div className="min-w-0 p-4">
               <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">Strategy leader</p>
               {leaderScoreboard ? (
                 <div className="mt-2 flex items-end justify-between gap-3">
@@ -383,7 +389,7 @@ export function CommandCenterPage({
               )}
             </div>
 
-            <div className="p-4">
+            <div className="min-w-0 p-4">
               <div className="flex items-center gap-2">
                 <BadgeCheck className="h-4 w-4 text-proof-200" aria-hidden="true" />
                 <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">Verification</p>
@@ -402,6 +408,19 @@ export function CommandCenterPage({
               )}
             </div>
 
+            <div className="min-w-0 p-4">
+              <div className="flex items-center gap-2">
+                <Activity className={`h-4 w-4 ${isSystemHealthy ? "text-positive" : "text-warning"}`} aria-hidden="true" />
+                <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">System health</p>
+              </div>
+              <div className="mt-2 flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white">{isSystemHealthy ? "Online" : "Degraded"}</p>
+                  <p className="truncate text-[11px] text-stone-500">{systemHealthLabel}</p>
+                </div>
+                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${isSystemHealthy ? "bg-positive" : "bg-warning"}`} aria-hidden="true" />
+              </div>
+            </div>
           </div>
         </Card>
       </section>

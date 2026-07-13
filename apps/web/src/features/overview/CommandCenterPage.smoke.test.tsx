@@ -94,7 +94,7 @@ describe("CommandCenterPage", () => {
     expect(screen.getByText("Live fixtures")).toBeInTheDocument();
     expect(screen.getByText("Draw")).toBeInTheDocument();
     expect(screen.getByText("39.54%")).toBeInTheDocument();
-    expect(screen.getAllByText("Streams connected")).toHaveLength(2);
+    expect(screen.getAllByText("Streams connected")).toHaveLength(3);
     expect(screen.queryByText("What changed")).not.toBeInTheDocument();
     expect(screen.queryByText("Why it matters")).not.toBeInTheDocument();
     expect(screen.getByText("Field-backed")).toBeInTheDocument();
@@ -117,9 +117,11 @@ describe("CommandCenterPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Inspect signal" }));
     fireEvent.click(screen.getByRole("button", { name: "Open verification" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open archive" }));
 
     expect(onNavigate).toHaveBeenNthCalledWith(1, "signals");
     expect(onNavigate).toHaveBeenNthCalledWith(2, "verification");
+    expect(onNavigate).toHaveBeenNthCalledWith(3, "archive");
   });
 
   it("shows an honest empty state instead of a fake chart when fewer than two points exist", () => {
