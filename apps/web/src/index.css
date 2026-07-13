@@ -11,10 +11,20 @@ html {
 
 body {
   margin: 0;
-  background: var(--color-canvas);
+  background:
+    radial-gradient(circle at 72% -10%, rgba(255, 159, 28, 0.06), transparent 30rem),
+    var(--color-canvas);
   color: white;
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Global focus-visible safety net - every interactive element gets a

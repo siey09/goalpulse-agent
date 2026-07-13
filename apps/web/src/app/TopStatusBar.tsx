@@ -38,7 +38,7 @@ export function TopStatusBar({
   const isRunning = agentStatus === "RUNNING";
 
   return (
-    <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface-1/95 px-6 py-3 backdrop-blur">
+    <header className="sticky top-0 z-10 flex flex-col gap-2 border-b border-border bg-surface-1/95 px-3 py-3 backdrop-blur sm:px-6 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex items-center gap-3">
         {onOpenMobileNav && (
           <button
@@ -50,9 +50,12 @@ export function TopStatusBar({
             <Menu className="h-5 w-5" />
           </button>
         )}
-        <h1 className="font-display text-lg font-bold tracking-tight text-white">{title}</h1>
+        <div className="min-w-0">
+          <p className="hidden font-mono text-[9px] uppercase tracking-[0.14em] text-stone-500 sm:block">GoalPulse / live intelligence</p>
+          <h1 className="truncate font-display text-base font-bold tracking-tight text-white sm:text-lg">{title}</h1>
+        </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div role="status" aria-label="System status" className="flex max-w-full items-center gap-2 overflow-x-auto pb-0.5 lg:justify-end">
         <span className={isRunning ? "rounded-full animate-glow-pulse" : ""}>
           <StatusBadge label={agentStatus} tone={AGENT_STATUS_TONE[agentStatus]} withDot />
         </span>
@@ -60,6 +63,6 @@ export function TopStatusBar({
         {freshnessLabel && <StatusBadge label={freshnessLabel} tone="neutral" />}
         {lastDecisionLabel && <StatusBadge label={lastDecisionLabel} tone="neutral" />}
       </div>
-    </div>
+    </header>
   );
 }

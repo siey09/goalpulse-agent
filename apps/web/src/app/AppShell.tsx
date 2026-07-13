@@ -31,10 +31,10 @@ export function AppShell({ active, onSelectDestination, children, ...statusBarPr
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopStatusBar {...statusBarProps} onOpenMobileNav={() => setIsMobileNavOpen(true)} />
-        <main className="min-w-0 flex-1 overflow-y-auto px-6 py-5">
+        <main className="min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5">
           <PageHeader destinationId={active} />
           {children}
-          <div id="app-shell-compliance" className="mt-6 flex items-center gap-3 rounded-xl border border-border bg-surface-2 p-4">
+          <div id="app-shell-compliance" className="mt-6 flex items-start gap-3 rounded-xl border border-border bg-surface-2 p-4">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-positive/10 text-positive">
               <ShieldCheck className="h-4 w-4" aria-hidden="true" />
             </div>

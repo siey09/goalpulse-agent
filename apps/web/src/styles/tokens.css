@@ -6,17 +6,17 @@
  * value changed here reskins the whole app consistently.
  */
 @theme {
-  --color-canvas: #0a0e13;
-  --color-surface-1: #10161d;
-  --color-surface-2: #161d26;
-  --color-surface-3: #1e2733;
+  --color-canvas: #090c10;
+  --color-surface-1: #0f141a;
+  --color-surface-2: #151b22;
+  --color-surface-3: #1b232c;
   --color-border: rgba(158, 196, 224, 0.12);
   --color-border-strong: rgba(158, 196, 224, 0.22);
 
   /* Brass/amber signal color - the "gauge needle." Distinct from a
      generic Tailwind orange on purpose: warmer, less safety-vest. */
-  --color-accent: #ffb020;
-  --color-accent-soft: #ffcf7a;
+  --color-accent: #ff9f1c;
+  --color-accent-soft: #ffc56b;
 
   --color-positive: #2fd6b4;
   --color-warning: #f2c14e;

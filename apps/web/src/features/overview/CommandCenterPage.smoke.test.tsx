@@ -62,9 +62,14 @@ const baseProps = {
     severityLabel: "HIGH",
     target: "Draw",
     priceMoveLabel: "39.54%",
+    matchLabel: "Norway vs England",
+    confidenceLabel: "82%",
+    evidenceLabel: "Field-backed",
+    explanation: "Odds compression followed a high-danger possession sequence.",
   },
   systemHealthLabel: "Streams connected",
   isSystemHealthy: true,
+  onNavigate: vi.fn(),
 };
 
 describe("CommandCenterPage", () => {
@@ -85,11 +90,16 @@ describe("CommandCenterPage", () => {
   it("renders with representative mocked data given to it", () => {
     render(<CommandCenterPage {...baseProps} />);
 
-    expect(screen.getByText("Norway vs England")).toBeInTheDocument();
+    expect(screen.getAllByText("Norway vs England")).toHaveLength(2);
     expect(screen.getByText("Live fixtures")).toBeInTheDocument();
     expect(screen.getByText("Draw")).toBeInTheDocument();
     expect(screen.getByText("39.54%")).toBeInTheDocument();
-    expect(screen.getByText("Streams connected")).toBeInTheDocument();
+    expect(screen.getAllByText("Streams connected")).toHaveLength(2);
+    expect(screen.getByText("What changed")).toBeInTheDocument();
+    expect(screen.getByText("Why it matters")).toBeInTheDocument();
+    expect(screen.getByText("Field-backed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Inspect signal" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Open verification" })).toBeEnabled();
   });
 
   it("shows an honest empty state instead of a fake chart when fewer than two points exist", () => {
