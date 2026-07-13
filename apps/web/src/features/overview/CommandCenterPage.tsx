@@ -120,64 +120,65 @@ export function CommandCenterPage({
 
   return (
     <div id="guide-command-center-overview" className="mx-auto w-full max-w-[1600px] space-y-4 lg:space-y-6">
-      <div
-        data-testid="command-workbench"
-        data-layout="independent-columns"
-        className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-12 lg:gap-4"
-      >
-        <div className="contents lg:col-span-8 lg:block lg:space-y-4">
-          <section aria-label="Priority signal" className="order-1 md:col-span-2 lg:order-none">
-            <Card className="border-accent/25 bg-surface-3 p-4 lg:p-5">
-              <SectionHeader
-                eyebrow="Priority intelligence"
-                title="Most important signal now"
-                size="primary"
-                action={
-                  latestSignal ? (
-                    <span className="shrink-0 rounded-full border border-accent/25 bg-accent/10 px-2.5 py-1 font-mono text-[10px] font-bold text-accent-200">
-                      {latestSignal.severityLabel} · {latestSignal.confidenceLabel}
-                    </span>
-                  ) : undefined
-                }
-              />
-
-              {latestSignal ? (
-                <div className="grid gap-4 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-                  <div>
-                    <p className="text-xs text-stone-400">{latestSignal.matchLabel}</p>
-                    <p className="mt-1 font-display text-2xl font-bold tracking-tight text-white">
-                      {latestSignal.target}
-                      <span className="ml-2 font-mono text-accent-200">{latestSignal.priceMoveLabel}</span>
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-positive/20 bg-positive/8 px-2.5 py-1.5 text-[11px] font-semibold text-positive-200">
-                        <Crosshair className="h-3.5 w-3.5" aria-hidden="true" />
-                        {latestSignal.evidenceLabel}
-                      </span>
-                      <span className="inline-flex items-center rounded-lg border border-border bg-black/20 px-2.5 py-1.5 text-[11px] text-stone-300">
-                        Threshold crossed
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">What changed</p>
-                      <p className="mt-1 text-sm leading-5 text-stone-200">
-                        {latestSignal.target} compressed {latestSignal.priceMoveLabel} from its earlier price.
-                      </p>
-                    </div>
-                    <div>
-                      <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">Why it matters</p>
-                      <p className="mt-1 text-sm leading-5 text-stone-200">{latestSignal.explanation}</p>
-                    </div>
-                  </div>
+      <section aria-label="Priority signal rail">
+        <Card className="overflow-hidden border-accent/25 bg-surface-3 p-0">
+          {latestSignal ? (
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_auto]">
+              <div className="min-w-0 p-4 lg:p-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-accent-200">Priority signal</span>
+                  <span className="rounded-full border border-accent/25 bg-accent/10 px-2 py-0.5 font-mono text-[9px] font-bold text-accent-200">
+                    {latestSignal.severityLabel}
+                  </span>
                 </div>
-              ) : (
-                <EmptyState reason="No signal crossed the deterministic threshold in this window." />
-              )}
+                <p className="mt-2 truncate text-xs text-stone-400">{latestSignal.matchLabel}</p>
+                <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <p className="font-display text-xl font-bold tracking-tight text-white">{latestSignal.target}</p>
+                  <p className="font-mono text-lg font-bold tabular-nums text-accent-200">{latestSignal.priceMoveLabel}</p>
+                </div>
+                <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-positive-200">
+                  <Crosshair className="h-3.5 w-3.5" aria-hidden="true" />
+                  {latestSignal.evidenceLabel}
+                </div>
+              </div>
 
-              <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+              <div className="min-w-0 border-t border-border p-4 lg:border-l lg:border-t-0 lg:p-5">
+                <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">Signal rationale</p>
+                <p className="mt-2 text-sm leading-6 text-stone-200" title={latestSignal.explanation}>
+                  {latestSignal.target} compressed {latestSignal.priceMoveLabel}; {latestSignal.explanation}
+                </p>
+              </div>
+
+              <div className="flex min-w-[13rem] flex-col justify-between gap-3 border-t border-border p-4 lg:border-l lg:border-t-0 lg:p-5">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">Confidence</p>
+                  <p className="mt-1 font-mono text-xl font-bold tabular-nums text-white">{latestSignal.confidenceLabel}</p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("signals")}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-xs font-bold text-canvas transition-colors hover:bg-accent-soft"
+                  >
+                    Inspect signal
+                    <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("verification")}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border bg-white/5 px-4 text-xs font-semibold text-stone-200 transition-colors hover:bg-white/10"
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5 text-proof-200" aria-hidden="true" />
+                    Open verification
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 lg:p-5">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-accent-200">Priority signal</p>
+              <EmptyState reason="No signal crossed the deterministic threshold in this window." />
+              <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => onNavigate("signals")}
@@ -195,10 +196,45 @@ export function CommandCenterPage({
                   Open verification
                 </button>
               </div>
-            </Card>
-          </section>
+            </div>
+          )}
+        </Card>
+      </section>
 
-          <section aria-label="Market evidence" className="order-4 md:col-span-2 lg:order-none">
+      <section aria-label="Live status" className="overflow-hidden rounded-xl border border-border bg-surface-2">
+        <div className="grid grid-cols-2 divide-x divide-y divide-border md:grid-cols-5 md:divide-y-0">
+          {liveMetrics.map((metric) => {
+            const Icon = metric.icon;
+            return (
+              <div key={metric.label} className="min-w-0 p-3 sm:p-4">
+                <div className="flex items-center gap-1.5">
+                  <Icon className={`h-3.5 w-3.5 shrink-0 ${metric.tone}`} aria-hidden="true" />
+                  <p className="truncate text-[9px] uppercase tracking-[0.08em] text-stone-500">{metric.label}</p>
+                </div>
+                <p className={`mt-1 truncate font-mono text-sm font-bold tabular-nums ${metric.tone}`}>{metric.value}</p>
+              </div>
+            );
+          })}
+          <div className="col-span-2 min-w-0 p-3 sm:p-4 md:col-span-1">
+            <div className="flex items-center gap-1.5">
+              <Activity className={`h-3.5 w-3.5 shrink-0 ${isSystemHealthy ? "text-positive" : "text-warning"}`} aria-hidden="true" />
+              <p className="truncate text-[9px] uppercase tracking-[0.08em] text-stone-500">System health</p>
+            </div>
+            <p className={`mt-1 truncate font-mono text-sm font-bold ${isSystemHealthy ? "text-positive" : "text-warning"}`}>
+              {isSystemHealthy ? "Online" : "Degraded"}
+            </p>
+            <p className="truncate text-[10px] text-stone-500">{systemHealthLabel}</p>
+          </div>
+        </div>
+      </section>
+
+      <div
+        data-testid="command-workbench"
+        data-layout="signal-rail"
+        className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-12 lg:gap-4"
+      >
+        <div className="contents lg:col-span-8 lg:block lg:space-y-4">
+          <section aria-label="Market workspace" className="order-4 md:col-span-2 lg:order-none">
             <Card className="p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <SectionHeader
@@ -302,29 +338,9 @@ export function CommandCenterPage({
             </div>
           </Card>
 
-          <Card className="order-3 p-3 sm:p-4 lg:order-none">
-            <SectionHeader eyebrow="Live context" title="At a glance" size="compact" />
-            <div className="grid grid-cols-2 gap-2">
-              {liveMetrics.map((metric) => {
-                const Icon = metric.icon;
-                return (
-                  <div key={metric.label} className="min-w-0 rounded-lg border border-border bg-black/15 p-3">
-                    <div className="flex items-center gap-1.5">
-                      <Icon className={`h-3.5 w-3.5 shrink-0 ${metric.tone}`} aria-hidden="true" />
-                      <p className="truncate text-[9px] uppercase tracking-[0.08em] text-stone-500">{metric.label}</p>
-                    </div>
-                    <p className={`mt-1 truncate font-mono text-sm font-bold tabular-nums ${metric.tone}`}>
-                      {metric.value}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
           <section
             id="guide-decision-feed"
-            aria-label="Decision audit"
+            aria-label="Decision activity"
             className="order-5 md:col-span-2 lg:order-none"
           >
             <Card className="p-3 sm:p-4">
@@ -345,9 +361,9 @@ export function CommandCenterPage({
         </aside>
       </div>
 
-      <section aria-label="Trust and system status" className="overflow-x-auto">
-        <Card className="min-w-[42rem] overflow-hidden p-0 md:min-w-0">
-          <div className="grid grid-cols-3 divide-x divide-border">
+      <section aria-label="Trust evidence" className="overflow-x-auto">
+        <Card className="min-w-[28rem] overflow-hidden p-0 md:min-w-0">
+          <div className="grid grid-cols-2 divide-x divide-border">
             <div className="p-4">
               <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">Strategy leader</p>
               {leaderScoreboard ? (
@@ -386,19 +402,6 @@ export function CommandCenterPage({
               )}
             </div>
 
-            <div className="p-4">
-              <div className="flex items-center gap-2">
-                <Activity className={`h-4 w-4 ${isSystemHealthy ? "text-positive" : "text-warning"}`} aria-hidden="true" />
-                <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">System health</p>
-              </div>
-              <div className="mt-2 flex items-end justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-white">{isSystemHealthy ? "Online" : "Degraded"}</p>
-                  <p className="text-[11px] text-stone-500">{systemHealthLabel}</p>
-                </div>
-                <span className={`h-2.5 w-2.5 rounded-full ${isSystemHealthy ? "bg-positive" : "bg-warning"}`} aria-hidden="true" />
-              </div>
-            </div>
           </div>
         </Card>
       </section>
