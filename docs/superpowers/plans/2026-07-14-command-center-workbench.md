@@ -76,7 +76,7 @@ const SIZE_STYLES = {
 } as const;
 ```
 
-Render `data-testid="section-header"`, `data-size={size}`, the existing eyebrow and `h2`, then `subtitle` as `mt-0.5 text-xs text-stone-500`. Default `size` to `standard`.
+Render `data-testid="section-header"`, `data-size={size}`, the existing eyebrow and `h2`, then `subtitle` as `mt-0.5 text-xs text-stone-500`. Default `size` to `primary` so existing pages preserve their current header scale; the Command Center opts into denser variants explicitly.
 
 - [ ] **Step 4: Run the focused test and verify GREEN**
 
