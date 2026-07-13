@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react";
 import { AreaChart, Area, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Activity, BadgeCheck, Radio, Signal as SignalIcon, Wallet } from "lucide-react";
+import { Activity, ArrowUpRight, BadgeCheck, Crosshair, Radio, ShieldCheck, Signal as SignalIcon, Wallet } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { StatusCapsule } from "../../components/ui/widgets/StatusCapsule";
 import { ProgressCapsule } from "../../components/ui/widgets/ProgressCapsule";
-import { SegmentedGauge } from "../../components/ui/widgets/SegmentedGauge";
 import { DeltaTicker } from "../../components/ui/widgets/DeltaTicker";
 import { RadialDial } from "../../components/ui/widgets/RadialDial";
 import { getMetaAgentRecommendation, formatRoi, type ArenaResponse } from "../../lib/arena";
-
-const SEVERITY_SEGMENT: Record<string, number> = { LOW: 0, MEDIUM: 1, HIGH: 2 };
-const SEVERITY_TONE: Record<string, "neutral" | "accent" | "danger"> = { LOW: "neutral", MEDIUM: "accent", HIGH: "danger" };
+import type { DestinationId } from "../../app/navigation";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "https://goalpulse-agent-api.onrender.com";
@@ -43,6 +40,10 @@ export interface CommandCenterLatestSignal {
   severityLabel: string;
   target: string;
   priceMoveLabel: string;
+  matchLabel: string;
+  confidenceLabel: string;
+  evidenceLabel: string;
+  explanation: string;
 }
 
 export interface CommandCenterPageProps {
@@ -53,6 +54,7 @@ export interface CommandCenterPageProps {
   latestSignal: CommandCenterLatestSignal | null;
   systemHealthLabel: string;
   isSystemHealthy: boolean;
+  onNavigate: (destination: DestinationId) => void;
 }
 
 /**
@@ -71,6 +73,7 @@ export function CommandCenterPage({
   latestSignal,
   systemHealthLabel,
   isSystemHealthy,
+  onNavigate,
 }: CommandCenterPageProps) {
   const [arena, setArena] = useState<ArenaResponse | null>(null);
 
@@ -142,8 +145,107 @@ export function CommandCenterPage({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
-        <Card className="p-4 xl:col-span-8">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+        <Card elevated className="relative overflow-hidden p-5 lg:col-span-8">
+          <span className="absolute inset-y-0 left-0 w-1 bg-accent" aria-hidden="true" />
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <SectionHeader eyebrow="Priority intelligence" title="Most important signal now" />
+            {latestSignal && (
+              <span className="rounded-full border border-accent/25 bg-accent/10 px-2.5 py-1 font-mono text-[10px] font-bold text-accent-200">
+                {latestSignal.severityLabel} · {latestSignal.confidenceLabel} confidence
+              </span>
+            )}
+          </div>
+
+          {latestSignal ? (
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
+              <div>
+                <p className="text-xs text-stone-400">{latestSignal.matchLabel}</p>
+                <p className="mt-1 font-display text-2xl font-bold tracking-tight text-white">
+                  {latestSignal.target}
+                  <span className="ml-2 font-mono text-accent-200">{latestSignal.priceMoveLabel}</span>
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-positive/20 bg-positive/8 px-2.5 py-1.5 text-[11px] font-semibold text-positive-200">
+                    <Crosshair className="h-3.5 w-3.5" aria-hidden="true" />
+                    {latestSignal.evidenceLabel}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-black/20 px-2.5 py-1.5 text-[11px] text-stone-300">
+                    Deterministic threshold crossed
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="border-l border-border pl-3">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">What changed</p>
+                  <p className="mt-1 text-sm leading-5 text-stone-200">
+                    {latestSignal.target} compressed {latestSignal.priceMoveLabel} from its earlier market price.
+                  </p>
+                </div>
+                <div className="border-l border-border pl-3">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">Why it matters</p>
+                  <p className="mt-1 text-sm leading-5 text-stone-200">{latestSignal.explanation}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <EmptyState reason="No signal crossed the deterministic threshold in this window." />
+          )}
+
+          <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
+            <button
+              type="button"
+              onClick={() => onNavigate("signals")}
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-accent px-3.5 text-xs font-bold text-canvas transition-colors hover:bg-accent-soft"
+            >
+              Inspect signal
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate("verification")}
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-white/5 px-3.5 text-xs font-semibold text-stone-200 transition-colors hover:bg-white/10"
+            >
+              <ShieldCheck className="h-3.5 w-3.5 text-proof-200" aria-hidden="true" />
+              Open verification
+            </button>
+          </div>
+        </Card>
+
+        <Card className="p-5 lg:col-span-4">
+          <SectionHeader eyebrow="Operator brief" title="What to inspect next" />
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => onNavigate(isSystemHealthy ? "live-markets" : "system-health")}
+              className="flex min-h-12 w-full items-center justify-between rounded-lg border border-border bg-black/15 px-3 text-left transition-colors hover:border-border-strong hover:bg-white/5"
+            >
+              <span>
+                <span className="block text-xs font-semibold text-white">
+                  {isSystemHealthy ? "Compare live market context" : "Resolve degraded stream state"}
+                </span>
+                <span className="mt-0.5 block text-[11px] text-stone-500">{systemHealthLabel}</span>
+              </span>
+              <ArrowUpRight className="h-4 w-4 text-stone-500" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate("archive")}
+              className="flex min-h-12 w-full items-center justify-between rounded-lg border border-border bg-black/15 px-3 text-left transition-colors hover:border-border-strong hover:bg-white/5"
+            >
+              <span>
+                <span className="block text-xs font-semibold text-white">Check historical precedent</span>
+                <span className="mt-0.5 block text-[11px] text-stone-500">Compare settled outcomes and calibration</span>
+              </span>
+              <ArrowUpRight className="h-4 w-4 text-stone-500" aria-hidden="true" />
+            </button>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+        <Card className="p-4 lg:col-span-8">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <SectionHeader eyebrow="Selected fixture" title="Market Pulse" />
@@ -217,7 +319,7 @@ export function CommandCenterPage({
           )}
         </Card>
 
-        <Card id="guide-decision-feed" className="p-4 xl:col-span-4">
+        <Card id="guide-decision-feed" className="p-4 lg:col-span-4">
           <SectionHeader eyebrow="Autonomous flow" title="Decision Feed" />
           <ol className="space-y-3">
             {decisionFeed.map((step) => (
@@ -231,22 +333,7 @@ export function CommandCenterPage({
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        <Card className="p-4">
-          <SectionHeader eyebrow="Autonomous decision" title="Latest Signal" />
-          {latestSignal ? (
-            <SegmentedGauge
-              label={latestSignal.target}
-              value={latestSignal.priceMoveLabel}
-              segmentCount={3}
-              activeSegment={SEVERITY_SEGMENT[latestSignal.severityLabel] ?? 0}
-              tone={SEVERITY_TONE[latestSignal.severityLabel] ?? "neutral"}
-            />
-          ) : (
-            <EmptyState reason="No signal crossed the deterministic threshold in this window." />
-          )}
-        </Card>
-
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <Card className="p-4">
           <SectionHeader eyebrow="Strategy snapshot" title="Strategy Leader" />
           {leaderScoreboard ? (

@@ -1,5 +1,6 @@
 ﻿import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SignalIntelligencePanel } from "./components/SignalIntelligencePanel";
+import { useCallback } from "react";
 import { MarketMakerPanel } from "./components/MarketMakerPanel";
 import { SteamMoveDetectionPanel } from "./components/SteamMoveDetectionPanel";
 import { ArenaPanel } from "./components/ArenaPanel";
@@ -14,12 +15,8 @@ import { AnalystChatWidget } from "./components/AnalystChatWidget";
 import { useScrollSpy } from "./hooks/useScrollSpy";
 import { AppShell } from "./app/AppShell";
 import { DEFAULT_DESTINATION, type DestinationId } from "./app/navigation";
-import { GUIDE_STEPS } from "./app/guideSteps";
-import {
-  clearGuideSpotlight as clearPreviewGuideSpotlight,
-  applyGuideSpotlight as applyPreviewGuideSpotlight,
-  getGuideStepElement,
-} from "./app/guideSpotlight";
+import { GuidedTour } from "./app/GuidedTour";
+import { useProductTour } from "./app/useProductTour";
 // Lazy-loaded: only one destination is ever visible at a time in the
 // Command Center preview, so there's no reason to bundle all 9 pages'
 // code into the initial chunk a default-page (non-preview) visitor
@@ -90,6 +87,7 @@ import {
   BarChart3,
   Bot,
   ChevronDown,
+  Compass,
   Gauge,
   History,
   LayoutDashboard,
@@ -282,9 +280,6 @@ function App() {
   const [activeSection, setActiveSection] = useState("overview");
   const activePipelineStage = useScrollSpy(PIPELINE_STAGE_IDS);
   const [previewDestination, setPreviewDestination] = useState<DestinationId>(DEFAULT_DESTINATION);
-  const [isPreviewGuideMode, setIsPreviewGuideMode] = useState(false);
-  const [previewGuideStep, setPreviewGuideStep] = useState(0);
-  const [previewGuidePanelPosition, setPreviewGuidePanelPosition] = useState({ top: 16, left: 16 });
   const [searchTerm, setSearchTerm] = useState("");
   const [matchStatusFilter, setMatchStatusFilter] = useState<"all" | Match["status"]>("all");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -301,9 +296,6 @@ function App() {
         "Ask me about the latest signal, failed continuation patterns, reversal radar, score reality checks, or the outcome audit.",
     },
   ]);
-  const [isJudgeMode, setIsJudgeMode] = useState(false);
-  const [judgeStep, setJudgeStep] = useState(0);
-  const [guidePanelPosition, setGuidePanelPosition] = useState({ top: 16, left: 16 });
   const [lastRefresh, setLastRefresh] = useState("");
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState("");
@@ -314,96 +306,6 @@ function App() {
   >({});
   const hasLoadedOnceRef = useRef(false);
 
-  const judgeDemoSteps = [
-    {
-      title: "1. Autonomous intelligence overview",
-      detail: "GoalPulse ingests TxLINE data, normalizes match markets, monitors odds movement, and explains signals without manual analyst work.",
-    },
-    {
-      title: "2. Odds movement timeline",
-      detail: "The chart shows how market prices move over time. Signal markers appear only when movement crosses deterministic compression thresholds.",
-    },
-    {
-      title: "3. TxLINE market board",
-      detail: "The market board shows normalized home, draw, and away prices plus precise TXODDS status and clock labels.",
-    },
-    {
-      title: "4. Scores intelligence signals",
-      detail: "Signals combine odds movement with TXODDS Scores context: goals, shots, VAR, penalties, cards, danger possession, and reliability warnings.",
-    },
-    {
-      title: "5. Final score audit",
-      detail: "Signals are checked after final score settlement so judges can see whether each movement was confirmed or rejected.",
-    },
-    {
-      title: "6. Field pressure context",
-      detail: "GoalPulse separates field-backed moves from market-only moves using Field Pressure Index and TXODDS play-by-play events.",
-    },
-    {
-      title: "7. In-Play Market Maker",
-      detail: "The Market Maker quotes a live bid/ask spread around TxLINE's de-margined fair odds, widening under field pressure or unreliable data and narrowing when conditions are calm.",
-    },
-    {
-      title: "8. Steam move detection",
-      detail: "Steam Move Detection scans every match every 5 seconds for sustained same-direction odds movement, flagging genuine momentum building before it becomes an obvious signal.",
-    },
-    {
-      title: "9. Agent vs Agent Arena",
-      detail: "Three strategies compete on the same live signal feed: Momentum Follower trusts the signal, Contrarian fades signals without real field support, and Kelly Criterion sizes its stake by confidence — settlement is on-chain-verified.",
-    },
-    {
-      title: "10. Meta-agent & Skeptic Check",
-      detail: "The Arena doesn't just race three strategies — it audits its own leaderboard. A Meta-agent recommendation ranks strategies fairly by ROI, not raw units, and only names a leader once there's enough settled data. A Skeptic Check then questions that lead directly: if it's concentrated in one real match, it says so plainly instead of implying more confidence than the data supports.",
-    },
-    {
-      title: "11. Autonomous agent timeline",
-      detail: "The timeline explains the agent loop: ingest feed, capture snapshots, compare odds, attach scores context, score reliability, and store evidence.",
-    },
-    {
-      title: "12. Real TxLINE replay",
-      detail: "Replay mode runs stored TxLINE snapshots through the same engine, making the demo repeatable even when live matches are quiet.",
-    },
-    {
-      title: "13. Evidence chain",
-      detail: "The evidence chain links odds endpoints, scores endpoints, message IDs, bookmakers, scoreline context, and proof labels for judge-verifiable review.",
-    },
-    {
-      title: "14. Signal review council",
-      detail: "Multiple agent checks review movement strength, field context, reliability, reversion risk, and evidence quality before surfacing a signal.",
-    },
-    {
-      title: "15. Proof hash",
-      detail: "The replay generates a SHA-256 proof hash so the audit trail can become tamper-evident and independently reviewable.",
-    },
-    {
-      title: "16. Signal detail: precedent & verification",
-      detail: "Click \"View details\" on any signal card to open its full evidence trail yourself. Scroll down and you'll find two more things: \"Similar past signals\" searches the permanent archive for precedent of the same signal type and shows honestly how those resolved, and a Verification Depth badge shows whether that specific signal's underlying data has actually been checked on Solana mainnet — never a percentage, always a plain, honest status.",
-    },
-    {
-      title: "17. Transparent thresholds",
-      detail: "The engine uses explainable thresholds: watch, momentum shift, and sharp move. No black-box betting recommendation is required.",
-    },
-    {
-      title: "18. Full tournament archive",
-      detail: "The archive permanently records every settled signal — status, severity, and market — independent of the dashboard's in-memory caps, giving judges the complete, unfiltered track record.",
-    },
-    {
-      title: "19. Signal performance",
-      detail: "Signal Performance breaks accuracy down by signal type — sharp move, momentum shift, watch — showing correct-versus-settled counts so judges can see where the model's calls actually hold up.",
-    },
-    {
-      title: "20. Confidence calibration",
-      detail: "Confidence Calibration checks whether the model's own confidence score is honest: higher-confidence signals should settle correct more often, and this panel proves whether that pattern actually holds.",
-    },
-    {
-      title: "21. Signal correlation",
-      detail: "Signal Correlation finds clusters of the same pattern firing across multiple real matches — side, severity, and market aligned — evidence the model is detecting a real phenomenon, not noise.",
-    },
-    {
-      title: "22. Compliance boundary",
-      detail: "GoalPulse is analytics-only: it explains sports market movement and evidence context. It does not place wagers, custody funds, or facilitate betting execution.",
-    },
-  ];
   const outcomeVerificationItems = useMemo(() => {
     const replayItems =
       replayBacktest?.signals?.map((signal) => ({
@@ -807,279 +709,14 @@ function App() {
       }));
     }
   }
-  const guideTargets = [
-    { id: "overview", text: "GoalPulse Agent" },
-    { text: "Selected market" },
-    { text: "Market board" },
-    { id: "agent", text: "Latest signals" },
-    { text: "Outcome verification" },
-    { text: "Selected match" },
-    { text: "Live bid/ask quotes" },
-    { text: "Steam move detection" },
-    { text: "Momentum Follower vs Contrarian vs Kelly Criterion" },
-    { id: "guide-meta-skeptic", text: "Meta-agent recommendation" },
-    { text: "Agent timeline" },
-    { id: "guide-backtest-card", text: "Outcome audit" },
-    { id: "guide-event-correlation", text: "Evidence chain" },
-    { id: "guide-oracle-council", text: "Signal review" },
-    { id: "guide-proof-readiness", text: "Proof network" },
-    { id: "agent", text: "Latest signals" },
-    { text: "Signal thresholds" },
-    { text: "Full tournament archive" },
-    { text: "Signal performance" },
-    { text: "Confidence calibration" },
-    { text: "Signal correlation" },
-    { id: "compliance", text: "Analytics only" },
-  ];
 
-  const guideSpotlightClasses = [
-    "relative",
-    "z-[60]",
-    "scale-[1.01]",
-    "ring-2",
-    "ring-accent/70",
-    "shadow-2xl",
-    "shadow-accent/20",
-  ];
-  function clearGuideSpotlight() {
-    document.querySelectorAll("[data-guide-active='true']").forEach((element) => {
-      element.classList.remove(...guideSpotlightClasses);
-      element.removeAttribute("data-guide-active");
-    });
-  }
-
-  function findCardByText(text: string) {
-    const candidates = Array.from(
-      document.querySelectorAll("section, aside, div")
-    ) as HTMLElement[];
-
-    const matches = candidates.filter((element) => {
-      const className = `${element.className}`;
-      const isGuidePanel = Boolean(element.closest("[data-guide-panel='true']"));
-      const isCardLike =
-        className.includes("rounded-2xl") ||
-        className.includes("rounded-2xl") ||
-        className.includes("rounded-xl") ||
-        element.tagName.toLowerCase() === "section" ||
-        element.tagName.toLowerCase() === "aside";
-
-      return (
-        !isGuidePanel &&
-        isCardLike &&
-        element.offsetParent !== null &&
-        Boolean(element.textContent?.includes(text))
-      );
-    });
-
-    return (
-      matches.sort(
-        (first, second) =>
-          first.getBoundingClientRect().height - second.getBoundingClientRect().height
-      )[0] ?? null
-    );
-  }
-
-  function getGuideTargetElement(step: number) {
-    const target = guideTargets[step];
-
-    if (!target) return document.getElementById("overview");
-
-    if (target.id) {
-      const byId = document.getElementById(target.id);
-      if (byId) return byId;
-    }
-
-    if (target.text) {
-      return findCardByText(target.text);
-    }
-
-    return document.getElementById("overview");
-  }
-
-  function applyGuideSpotlight(target: HTMLElement | null) {
-    clearGuideSpotlight();
-
-    if (!target) return;
-
-    target.setAttribute("data-guide-active", "true");
-    target.classList.add(...guideSpotlightClasses);
-  }
-
-  function updateGuidePanelPosition(step: number) {
-    window.setTimeout(() => {
-      const target = getGuideTargetElement(step);
-      const panelWidth = 340;
-      const panelHeight = 260;
-      const margin = 18;
-
-      if (!target) {
-        setGuidePanelPosition({
-          top: margin,
-          left: Math.max(margin, window.innerWidth - panelWidth - margin),
-        });
-        return;
-      }
-
-      const rect = target.getBoundingClientRect();
-      const canPlaceRight = rect.right + margin + panelWidth <= window.innerWidth;
-      const canPlaceLeft = rect.left - margin - panelWidth >= margin;
-
-      const left = canPlaceRight
-        ? rect.right + margin
-        : canPlaceLeft
-          ? rect.left - panelWidth - margin
-          : Math.max(margin, window.innerWidth - panelWidth - margin);
-
-      const centeredTop = rect.top + rect.height / 2 - panelHeight / 2;
-      const top = Math.min(
-        Math.max(margin, centeredTop),
-        Math.max(margin, window.innerHeight - panelHeight - margin)
-      );
-
-      setGuidePanelPosition({ top, left });
-    }, 260);
-  }
-
-  function focusGuideTarget(step: number) {
-    window.setTimeout(() => {
-      const target = getGuideTargetElement(step);
-
-      target?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-
-      applyGuideSpotlight(target);
-      updateGuidePanelPosition(step);
-    }, 120);
-  }
-
-  function startGuideTour() {
-    setIsJudgeMode(true);
-    setJudgeStep(0);
-    focusGuideTarget(0);
-  }
-
-  function nextGuideStep() {
-    const nextStep = judgeStep + 1;
-
-    if (nextStep >= judgeDemoSteps.length) {
-      clearGuideSpotlight();
-      setIsJudgeMode(false);
-      return;
-    }
-
-    setJudgeStep(nextStep);
-    focusGuideTarget(nextStep);
-
-    if (nextStep === 6) {
-      startAgentReplay();
-      window.setTimeout(() => focusGuideTarget(nextStep), 500);
-    }
-
-    if (nextStep === 7) {
-      void runReplayBacktest();
-      window.setTimeout(() => focusGuideTarget(nextStep), 700);
-    }
-
-    if (nextStep >= 8 && nextStep <= 11 && !replayBacktest) {
-      void runReplayBacktest();
-      window.setTimeout(() => focusGuideTarget(nextStep), 700);
-    }
-
-    window.setTimeout(() => focusGuideTarget(nextStep), 350);
-  }
-
-  function skipGuideTour() {
-    clearGuideSpotlight();
-    setIsJudgeMode(false);
-    setJudgeStep(0);
-  }
-
-  function updatePreviewGuidePanelPosition(target: HTMLElement | null) {
-    const panelWidth = 340;
-    const panelHeight = 260;
-    const margin = 18;
-
-    if (!target) {
-      setPreviewGuidePanelPosition({
-        top: margin,
-        left: Math.max(margin, window.innerWidth - panelWidth - margin),
-      });
-      return;
-    }
-
-    const rect = target.getBoundingClientRect();
-    const canPlaceRight = rect.right + margin + panelWidth <= window.innerWidth;
-    const canPlaceLeft = rect.left - margin - panelWidth >= margin;
-
-    const left = canPlaceRight
-      ? rect.right + margin
-      : canPlaceLeft
-        ? rect.left - panelWidth - margin
-        : Math.max(margin, window.innerWidth - panelWidth - margin);
-
-    const centeredTop = rect.top + rect.height / 2 - panelHeight / 2;
-    const top = Math.min(
-      Math.max(margin, centeredTop),
-      Math.max(margin, window.innerHeight - panelHeight - margin)
-    );
-
-    setPreviewGuidePanelPosition({ top, left });
-  }
-
-  // Single controller for the Command Center preview tour: switches
-  // previewDestination when a step targets a different page, then lets
-  // this effect (which reruns after the new page commits) do the actual
-  // scroll/spotlight/panel-position work - one imperative mechanism per
-  // step, no scattered per-component judgeStep===N conditionals.
-  useEffect(() => {
-    if (!isPreviewGuideMode) return;
-
-    const step = GUIDE_STEPS[previewGuideStep];
-    if (!step) return;
-
-    if (step.requiresReplayBacktest && !replayBacktest && !isReplayRunning) {
-      void runReplayBacktest();
-    }
-
-    const timeout = window.setTimeout(() => {
-      const target = getGuideStepElement(step);
-      target?.scrollIntoView({ behavior: "smooth", block: "center" });
-      applyPreviewGuideSpotlight(target);
-      updatePreviewGuidePanelPosition(target);
-    }, 220);
-
-    return () => window.clearTimeout(timeout);
-  }, [isPreviewGuideMode, previewGuideStep, previewDestination, replayBacktest, isReplayRunning]);
-
-  function startPreviewGuideTour() {
-    setIsPreviewGuideMode(true);
-    setPreviewGuideStep(0);
-    setPreviewDestination(GUIDE_STEPS[0].destination);
-  }
-
-  function nextPreviewGuideStep() {
-    const nextIndex = previewGuideStep + 1;
-
-    if (nextIndex >= GUIDE_STEPS.length) {
-      clearPreviewGuideSpotlight();
-      setIsPreviewGuideMode(false);
-      return;
-    }
-
-    const nextGuideStepData = GUIDE_STEPS[nextIndex];
-    setPreviewGuideStep(nextIndex);
-    if (nextGuideStepData.destination !== previewDestination) {
-      setPreviewDestination(nextGuideStepData.destination);
-    }
-  }
-
-  function skipPreviewGuideTour() {
-    clearPreviewGuideSpotlight();
-    setIsPreviewGuideMode(false);
-    setPreviewGuideStep(0);
-  }
+  const productTour = useProductTour({
+    destination: previewDestination,
+    onDestinationChange: setPreviewDestination,
+    replayBacktestReady: Boolean(replayBacktest),
+    isReplayRunning,
+    onRunReplayBacktest: runReplayBacktest,
+  });
 
   function startAgentReplay() {
     setReplayStep(0);
@@ -1089,7 +726,7 @@ function App() {
     window.setTimeout(() => setReplayStep(3), 1650);
     window.setTimeout(() => setReplayStep(-1), 2500);
   }
-  async function loadDashboard() {
+  const loadDashboard = useCallback(async () => {
     try {
       if (!hasLoadedOnceRef.current) {
         setIsConnecting(true);
@@ -1158,7 +795,7 @@ function App() {
       hasLoadedOnceRef.current = true;
       setIsConnecting(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     loadDashboard();
@@ -1166,7 +803,7 @@ function App() {
     const interval = window.setInterval(loadDashboard, 5000);
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [loadDashboard]);
 
   useEffect(() => {
     if (!selectedMatchId) {
@@ -1798,23 +1435,32 @@ function App() {
                     severityLabel: (latestSignal.severity ?? "LOW").toUpperCase(),
                     target: getSignalTarget(latestSignal),
                     priceMoveLabel: formatOddsChange(latestSignal.oddsChangePct),
+                    matchLabel:
+                      latestSignal.match ??
+                      (selectedMatch
+                        ? `${selectedMatch.homeTeam ?? "Selected fixture"} vs ${selectedMatch.awayTeam ?? "opponent"}`
+                        : "Live market"),
+                    confidenceLabel: `${Math.round(latestSignal.confidenceScore ?? latestSignal.confidence ?? latestSignal.momentumScore ?? 0)}%`,
+                    evidenceLabel:
+                      (latestSignal.evidence?.scoresContext?.fieldPressureScore ?? 0) >= 22
+                        ? "Field-backed"
+                        : "Market-only",
+                    explanation:
+                      latestSignal.explanation ??
+                      latestSignal.reason ??
+                      "The move crossed GoalPulse's deterministic market threshold and is ready for evidence review.",
                   }
                 : null
             }
             systemHealthLabel={health?.liveStream?.connected ? "Streams connected" : "Stream issue"}
             isSystemHealthy={health?.liveStream?.connected ?? false}
+            onNavigate={setPreviewDestination}
           />
         );
     }
 
-    const previewGuideStepData = GUIDE_STEPS[previewGuideStep];
-
     return (
       <>
-        {isPreviewGuideMode && (
-          <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] transition-opacity duration-500 pointer-events-none" />
-        )}
-
         <AppShell
           active={previewDestination}
           onSelectDestination={setPreviewDestination}
@@ -1854,60 +1500,23 @@ function App() {
         />
 
         <button
-          onClick={startPreviewGuideTour}
-          className="fixed bottom-4 right-4 z-[80] rounded-full border border-accent/30 bg-accent px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-accent/25 transition hover:bg-accent"
+          type="button"
+          onClick={productTour.start}
+          className="fixed bottom-4 right-4 z-30 inline-flex min-h-11 items-center gap-2 rounded-full border border-accent/35 bg-accent px-4 text-xs font-bold text-canvas shadow-2xl shadow-black/40 transition-colors hover:bg-accent-soft"
         >
-          Guide
+          <Compass className="h-4 w-4" aria-hidden="true" />
+          Product tour
         </button>
 
-        {isPreviewGuideMode && previewGuideStepData && (
-          <div
-            data-guide-panel="true"
-            className="fixed z-[70] w-[340px] rounded-2xl border border-accent/30 bg-[#10161d]/95 p-4 shadow-2xl shadow-accent/20 backdrop-blur-xl ring-1 ring-white/10 transition-[top,left,transform] duration-500"
-            style={{
-              top: previewGuidePanelPosition.top,
-              left: previewGuidePanelPosition.left,
-            }}
-          >
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.24em] text-accent-200/70">Guided tour</p>
-                <h2 className="mt-1 text-sm font-semibold text-white">GoalPulse guided tour</h2>
-              </div>
-              <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-semibold text-accent-200">
-                {previewGuideStep + 1}/{GUIDE_STEPS.length}
-              </span>
-            </div>
-
-            <div className="rounded-xl border border-accent/15 bg-black/30 p-3 shadow-inner">
-              <p className="text-sm font-semibold text-white">{previewGuideStepData.title}</p>
-              <p className="mt-1 text-[11px] leading-5 text-stone-400">{previewGuideStepData.detail}</p>
-            </div>
-
-            <div className="mt-3 grid grid-cols-6 gap-1.5">
-              {GUIDE_STEPS.map((step, index) => (
-                <div
-                  key={step.title}
-                  className={`h-1.5 rounded-full ${index <= previewGuideStep ? "bg-accent" : "bg-white/10"}`}
-                />
-              ))}
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button
-                onClick={skipPreviewGuideTour}
-                className="rounded-full border border-border bg-white/5 px-3 py-2 text-[11px] font-medium text-stone-300 transition hover:bg-white/10 hover:text-white"
-              >
-                Skip
-              </button>
-              <button
-                onClick={nextPreviewGuideStep}
-                className="rounded-full border border-accent/30 bg-accent px-3 py-2 text-[11px] font-bold text-white transition hover:bg-accent"
-              >
-                {previewGuideStep + 1 >= GUIDE_STEPS.length ? "Finish" : "Next"}
-              </button>
-            </div>
-          </div>
+        {productTour.isOpen && productTour.currentStep && (
+          <GuidedTour
+            steps={productTour.steps}
+            stepIndex={productTour.stepIndex}
+            position={productTour.position}
+            onBack={productTour.back}
+            onNext={productTour.next}
+            onClose={productTour.close}
+          />
         )}
       </>
     );
@@ -1925,76 +1534,6 @@ function App() {
         onSend={sendAnalystMessage}
         isReplying={isAnalystReplying}
       />
-      {isJudgeMode && (
-        <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] transition-opacity duration-500 pointer-events-none" />
-      )}
-
-      <button
-        onClick={startGuideTour}
-        className="fixed bottom-4 right-4 z-[80] rounded-full border border-accent/30 bg-accent px-4 py-2 text-xs font-bold text-white shadow-2xl shadow-accent/25 transition hover:bg-accent"
-      >
-        Guide
-      </button>
-
-      {isJudgeMode && (
-        <div
-          data-guide-panel="true"
-          className="fixed z-[70] w-[340px] rounded-2xl border border-accent/30 bg-[#10161d]/95 p-4 shadow-2xl shadow-accent/20 backdrop-blur-xl ring-1 ring-white/10 transition-[top,left,transform] duration-500"
-          style={{
-            top: guidePanelPosition.top,
-            left: guidePanelPosition.left,
-          }}
-        >
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.24em] text-accent-200/70">
-                Guided tour
-              </p>
-              <h2 className="mt-1 text-sm font-semibold text-white">
-                GoalPulse guided tour
-              </h2>
-            </div>
-            <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-semibold text-accent-200">
-              {judgeStep + 1}/{judgeDemoSteps.length}
-            </span>
-          </div>
-
-          <div className="rounded-xl border border-accent/15 bg-black/30 p-3 shadow-inner">
-            <p className="text-sm font-semibold text-white">
-              {judgeDemoSteps[judgeStep]?.title}
-            </p>
-            <p className="mt-1 text-[11px] leading-5 text-stone-400">
-              {judgeDemoSteps[judgeStep]?.detail}
-            </p>
-          </div>
-
-          <div className="mt-3 grid grid-cols-6 gap-1.5">
-            {judgeDemoSteps.map((step, index) => (
-              <div
-                key={step.title}
-                className={`h-1.5 rounded-full ${
-                  index <= judgeStep ? "bg-accent" : "bg-white/10"
-                }`}
-              />
-            ))}
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              onClick={skipGuideTour}
-              className="rounded-full border border-border bg-white/5 px-3 py-2 text-[11px] font-medium text-stone-300 transition hover:bg-white/10 hover:text-white"
-            >
-              Skip
-            </button>
-            <button
-              onClick={nextGuideStep}
-              className="rounded-full border border-accent/30 bg-accent px-3 py-2 text-[11px] font-bold text-white transition hover:bg-accent"
-            >
-              {judgeStep + 1 >= judgeDemoSteps.length ? "Finish" : "Next"}
-            </button>
-          </div>
-        </div>
-      )}
       <div className="mx-auto grid max-w-[1380px] grid-cols-[70px_minmax(0,1fr)_300px] gap-4">
         <aside className="sticky top-3 h-[calc(100vh-24px)] rounded-2xl border border-border bg-[#10161d] p-3">
           <div className="mb-7 flex h-11 w-11 items-center justify-center rounded-xl bg-positive-500 text-lg font-black text-[#0a0e13]">
@@ -3241,9 +2780,7 @@ function App() {
           <div className="rounded-2xl border border-border bg-[#10161d] p-4">
             <div
               id="guide-backtest-card"
-              className={`transition-all ${
-                isJudgeMode && judgeStep === 11 ? "relative z-[60] scale-[1.01] rounded-xl ring-2 ring-accent/70 shadow-2xl shadow-accent/30" : ""
-              }`}
+              className="transition-all"
             >
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
@@ -3394,9 +2931,7 @@ function App() {
               <div className="mt-3 space-y-3">
                 <div
                   id="guide-proof-readiness"
-                  className={`rounded-xl border border-positive/15 bg-positive/10 p-3 transition-all ${
-                    isJudgeMode && judgeStep === 14 ? "relative z-[60] scale-[1.01] ring-2 ring-accent/70 shadow-2xl shadow-accent/30" : ""
-                  }`}
+                  className="rounded-xl border border-positive/15 bg-positive/10 p-3 transition-all"
                 >
                   <div className="flex items-center justify-between gap-3 text-[11px]">
                     <span className="text-stone-400">Outcome audit</span>
@@ -3436,9 +2971,7 @@ function App() {
                 {(replayBacktest.events ?? []).length > 0 && (
                   <div
                     id="guide-event-correlation"
-                    className={`rounded-xl border border-accent/15 bg-accent/10 p-3 transition-all ${
-                      isJudgeMode && judgeStep === 12 ? "relative z-[60] scale-[1.01] ring-2 ring-accent/70 shadow-2xl shadow-accent/30" : ""
-                    }`}
+                    className="rounded-xl border border-accent/15 bg-accent/10 p-3 transition-all"
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div>
@@ -3475,9 +3008,7 @@ function App() {
                 {(replayBacktest.councilVotes ?? []).length > 0 && (
                   <div
                     id="guide-oracle-council"
-                    className={`rounded-xl border border-info/15 bg-info/10 p-3 transition-all ${
-                      isJudgeMode && judgeStep === 13 ? "relative z-[60] scale-[1.01] ring-2 ring-accent/70 shadow-2xl shadow-accent/30" : ""
-                    }`}
+                    className="rounded-xl border border-info/15 bg-info/10 p-3 transition-all"
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div>
