@@ -4,10 +4,6 @@ import { Activity, ArrowUpRight, BadgeCheck, Crosshair, Radio, ShieldCheck, Sign
 import { Card } from "../../components/ui/Card";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { StatusCapsule } from "../../components/ui/widgets/StatusCapsule";
-import { ProgressCapsule } from "../../components/ui/widgets/ProgressCapsule";
-import { DeltaTicker } from "../../components/ui/widgets/DeltaTicker";
-import { RadialDial } from "../../components/ui/widgets/RadialDial";
 import { getMetaAgentRecommendation, formatRoi, type ArenaResponse } from "../../lib/arena";
 import type { DestinationId } from "../../app/navigation";
 
@@ -76,6 +72,7 @@ export function CommandCenterPage({
   onNavigate,
 }: CommandCenterPageProps) {
   const [arena, setArena] = useState<ArenaResponse | null>(null);
+  const [isArenaUnavailable, setIsArenaUnavailable] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -88,8 +85,9 @@ export function CommandCenterPage({
         if (!mounted) return;
 
         setArena(payload.data ?? null);
-      } catch (error) {
-        console.error("Unable to load arena summary for Command Center overview", error);
+        setIsArenaUnavailable(false);
+      } catch {
+        if (mounted) setIsArenaUnavailable(true);
       }
     }
 
@@ -113,266 +111,297 @@ export function CommandCenterPage({
           : arena.kellyCriterion
       : null;
 
+  const liveMetrics = [
+    { label: "Live fixtures", value: kpis.liveFixtures, icon: Radio, tone: "text-info" },
+    { label: "Feed freshness", value: kpis.feedFreshnessLabel, icon: Activity, tone: "text-positive" },
+    { label: "Signals in window", value: kpis.signalsInWindow, icon: SignalIcon, tone: "text-accent-200" },
+    { label: "Open positions", value: kpis.openSimulatedPositions, icon: Wallet, tone: "text-warning" },
+  ];
+
   return (
-    <div id="guide-command-center-overview" className="space-y-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatusCapsule
-          label="Live fixtures"
-          value={kpis.liveFixtures}
-          tone="info"
-          icon={<Radio className="h-4 w-4" />}
-        />
-        <StatusCapsule
-          label="Feed freshness"
-          value={kpis.feedFreshnessLabel}
-          tone="positive"
-          pulse
-          icon={<Activity className="h-4 w-4" />}
-        />
-        <ProgressCapsule
-          label="Signals in window"
-          value={kpis.signalsInWindow}
-          cap={50}
-          tone="accent"
-          icon={<SignalIcon className="h-4 w-4" />}
-        />
-        <ProgressCapsule
-          label="Open simulated positions"
-          value={kpis.openSimulatedPositions}
-          cap={20}
-          tone="warning"
-          icon={<Wallet className="h-4 w-4" />}
-        />
-      </div>
+    <div id="guide-command-center-overview" className="mx-auto w-full max-w-[1600px] space-y-4 lg:space-y-6">
+      <div
+        data-testid="command-workbench"
+        data-layout="independent-columns"
+        className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-12 lg:gap-4"
+      >
+        <div className="contents lg:col-span-8 lg:block lg:space-y-4">
+          <section aria-label="Priority signal" className="order-1 md:col-span-2 lg:order-none">
+            <Card className="border-accent/25 bg-surface-3 p-4 lg:p-5">
+              <SectionHeader
+                eyebrow="Priority intelligence"
+                title="Most important signal now"
+                size="primary"
+                action={
+                  latestSignal ? (
+                    <span className="shrink-0 rounded-full border border-accent/25 bg-accent/10 px-2.5 py-1 font-mono text-[10px] font-bold text-accent-200">
+                      {latestSignal.severityLabel} · {latestSignal.confidenceLabel}
+                    </span>
+                  ) : undefined
+                }
+              />
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-        <Card elevated className="relative overflow-hidden p-5 lg:col-span-8">
-          <span className="absolute inset-y-0 left-0 w-1 bg-accent" aria-hidden="true" />
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <SectionHeader eyebrow="Priority intelligence" title="Most important signal now" />
-            {latestSignal && (
-              <span className="rounded-full border border-accent/25 bg-accent/10 px-2.5 py-1 font-mono text-[10px] font-bold text-accent-200">
-                {latestSignal.severityLabel} · {latestSignal.confidenceLabel} confidence
-              </span>
-            )}
-          </div>
+              {latestSignal ? (
+                <div className="grid gap-4 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                  <div>
+                    <p className="text-xs text-stone-400">{latestSignal.matchLabel}</p>
+                    <p className="mt-1 font-display text-2xl font-bold tracking-tight text-white">
+                      {latestSignal.target}
+                      <span className="ml-2 font-mono text-accent-200">{latestSignal.priceMoveLabel}</span>
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-positive/20 bg-positive/8 px-2.5 py-1.5 text-[11px] font-semibold text-positive-200">
+                        <Crosshair className="h-3.5 w-3.5" aria-hidden="true" />
+                        {latestSignal.evidenceLabel}
+                      </span>
+                      <span className="inline-flex items-center rounded-lg border border-border bg-black/20 px-2.5 py-1.5 text-[11px] text-stone-300">
+                        Threshold crossed
+                      </span>
+                    </div>
+                  </div>
 
-          {latestSignal ? (
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
-              <div>
-                <p className="text-xs text-stone-400">{latestSignal.matchLabel}</p>
-                <p className="mt-1 font-display text-2xl font-bold tracking-tight text-white">
-                  {latestSignal.target}
-                  <span className="ml-2 font-mono text-accent-200">{latestSignal.priceMoveLabel}</span>
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-positive/20 bg-positive/8 px-2.5 py-1.5 text-[11px] font-semibold text-positive-200">
-                    <Crosshair className="h-3.5 w-3.5" aria-hidden="true" />
-                    {latestSignal.evidenceLabel}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">What changed</p>
+                      <p className="mt-1 text-sm leading-5 text-stone-200">
+                        {latestSignal.target} compressed {latestSignal.priceMoveLabel} from its earlier price.
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">Why it matters</p>
+                      <p className="mt-1 text-sm leading-5 text-stone-200">{latestSignal.explanation}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <EmptyState reason="No signal crossed the deterministic threshold in this window." />
+              )}
+
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={() => onNavigate("signals")}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-4 text-xs font-bold text-canvas transition-colors hover:bg-accent-soft"
+                >
+                  Inspect signal
+                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("verification")}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-white/5 px-4 text-xs font-semibold text-stone-200 transition-colors hover:bg-white/10"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 text-proof-200" aria-hidden="true" />
+                  Open verification
+                </button>
+              </div>
+            </Card>
+          </section>
+
+          <section aria-label="Market evidence" className="order-4 md:col-span-2 lg:order-none">
+            <Card className="p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <SectionHeader
+                  eyebrow="Selected fixture"
+                  title="Market Pulse"
+                  subtitle={selectedFixtureLabel}
+                  size="standard"
+                />
+                <div className="flex items-center gap-3 text-[10px] text-stone-400">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
+                    Home odds
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-black/20 px-2.5 py-1.5 text-[11px] text-stone-300">
-                    Deterministic threshold crossed
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-info" aria-hidden="true" />
+                    Away odds
                   </span>
                 </div>
               </div>
+              {chartData.length >= 2 ? (
+                <div className="h-52 sm:h-60 lg:h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <pattern id="ccPixelHome" width="8" height="8" patternUnits="userSpaceOnUse">
+                          <rect width="8" height="8" fill="transparent" />
+                          <rect width="4" height="4" fill="#ffb020" fillOpacity={0.6} />
+                        </pattern>
+                        <pattern id="ccPixelAway" width="8" height="8" patternUnits="userSpaceOnUse">
+                          <rect width="8" height="8" fill="transparent" />
+                          <rect width="4" height="4" fill="#5aa9ff" fillOpacity={0.4} />
+                        </pattern>
+                      </defs>
+                      <CartesianGrid strokeDasharray="1 7" strokeLinecap="round" stroke="rgba(158,196,224,0.35)" />
+                      <XAxis dataKey="name" stroke="#78716c" fontSize={10} />
+                      <YAxis stroke="#78716c" fontSize={10} />
+                      <Tooltip
+                        cursor={{ stroke: "rgba(255,255,255,0.3)", strokeWidth: 1, strokeDasharray: "4 4" }}
+                        wrapperStyle={{ zIndex: 50 }}
+                        content={({ payload, label }) => {
+                          const point = payload?.[0]?.payload as CommandCenterChartPoint | undefined;
+                          if (!point) return null;
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="border-l border-border pl-3">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">What changed</p>
-                  <p className="mt-1 text-sm leading-5 text-stone-200">
-                    {latestSignal.target} compressed {latestSignal.priceMoveLabel} from its earlier market price.
+                          return (
+                            <div className="rounded-xl border border-border bg-surface-1/95 p-3 text-xs shadow-lg shadow-black/40">
+                              <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-stone-500">{label}</p>
+                              <div className="grid gap-1.5">
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="text-stone-400">Home</span>
+                                  <span className="font-mono font-semibold text-accent-200">{point.home?.toFixed(2) ?? "—"}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="text-stone-400">Away</span>
+                                  <span className="font-mono font-semibold text-info-200">{point.away?.toFixed(2) ?? "—"}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Area type="monotone" dataKey="home" stroke="#ffb020" fill="url(#ccPixelHome)" />
+                      <Area type="monotone" dataKey="away" stroke="#5aa9ff" fill="url(#ccPixelAway)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <EmptyState reason="Fewer than two comparable odds points yet - the chart will populate once the next tick arrives." />
+              )}
+            </Card>
+          </section>
+        </div>
+
+        <aside aria-label="Command actions and live context" className="contents lg:col-span-4 lg:block lg:space-y-4">
+          <Card className="order-2 p-3 sm:p-4 lg:order-none">
+            <SectionHeader eyebrow="Next action" title="Operator brief" size="compact" />
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => onNavigate(isSystemHealthy ? "live-markets" : "system-health")}
+                className="flex min-h-11 w-full items-center justify-between rounded-lg border border-border bg-black/15 px-3 text-left transition-colors hover:border-border-strong hover:bg-white/5"
+              >
+                <span>
+                  <span className="block text-xs font-semibold text-white">
+                    {isSystemHealthy ? "Compare live market context" : "Resolve degraded stream state"}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] text-stone-500">{systemHealthLabel}</span>
+                </span>
+                <ArrowUpRight className="h-4 w-4 text-stone-500" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate("archive")}
+                className="flex min-h-11 w-full items-center justify-between rounded-lg border border-border bg-black/15 px-3 text-left transition-colors hover:border-border-strong hover:bg-white/5"
+              >
+                <span>
+                  <span className="block text-xs font-semibold text-white">Check historical precedent</span>
+                  <span className="mt-0.5 block text-[11px] text-stone-500">Settled outcomes and calibration</span>
+                </span>
+                <ArrowUpRight className="h-4 w-4 text-stone-500" aria-hidden="true" />
+              </button>
+            </div>
+          </Card>
+
+          <Card className="order-3 p-3 sm:p-4 lg:order-none">
+            <SectionHeader eyebrow="Live context" title="At a glance" size="compact" />
+            <div className="grid grid-cols-2 gap-2">
+              {liveMetrics.map((metric) => {
+                const Icon = metric.icon;
+                return (
+                  <div key={metric.label} className="min-w-0 rounded-lg border border-border bg-black/15 p-3">
+                    <div className="flex items-center gap-1.5">
+                      <Icon className={`h-3.5 w-3.5 shrink-0 ${metric.tone}`} aria-hidden="true" />
+                      <p className="truncate text-[9px] uppercase tracking-[0.08em] text-stone-500">{metric.label}</p>
+                    </div>
+                    <p className={`mt-1 truncate font-mono text-sm font-bold tabular-nums ${metric.tone}`}>
+                      {metric.value}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <section
+            id="guide-decision-feed"
+            aria-label="Decision audit"
+            className="order-5 md:col-span-2 lg:order-none"
+          >
+            <Card className="p-3 sm:p-4">
+              <SectionHeader eyebrow="Autonomous flow" title="Decision Feed" size="compact" />
+              <ol className="divide-y divide-border">
+                {decisionFeed.map((step) => (
+                  <li key={step.title} className="py-3 first:pt-0 last:pb-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-white">{step.title}</p>
+                      <p className="shrink-0 font-mono text-[9px] uppercase tracking-[0.08em] text-stone-500">{step.time}</p>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-stone-400">{step.detail}</p>
+                  </li>
+                ))}
+              </ol>
+            </Card>
+          </section>
+        </aside>
+      </div>
+
+      <section aria-label="Trust and system status" className="overflow-x-auto">
+        <Card className="min-w-[42rem] overflow-hidden p-0 md:min-w-0">
+          <div className="grid grid-cols-3 divide-x divide-border">
+            <div className="p-4">
+              <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">Strategy leader</p>
+              {leaderScoreboard ? (
+                <div className="mt-2 flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-white">{leaderScoreboard.label}</p>
+                    <p className="text-[11px] text-stone-500">{leaderScoreboard.settledCount} settled</p>
+                  </div>
+                  <p className={`font-mono text-lg font-bold ${leaderScoreboard.roiPercent >= 0 ? "text-positive" : "text-danger"}`}>
+                    {formatRoi(leaderScoreboard.roiPercent)}
                   </p>
                 </div>
-                <div className="border-l border-border pl-3">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">Why it matters</p>
-                  <p className="mt-1 text-sm leading-5 text-stone-200">{latestSignal.explanation}</p>
+              ) : (
+                <p className="mt-2 text-xs text-stone-400">
+                  {isArenaUnavailable ? "Arena data unavailable." : recommendation.message}
+                </p>
+              )}
+            </div>
+
+            <div className="p-4">
+              <div className="flex items-center gap-2">
+                <BadgeCheck className="h-4 w-4 text-proof-200" aria-hidden="true" />
+                <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">Verification</p>
+              </div>
+              {arena ? (
+                <div className="mt-2">
+                  <p className="text-sm font-semibold text-white">
+                    {arena.proof.verifiableStat ? "Ready to verify" : "No settled signal yet"}
+                  </p>
+                  <p className="mt-0.5 truncate font-mono text-[10px] text-proof-200">Hash {arena.proof.hash.slice(0, 12)}…</p>
                 </div>
+              ) : (
+                <p className="mt-2 text-xs text-stone-400">
+                  {isArenaUnavailable ? "Arena data unavailable." : "Waiting for arena data."}
+                </p>
+              )}
+            </div>
+
+            <div className="p-4">
+              <div className="flex items-center gap-2">
+                <Activity className={`h-4 w-4 ${isSystemHealthy ? "text-positive" : "text-warning"}`} aria-hidden="true" />
+                <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">System health</p>
+              </div>
+              <div className="mt-2 flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">{isSystemHealthy ? "Online" : "Degraded"}</p>
+                  <p className="text-[11px] text-stone-500">{systemHealthLabel}</p>
+                </div>
+                <span className={`h-2.5 w-2.5 rounded-full ${isSystemHealthy ? "bg-positive" : "bg-warning"}`} aria-hidden="true" />
               </div>
             </div>
-          ) : (
-            <EmptyState reason="No signal crossed the deterministic threshold in this window." />
-          )}
-
-          <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
-            <button
-              type="button"
-              onClick={() => onNavigate("signals")}
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-accent px-3.5 text-xs font-bold text-canvas transition-colors hover:bg-accent-soft"
-            >
-              Inspect signal
-              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigate("verification")}
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-white/5 px-3.5 text-xs font-semibold text-stone-200 transition-colors hover:bg-white/10"
-            >
-              <ShieldCheck className="h-3.5 w-3.5 text-proof-200" aria-hidden="true" />
-              Open verification
-            </button>
           </div>
         </Card>
-
-        <Card className="p-5 lg:col-span-4">
-          <SectionHeader eyebrow="Operator brief" title="What to inspect next" />
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => onNavigate(isSystemHealthy ? "live-markets" : "system-health")}
-              className="flex min-h-12 w-full items-center justify-between rounded-lg border border-border bg-black/15 px-3 text-left transition-colors hover:border-border-strong hover:bg-white/5"
-            >
-              <span>
-                <span className="block text-xs font-semibold text-white">
-                  {isSystemHealthy ? "Compare live market context" : "Resolve degraded stream state"}
-                </span>
-                <span className="mt-0.5 block text-[11px] text-stone-500">{systemHealthLabel}</span>
-              </span>
-              <ArrowUpRight className="h-4 w-4 text-stone-500" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigate("archive")}
-              className="flex min-h-12 w-full items-center justify-between rounded-lg border border-border bg-black/15 px-3 text-left transition-colors hover:border-border-strong hover:bg-white/5"
-            >
-              <span>
-                <span className="block text-xs font-semibold text-white">Check historical precedent</span>
-                <span className="mt-0.5 block text-[11px] text-stone-500">Compare settled outcomes and calibration</span>
-              </span>
-              <ArrowUpRight className="h-4 w-4 text-stone-500" aria-hidden="true" />
-            </button>
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-        <Card className="p-4 lg:col-span-8">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <SectionHeader eyebrow="Selected fixture" title="Market Pulse" />
-              <p className="-mt-3 text-xs text-stone-500">{selectedFixtureLabel}</p>
-            </div>
-            <div className="flex items-center gap-3 text-[10px] text-stone-400">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
-                Home odds
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-info" aria-hidden="true" />
-                Away odds
-              </span>
-            </div>
-          </div>
-          {chartData.length >= 2 ? (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <pattern id="ccPixelHome" width="8" height="8" patternUnits="userSpaceOnUse">
-                      <rect width="8" height="8" fill="transparent" />
-                      <rect width="4" height="4" fill="#ffb020" fillOpacity={0.6} />
-                    </pattern>
-                    <pattern id="ccPixelAway" width="8" height="8" patternUnits="userSpaceOnUse">
-                      <rect width="8" height="8" fill="transparent" />
-                      <rect width="4" height="4" fill="#5aa9ff" fillOpacity={0.4} />
-                    </pattern>
-                  </defs>
-                  <CartesianGrid strokeDasharray="1 7" strokeLinecap="round" stroke="rgba(158,196,224,0.35)" />
-                  <XAxis dataKey="name" stroke="#78716c" fontSize={10} />
-                  <YAxis stroke="#78716c" fontSize={10} />
-                  <Tooltip
-                    cursor={{ stroke: "rgba(255,255,255,0.3)", strokeWidth: 1, strokeDasharray: "4 4" }}
-                    wrapperStyle={{ zIndex: 50 }}
-                    content={({ payload, label }) => {
-                      const point = payload?.[0]?.payload as CommandCenterChartPoint | undefined;
-                      if (!point) return null;
-
-                      return (
-                        <div className="rounded-xl border border-border bg-surface-1/95 p-3 text-xs shadow-2xl shadow-black/50">
-                          <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-stone-500">{label}</p>
-                          <div className="grid gap-1.5">
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="flex items-center gap-1.5 text-stone-400">
-                                <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
-                                Home
-                              </span>
-                              <span className="font-mono font-semibold text-accent-200">{point.home?.toFixed(2) ?? "—"}</span>
-                            </div>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="flex items-center gap-1.5 text-stone-400">
-                                <span className="h-1.5 w-1.5 rounded-full bg-info" aria-hidden="true" />
-                                Away
-                              </span>
-                              <span className="font-mono font-semibold text-info-200">{point.away?.toFixed(2) ?? "—"}</span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }}
-                  />
-                  <Area type="monotone" dataKey="home" stroke="#ffb020" fill="url(#ccPixelHome)" />
-                  <Area type="monotone" dataKey="away" stroke="#5aa9ff" fill="url(#ccPixelAway)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <EmptyState reason="Fewer than two comparable odds points yet - the chart will populate once the next tick arrives." />
-          )}
-        </Card>
-
-        <Card id="guide-decision-feed" className="p-4 lg:col-span-4">
-          <SectionHeader eyebrow="Autonomous flow" title="Decision Feed" />
-          <ol className="space-y-3">
-            {decisionFeed.map((step) => (
-              <li key={step.title} className="border-l-2 border-accent/30 pl-3">
-                <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">{step.time}</p>
-                <p className="text-sm font-semibold text-white">{step.title}</p>
-                <p className="text-xs text-stone-400">{step.detail}</p>
-              </li>
-            ))}
-          </ol>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <Card className="p-4">
-          <SectionHeader eyebrow="Strategy snapshot" title="Strategy Leader" />
-          {leaderScoreboard ? (
-            <DeltaTicker
-              label={leaderScoreboard.label}
-              value={formatRoi(leaderScoreboard.roiPercent)}
-              delta={`${leaderScoreboard.settledCount} settled`}
-              deltaTone={leaderScoreboard.roiPercent >= 0 ? "positive" : "danger"}
-              tone={leaderScoreboard.roiPercent >= 0 ? "positive" : "danger"}
-            />
-          ) : (
-            <EmptyState reason={recommendation.message} />
-          )}
-        </Card>
-
-        <Card className="p-4">
-          <SectionHeader eyebrow="Trust" title="Verification" />
-          {arena ? (
-            <StatusCapsule
-              label={`Hash ${arena.proof.hash.slice(0, 12)}…`}
-              value={arena.proof.verifiableStat ? "Ready to verify" : "No settled signal yet"}
-              tone="proof"
-              icon={<BadgeCheck className="h-4 w-4" />}
-            />
-          ) : (
-            <EmptyState reason="Waiting for arena data." />
-          )}
-        </Card>
-
-        <Card className="p-4">
-          <SectionHeader eyebrow="Trust" title="System Health" />
-          <RadialDial
-            label={systemHealthLabel}
-            value={isSystemHealthy ? "Online" : "Degraded"}
-            percent={isSystemHealthy ? 100 : 0}
-            tone={isSystemHealthy ? "positive" : "warning"}
-          />
-        </Card>
-      </div>
+      </section>
     </div>
   );
 }
