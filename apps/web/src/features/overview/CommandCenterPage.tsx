@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { AreaChart, Area, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Activity, ArrowUpRight, BadgeCheck, Crosshair, Radio, ShieldCheck, Signal as SignalIcon, Wallet } from "lucide-react";
 import { Card } from "../../components/ui/Card";
-import { SectionHeader } from "../../components/ui/SectionHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { getMetaAgentRecommendation, formatRoi, type ArenaResponse } from "../../lib/arena";
 import type { DestinationId } from "../../app/navigation";
@@ -80,6 +79,8 @@ export function CommandCenterPage({
     async function loadArena() {
       try {
         const response = await fetch(`${API_BASE_URL}/api/arena`);
+        if (!response.ok) throw new Error(`Arena request failed with ${response.status}`);
+
         const payload = (await response.json()) as { data?: ArenaResponse };
 
         if (!mounted) return;
@@ -87,7 +88,10 @@ export function CommandCenterPage({
         setArena(payload.data ?? null);
         setIsArenaUnavailable(false);
       } catch {
-        if (mounted) setIsArenaUnavailable(true);
+        if (mounted) {
+          setArena(null);
+          setIsArenaUnavailable(true);
+        }
       }
     }
 
@@ -112,10 +116,10 @@ export function CommandCenterPage({
       : null;
 
   const liveMetrics = [
-    { label: "Live fixtures", value: kpis.liveFixtures, icon: Radio, tone: "text-info" },
-    { label: "Feed freshness", value: kpis.feedFreshnessLabel, icon: Activity, tone: "text-positive" },
-    { label: "Signals in window", value: kpis.signalsInWindow, icon: SignalIcon, tone: "text-accent-200" },
-    { label: "Open positions", value: kpis.openSimulatedPositions, icon: Wallet, tone: "text-warning" },
+    { label: "Live fixtures", value: kpis.liveFixtures, icon: Radio, tone: "text-info", divider: "border-b border-r lg:border-b-0" },
+    { label: "Feed freshness", value: kpis.feedFreshnessLabel, icon: Activity, tone: "text-positive", divider: "border-b md:border-r lg:border-b-0" },
+    { label: "Signals in window", value: kpis.signalsInWindow, icon: SignalIcon, tone: "text-accent-200", divider: "border-b border-r md:border-r-0 lg:border-b-0 lg:border-r" },
+    { label: "Open positions", value: kpis.openSimulatedPositions, icon: Wallet, tone: "text-warning", divider: "border-b md:border-b-0 md:border-r" },
   ];
 
   return (
@@ -123,7 +127,10 @@ export function CommandCenterPage({
       <section aria-label="Priority signal rail">
         <Card className="overflow-hidden border-accent/25 bg-surface-3 p-0">
           {latestSignal ? (
-            <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_auto]">
+            <div
+              data-testid="priority-signal-grid"
+              className="grid md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_auto]"
+            >
               <div className="min-w-0 p-4 lg:p-5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-accent-200">Priority signal</span>
@@ -142,16 +149,19 @@ export function CommandCenterPage({
                 </div>
               </div>
 
-              <div className="min-w-0 border-t border-border p-4 lg:border-l lg:border-t-0 lg:p-5">
-                <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">Signal rationale</p>
+              <div className="min-w-0 border-t border-border p-4 md:border-l md:border-t-0 lg:p-5">
+                <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-400">Signal rationale</p>
                 <p className="mt-2 line-clamp-2 text-sm leading-6 text-stone-200" title={latestSignal.explanation}>
-                  {latestSignal.target} compressed {latestSignal.priceMoveLabel}; {latestSignal.explanation}
+                  {latestSignal.explanation}
                 </p>
               </div>
 
-              <div className="flex min-w-52 flex-col justify-between gap-3 border-t border-border p-4 lg:border-l lg:border-t-0 lg:p-5">
+              <div
+                data-testid="priority-signal-actions"
+                className="flex min-w-0 flex-col justify-between gap-3 border-t border-border p-4 md:col-span-2 lg:col-span-1 lg:min-w-52 lg:border-l lg:border-t-0 lg:p-5"
+              >
                 <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500">Confidence</p>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-stone-400">Confidence</p>
                   <p className="mt-1 font-mono text-xl font-bold tabular-nums text-white">{latestSignal.confidenceLabel}</p>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
@@ -202,28 +212,39 @@ export function CommandCenterPage({
       </section>
 
       <section aria-label="Live status" className="overflow-hidden rounded-xl border border-border bg-surface-2">
-        <div className="grid grid-cols-2 divide-x divide-y divide-border md:grid-cols-5 md:divide-y-0">
+        <div data-testid="live-status-grid" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {liveMetrics.map((metric) => {
             const Icon = metric.icon;
             return (
-              <div key={metric.label} className="min-w-0 p-3 sm:p-4">
+              <div key={metric.label} className={`min-w-0 border-border p-3 sm:p-4 ${metric.divider}`}>
                 <div className="flex items-center gap-1.5">
                   <Icon className={`h-3.5 w-3.5 shrink-0 ${metric.tone}`} aria-hidden="true" />
-                  <p className="truncate text-[9px] uppercase tracking-[0.08em] text-stone-500">{metric.label}</p>
+                  <p className="truncate text-[9px] uppercase tracking-[0.08em] text-stone-400">{metric.label}</p>
                 </div>
                 <p className={`mt-1 truncate font-mono text-sm font-bold tabular-nums ${metric.tone}`}>{metric.value}</p>
               </div>
             );
           })}
-          <div className="col-span-2 min-w-0 p-3 sm:p-4 md:col-span-1">
+          <div className="col-span-2 min-w-0 p-3 sm:p-4 md:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-1.5">
               <Activity className={`h-3.5 w-3.5 shrink-0 ${isSystemHealthy ? "text-positive" : "text-warning"}`} aria-hidden="true" />
-              <p className="truncate text-[9px] uppercase tracking-[0.08em] text-stone-500">System health</p>
+              <p className="truncate text-[9px] uppercase tracking-[0.08em] text-stone-400">System health</p>
             </div>
             <p className={`mt-1 truncate font-mono text-sm font-bold ${isSystemHealthy ? "text-positive" : "text-warning"}`}>
               {isSystemHealthy ? "Online" : "Degraded"}
             </p>
-            <p className="truncate text-[10px] text-stone-500">{systemHealthLabel}</p>
+            <p className="truncate text-[10px] text-stone-400">{systemHealthLabel}</p>
+            <button
+              type="button"
+              aria-label={isSystemHealthy ? "Compare live market context" : "Resolve degraded stream state"}
+              onClick={() => onNavigate(isSystemHealthy ? "live-markets" : "system-health")}
+              className="mt-2 inline-flex min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg bg-white/5 px-3 text-left text-[10px] font-semibold text-stone-200 transition-colors hover:bg-white/10"
+            >
+              <span className="truncate">
+                {isSystemHealthy ? "Compare live market context" : "Resolve degraded stream state"}
+              </span>
+              <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-stone-400" aria-hidden="true" />
+            </button>
           </div>
         </div>
       </section>
@@ -238,7 +259,7 @@ export function CommandCenterPage({
               <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                 <div className="min-w-0">
                   <h2 className="font-display text-lg font-bold tracking-tight text-white">Market Pulse</h2>
-                  <p className="mt-0.5 truncate text-xs text-stone-500">{selectedFixtureLabel}</p>
+                  <p className="mt-0.5 truncate text-xs text-stone-400">{selectedFixtureLabel}</p>
                 </div>
                 <div className="flex items-center gap-3 text-[10px] text-stone-400" aria-label="Odds legend">
                   <span className="flex items-center gap-1.5">
@@ -252,7 +273,16 @@ export function CommandCenterPage({
                 </div>
               </div>
               {chartData.length >= 2 ? (
-                <div className="h-56 sm:h-64 lg:h-[22rem]">
+                <>
+                <p id="market-evidence-chart-description" className="sr-only">
+                  Home and away odds by timestamp. Exact values follow in the data table.
+                </p>
+                <div
+                  role="img"
+                  aria-label={`Market odds movement for ${selectedFixtureLabel}`}
+                  aria-describedby="market-evidence-chart-description"
+                  className="h-56 sm:h-64 lg:h-[22rem]"
+                >
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
                       <defs>
@@ -277,7 +307,7 @@ export function CommandCenterPage({
 
                           return (
                             <div className="rounded-xl border border-border bg-surface-1/95 p-3 text-xs shadow-lg shadow-black/40">
-                              <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-stone-500">{label}</p>
+                              <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-stone-400">{label}</p>
                               <div className="grid gap-1.5">
                                 <div className="flex items-center justify-between gap-4">
                                   <span className="text-stone-400">Home</span>
@@ -297,43 +327,33 @@ export function CommandCenterPage({
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
+                <table className="sr-only">
+                  <caption>Market odds data for {selectedFixtureLabel}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Timestamp</th>
+                      <th scope="col">Home odds</th>
+                      <th scope="col">Away odds</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chartData.map((point, index) => (
+                      <tr key={`${point.name}-${index}`}>
+                        <td>{point.name}</td>
+                        <td>{point.home?.toFixed(2) ?? "Unavailable"}</td>
+                        <td>{point.away?.toFixed(2) ?? "Unavailable"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                </>
               ) : (
                 <EmptyState reason="Fewer than two comparable odds points yet - the chart will populate once the next tick arrives." />
               )}
             </Card>
         </section>
 
-        <aside aria-label="Command actions and live context" className="min-w-0 space-y-3 lg:col-span-4 lg:space-y-4">
-          <Card className="p-3 sm:p-4">
-            <SectionHeader eyebrow="Next action" title="Operator brief" size="compact" />
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => onNavigate(isSystemHealthy ? "live-markets" : "system-health")}
-                className="flex min-h-11 w-full items-center justify-between rounded-lg border border-border bg-black/15 px-3 text-left transition-colors hover:border-border-strong hover:bg-white/5"
-              >
-                <span>
-                  <span className="block text-xs font-semibold text-white">
-                    {isSystemHealthy ? "Compare live market context" : "Resolve degraded stream state"}
-                  </span>
-                  <span className="mt-0.5 block text-[11px] text-stone-500">{systemHealthLabel}</span>
-                </span>
-                <ArrowUpRight className="h-4 w-4 text-stone-500" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onNavigate("archive")}
-                className="flex min-h-11 w-full items-center justify-between rounded-lg border border-border bg-black/15 px-3 text-left transition-colors hover:border-border-strong hover:bg-white/5"
-              >
-                <span>
-                  <span className="block text-xs font-semibold text-white">Check historical precedent</span>
-                  <span className="mt-0.5 block text-[11px] text-stone-500">Settled outcomes and calibration</span>
-                </span>
-                <ArrowUpRight className="h-4 w-4 text-stone-500" aria-hidden="true" />
-              </button>
-            </div>
-          </Card>
-
+        <aside aria-label="Decision rail" className="min-w-0 lg:col-span-4">
           <section
             id="guide-decision-feed"
             aria-label="Decision activity"
@@ -356,9 +376,9 @@ export function CommandCenterPage({
                     <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-info" aria-hidden="true" />
                     <div className="min-w-0">
                       <p className="truncate text-xs font-semibold text-white" title={step.title}>{step.title}</p>
-                      <p className="mt-0.5 line-clamp-1 text-[11px] leading-4 text-stone-500" title={step.detail}>{step.detail}</p>
+                      <p className="mt-0.5 line-clamp-1 text-[11px] leading-4 text-stone-400" title={step.detail}>{step.detail}</p>
                     </div>
-                    <time className="shrink-0 font-mono text-[9px] tabular-nums text-stone-500">{step.time}</time>
+                    <time className="shrink-0 font-mono text-[9px] tabular-nums text-stone-400">{step.time}</time>
                   </li>
                 ))}
               </ol>
@@ -371,12 +391,12 @@ export function CommandCenterPage({
         <Card className="overflow-hidden p-0">
           <div className="grid grid-cols-1 divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
             <div className="min-w-0 p-4">
-              <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">Strategy leader</p>
+              <p className="text-[10px] uppercase tracking-[0.1em] text-stone-400">Strategy leader</p>
               {leaderScoreboard ? (
                 <div className="mt-2 flex items-end justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-white">{leaderScoreboard.label}</p>
-                    <p className="text-[11px] text-stone-500">{leaderScoreboard.settledCount} settled</p>
+                    <p className="text-[11px] text-stone-400">{leaderScoreboard.settledCount} settled</p>
                   </div>
                   <p className={`font-mono text-lg font-bold ${leaderScoreboard.roiPercent >= 0 ? "text-positive" : "text-danger"}`}>
                     {formatRoi(leaderScoreboard.roiPercent)}
@@ -392,7 +412,7 @@ export function CommandCenterPage({
             <div className="min-w-0 p-4">
               <div className="flex items-center gap-2">
                 <BadgeCheck className="h-4 w-4 text-proof-200" aria-hidden="true" />
-                <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">Verification</p>
+                <p className="text-[10px] uppercase tracking-[0.1em] text-stone-400">Verification</p>
               </div>
               {arena ? (
                 <div className="mt-2">
@@ -411,12 +431,12 @@ export function CommandCenterPage({
             <div className="min-w-0 p-4">
               <div className="flex items-center gap-2">
                 <Activity className={`h-4 w-4 ${isSystemHealthy ? "text-positive" : "text-warning"}`} aria-hidden="true" />
-                <p className="text-[10px] uppercase tracking-[0.1em] text-stone-500">System health</p>
+                <p className="text-[10px] uppercase tracking-[0.1em] text-stone-400">System health</p>
               </div>
               <div className="mt-2 flex items-end justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-white">{isSystemHealthy ? "Online" : "Degraded"}</p>
-                  <p className="truncate text-[11px] text-stone-500">{systemHealthLabel}</p>
+                  <p className="truncate text-[11px] text-stone-400">{systemHealthLabel}</p>
                 </div>
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${isSystemHealthy ? "bg-positive" : "bg-warning"}`} aria-hidden="true" />
               </div>
