@@ -427,14 +427,23 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
           <div className="divide-y divide-border lg:hidden">
             {entries.map((entry) => {
               const matchName = entry.signalData?.match ?? entry.matchId;
+              const evidenceDescriptionId = `${entry.signalId}-${entry.event}-mobile-evidence`;
               return (
                 <button
                   key={`${entry.signalId}-${entry.event}`}
                   type="button"
                   aria-label={`Inspect ${matchName}`}
+                  aria-describedby={evidenceDescriptionId}
                   onClick={() => inspectEntry(entry)}
                   className="relative w-full px-4 py-4 text-left transition hover:bg-white/5"
                 >
+                  <span id={evidenceDescriptionId} className="sr-only">
+                    Match ID {entry.matchId}. Severity {entry.severity}. Signal {entry.signalType.replaceAll("_", " ")}.
+                    {" "}{entry.side} target {entry.signalData?.target ?? "unavailable"}. Movement {entry.oddsChangePct} percent.
+                    {" "}Confidence {entry.signalData?.confidenceScore !== undefined
+                      ? `${Math.round(entry.signalData.confidenceScore)} out of 100`
+                      : "unavailable"}. Outcome {entry.resultStatus}. Record {entry.event}. Archived {formatDate(entry.archivedAt)}.
+                  </span>
                   <span
                     className={`absolute inset-y-4 left-0 w-1 rounded-r ${resultMarkerClass(entry.resultStatus)}`}
                     aria-hidden="true"

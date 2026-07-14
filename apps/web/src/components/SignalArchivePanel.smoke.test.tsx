@@ -95,6 +95,12 @@ describe("SignalArchivePanel", () => {
     expect(inspectButtons[1]).toHaveTextContent("m1");
     expect(inspectButtons[1]).toHaveTextContent("HIGH");
     expect(inspectButtons[1]).toHaveTextContent("settled");
+    expect(inspectButtons[1]).toHaveAccessibleDescription(
+      expect.stringContaining("Match ID m1")
+    );
+    expect(inspectButtons[1]).toHaveAccessibleDescription(
+      expect.stringContaining("Confidence 90 out of 100")
+    );
   });
 
   it("clears active filters back to the archive defaults", async () => {
