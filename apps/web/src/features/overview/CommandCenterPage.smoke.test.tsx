@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CommandCenterPage } from "./CommandCenterPage";
+import commandCenterSource from "./CommandCenterPage.tsx?raw";
 
 const arenaResponse = {
   data: {
@@ -84,6 +85,7 @@ describe("CommandCenterPage", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -95,22 +97,57 @@ describe("CommandCenterPage", () => {
     expect(screen.getByText("Draw")).toBeInTheDocument();
     expect(screen.getByText("39.54%")).toBeInTheDocument();
     expect(screen.getAllByText("Streams connected")).toHaveLength(2);
-    expect(screen.getByText("What changed")).toBeInTheDocument();
-    expect(screen.getByText("Why it matters")).toBeInTheDocument();
+    expect(screen.queryByText("What changed")).not.toBeInTheDocument();
+    expect(screen.queryByText("Why it matters")).not.toBeInTheDocument();
     expect(screen.getByText("Field-backed")).toBeInTheDocument();
+    const rationale = screen.getByTitle(baseProps.latestSignal.explanation);
+    expect(rationale).toHaveClass("line-clamp-2");
+    expect(rationale).toHaveAttribute("title", baseProps.latestSignal.explanation);
+    expect(rationale).toHaveTextContent(baseProps.latestSignal.explanation);
+    expect(rationale).not.toHaveTextContent("Draw compressed 39.54%");
     expect(screen.getByRole("button", { name: "Inspect signal" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Open verification" })).toBeEnabled();
-    expect(screen.getByRole("region", { name: "Priority signal" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("complementary", { name: "Command actions and live context" })
-    ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Market evidence" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Decision audit" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Trust and system status" })).toBeInTheDocument();
-    expect(screen.getByTestId("command-workbench")).toHaveAttribute(
-      "data-layout",
-      "independent-columns"
+    expect(screen.getByRole("region", { name: "Priority signal rail" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Live status" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Market workspace" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Decision activity" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Trust evidence" })).toBeInTheDocument();
+    expect(screen.getByTestId("command-workbench")).toHaveAttribute("data-layout", "signal-rail");
+  });
+
+  it("keeps tablet signal and live-status layouts to two rows until the large breakpoint", () => {
+    render(<CommandCenterPage {...baseProps} />);
+
+    expect(screen.getByTestId("priority-signal-grid")).toHaveClass(
+      "md:grid-cols-2",
+      "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_auto]"
     );
+    expect(screen.getByTestId("priority-signal-actions")).toHaveClass(
+      "md:col-span-2",
+      "lg:col-span-1"
+    );
+    expect(screen.getByTestId("live-status-grid")).toHaveClass("md:grid-cols-3", "lg:grid-cols-5");
+  });
+
+  it("exposes the market evidence chart and every point as semantic content", () => {
+    render(<CommandCenterPage {...baseProps} />);
+
+    const chart = screen.getByRole("img", { name: "Market odds movement for Norway vs England" });
+    expect(chart).toHaveAccessibleDescription("Home and away odds by timestamp. Exact values follow in the data table.");
+
+    const table = screen.getByRole("table", { name: "Market odds data for Norway vs England" });
+    expect(table).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Timestamp" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Home odds" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Away odds" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "11:00 PM" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "3.90" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "2.10" })).toBeInTheDocument();
+  });
+
+  it("renders both market chart axes with the accessible informational color", () => {
+    expect(commandCenterSource).toMatch(/<XAxis\b[^>]*\bstroke="#a8a29e"/s);
+    expect(commandCenterSource).toMatch(/<YAxis\b[^>]*\bstroke="#a8a29e"/s);
   });
 
   it("routes the operator from the priority signal to evidence and verification", () => {
@@ -119,9 +156,30 @@ describe("CommandCenterPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Inspect signal" }));
     fireEvent.click(screen.getByRole("button", { name: "Open verification" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open archive" }));
 
     expect(onNavigate).toHaveBeenNthCalledWith(1, "signals");
     expect(onNavigate).toHaveBeenNthCalledWith(2, "verification");
+    expect(onNavigate).toHaveBeenNthCalledWith(3, "archive");
+  });
+
+  it.each([
+    [true, "Compare live market context", "live-markets"],
+    [false, "Resolve degraded stream state", "system-health"],
+  ] as const)("routes the contextual system action from Live status", (isSystemHealthy, label, destination) => {
+    const onNavigate = vi.fn();
+    render(
+      <CommandCenterPage
+        {...baseProps}
+        isSystemHealthy={isSystemHealthy}
+        onNavigate={onNavigate}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: label }));
+
+    expect(onNavigate).toHaveBeenCalledWith(destination);
+    expect(screen.queryByText("Operator brief")).not.toBeInTheDocument();
   });
 
   it("shows an honest empty state instead of a fake chart when fewer than two points exist", () => {
@@ -158,5 +216,51 @@ describe("CommandCenterPage", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network disabled in tests")));
     render(<CommandCenterPage {...baseProps} />);
     await waitFor(() => expect(screen.getAllByText("Arena data unavailable.")).toHaveLength(2));
+  });
+
+  it("treats a non-success arena response as unavailable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: () => Promise.resolve(arenaResponse),
+      })
+    );
+
+    render(<CommandCenterPage {...baseProps} />);
+
+    await waitFor(() => expect(screen.getAllByText("Arena data unavailable.")).toHaveLength(2));
+    expect(screen.queryByText("Momentum Follower")).not.toBeInTheDocument();
+    expect(screen.queryByText("+20%")).not.toBeInTheDocument();
+  });
+
+  it("clears stale arena proof and ROI when the next poll fails", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(arenaResponse),
+      })
+      .mockRejectedValueOnce(new Error("arena poll failed"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CommandCenterPage {...baseProps} />);
+    await act(async () => {});
+
+    expect(screen.getByText("Momentum Follower")).toBeInTheDocument();
+    expect(screen.getByText("+20%")).toBeInTheDocument();
+    expect(screen.getByText(/Hash abc123def456/)).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByText("Arena data unavailable.")).toHaveLength(2);
+    expect(screen.queryByText("Momentum Follower")).not.toBeInTheDocument();
+    expect(screen.queryByText("+20%")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Hash abc123def456/)).not.toBeInTheDocument();
   });
 });
