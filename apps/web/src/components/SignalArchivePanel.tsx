@@ -205,7 +205,11 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
           </p>
         </div>
         <StatusBadge
-          label={pagination ? `${pagination.totalCount} records` : isLoading ? "Loading" : "Unavailable"}
+          label={pagination
+            ? `${pagination.totalCount} ${pagination.totalCount === 1 ? "record" : "records"}`
+            : isLoading
+              ? "Loading"
+              : "Unavailable"}
           tone="proof"
         />
       </div>
@@ -343,7 +347,7 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
         </div>
       ) : (
         <>
-          <div className="hidden overflow-x-auto md:block">
+          <div className="hidden overflow-x-auto lg:block">
             <table className="min-w-full table-fixed" aria-label="Permanent signal archive">
               <thead className="border-b border-border bg-black/15 text-left text-[10px] font-semibold uppercase tracking-widest text-stone-400">
                 <tr>
@@ -413,7 +417,7 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
             </table>
           </div>
 
-          <div className="divide-y divide-border md:hidden">
+          <div className="divide-y divide-border lg:hidden">
             {entries.map((entry) => {
               const matchName = entry.signalData?.match ?? entry.matchId;
               return (
