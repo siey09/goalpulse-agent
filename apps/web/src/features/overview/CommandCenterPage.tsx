@@ -296,8 +296,8 @@ export function CommandCenterPage({
                         </pattern>
                       </defs>
                       <CartesianGrid strokeDasharray="1 7" strokeLinecap="round" stroke="rgba(158,196,224,0.35)" />
-                      <XAxis dataKey="name" stroke="#78716c" fontSize={10} />
-                      <YAxis stroke="#78716c" fontSize={10} />
+                      <XAxis dataKey="name" stroke="#a8a29e" fontSize={10} />
+                      <YAxis stroke="#a8a29e" fontSize={10} />
                       <Tooltip
                         cursor={{ stroke: "rgba(255,255,255,0.3)", strokeWidth: 1, strokeDasharray: "4 4" }}
                         wrapperStyle={{ zIndex: 50 }}

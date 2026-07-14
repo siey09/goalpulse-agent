@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CommandCenterPage } from "./CommandCenterPage";
+import commandCenterSource from "./CommandCenterPage.tsx?raw";
 
 const arenaResponse = {
   data: {
@@ -142,6 +143,11 @@ describe("CommandCenterPage", () => {
     expect(screen.getByRole("cell", { name: "11:00 PM" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "3.90" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "2.10" })).toBeInTheDocument();
+  });
+
+  it("renders both market chart axes with the accessible informational color", () => {
+    expect(commandCenterSource).toMatch(/<XAxis\b[^>]*\bstroke="#a8a29e"/s);
+    expect(commandCenterSource).toMatch(/<YAxis\b[^>]*\bstroke="#a8a29e"/s);
   });
 
   it("routes the operator from the priority signal to evidence and verification", () => {
