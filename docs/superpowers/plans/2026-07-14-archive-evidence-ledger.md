@@ -57,7 +57,7 @@ Add explicit error state, request nonce for retry, stale-data clearing, consolid
 
 - [ ] **Step 2: Implement desktop and mobile evidence views**
 
-Render a semantic table from `md` upward and compact record buttons below `md`. Preserve the existing `archiveEntryToSignal` call on both presentations.
+Render a semantic table from `lg` upward and compact record buttons below `lg`, preserving readable evidence on tablets. Preserve the existing `archiveEntryToSignal` call on both presentations.
 
 - [ ] **Step 3: Run focused tests to verify GREEN**
 

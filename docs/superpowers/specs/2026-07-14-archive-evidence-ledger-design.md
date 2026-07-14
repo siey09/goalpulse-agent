@@ -38,7 +38,7 @@ Use a ledger-first composition instead of a card gallery or chronological timeli
 ## Responsive behavior
 
 - At desktop widths, the ledger is a table with aligned numeric columns.
-- Below the medium breakpoint, table headers are removed and records become stacked buttons.
+- Below the large breakpoint, table headers are removed and records become stacked buttons so tablet content is not compressed into seven narrow columns.
 - The filter toolbar wraps without horizontal scrolling.
 - Supporting analysis changes from two columns to one.
 

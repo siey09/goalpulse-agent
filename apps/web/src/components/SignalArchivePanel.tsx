@@ -130,6 +130,8 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
       try {
         setIsLoading(true);
         setError(null);
+        setEntries([]);
+        setPagination(null);
 
         const params = new URLSearchParams();
         params.set("page", String(page));
@@ -205,10 +207,10 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
           </p>
         </div>
         <StatusBadge
-          label={pagination
-            ? `${pagination.totalCount} ${pagination.totalCount === 1 ? "record" : "records"}`
-            : isLoading
-              ? "Loading"
+          label={isLoading
+            ? "Loading"
+            : pagination
+              ? `${pagination.totalCount} ${pagination.totalCount === 1 ? "record" : "records"}`
               : "Unavailable"}
           tone="proof"
         />
@@ -287,7 +289,9 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
 
         <div className="mt-2 flex items-center justify-between gap-3 text-xs text-stone-400">
           <span aria-live="polite">
-            {pagination && entries.length > 0
+            {error
+              ? "Archive request failed"
+              : pagination && entries.length > 0
               ? `Showing ${visibleStart}-${visibleEnd} of ${pagination.totalCount}`
               : isLoading
                 ? "Reading permanent record…"
@@ -309,7 +313,10 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
         </div>
       ) : error ? (
         <div className="p-4 sm:p-5">
-          <div className="flex flex-col gap-4 rounded-xl border border-danger/25 bg-danger/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            role="alert"
+            className="flex flex-col gap-4 rounded-xl border border-danger/25 bg-danger/10 p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
             <div>
               <p className="text-sm font-semibold text-danger-200">Archive unavailable</p>
               <p className="mt-1 max-w-2xl text-sm leading-5 text-stone-300">{error}</p>
@@ -337,7 +344,7 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="font-semibold text-accent-soft hover:text-accent-100"
+                  className="inline-flex h-11 items-center rounded-lg px-3 font-semibold text-accent-soft transition hover:bg-accent/10 hover:text-accent-100"
                 >
                   Clear filters
                 </button>
@@ -435,8 +442,9 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-white">{matchName}</p>
+                      <p className="mt-1 truncate font-mono text-[10px] text-stone-400">{entry.matchId}</p>
                       <p className="mt-1 truncate text-xs text-stone-400">
-                        {entry.signalType.replaceAll("_", " ")} · {entry.side} → {entry.signalData?.target ?? "Target unavailable"}
+                        {entry.severity} · {entry.signalType.replaceAll("_", " ")} · {entry.side} → {entry.signalData?.target ?? "Target unavailable"}
                       </p>
                     </div>
                     <StatusBadge label={entry.resultStatus} tone={resultStatusTone(entry.resultStatus)} />
@@ -456,7 +464,7 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
                     </div>
                     <div className="text-right">
                       <p className="text-stone-400">Archived</p>
-                      <p className="mt-1 text-stone-200">{formatDate(entry.archivedAt)}</p>
+                      <p className="mt-1 capitalize text-stone-200">{entry.event} · {formatDate(entry.archivedAt)}</p>
                     </div>
                   </div>
                 </button>
@@ -466,7 +474,7 @@ export function SignalArchivePanel({ onSelectSignal }: SignalArchivePanelProps =
         </>
       )}
 
-      {pagination && pagination.totalPages > 1 ? (
+      {!isLoading && pagination && pagination.totalPages > 1 ? (
         <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs text-stone-400 sm:px-5">
           <button
             type="button"
