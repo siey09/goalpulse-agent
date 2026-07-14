@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { SignalArchivePanel } from "./SignalArchivePanel";
 
 const archiveResponse = {
@@ -50,8 +50,10 @@ describe("SignalArchivePanel", () => {
     const onSelectSignal = vi.fn();
     render(<SignalArchivePanel onSelectSignal={onSelectSignal} />);
 
-    const entryButton = await waitFor(() => screen.getByText("Colombia vs Ghana"));
-    fireEvent.click(entryButton.closest("button")!);
+    const inspectButtons = await screen.findAllByRole("button", {
+      name: "Inspect Colombia vs Ghana",
+    });
+    fireEvent.click(inspectButtons[0]);
 
     expect(onSelectSignal).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -69,7 +71,61 @@ describe("SignalArchivePanel", () => {
 
   it("does not throw when a row is clicked and onSelectSignal is omitted", async () => {
     render(<SignalArchivePanel />);
-    const entryButton = await waitFor(() => screen.getByText("Colombia vs Ghana"));
-    expect(() => fireEvent.click(entryButton.closest("button")!)).not.toThrow();
+    const inspectButtons = await screen.findAllByRole("button", {
+      name: "Inspect Colombia vs Ghana",
+    });
+    expect(() => fireEvent.click(inspectButtons[0])).not.toThrow();
+  });
+
+  it("renders a labeled evidence ledger and consolidated filters", async () => {
+    render(<SignalArchivePanel />);
+
+    expect(
+      await screen.findByRole("table", { name: "Permanent signal archive" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search archive" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Outcome" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Market" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Record type" })).toBeInTheDocument();
+    expect(screen.getByText("25 records per page")).toBeInTheDocument();
+  });
+
+  it("clears active filters back to the archive defaults", async () => {
+    render(<SignalArchivePanel />);
+    await screen.findByRole("table", { name: "Permanent signal archive" });
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Outcome" }), {
+      target: { value: "correct" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Market" }), {
+      target: { value: "1x2" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    expect(screen.getByRole("combobox", { name: "Outcome" })).toHaveValue("all");
+    expect(screen.getByRole("combobox", { name: "Market" })).toHaveValue("all");
+    expect(screen.getByRole("combobox", { name: "Record type" })).toHaveValue("settled");
+  });
+
+  it("shows a recoverable error and retries the archive request", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("archive offline"))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(archiveResponse),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<SignalArchivePanel />);
+
+    expect(await screen.findByText("Archive unavailable")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry archive" }));
+
+    expect(
+      await screen.findByRole("table", { name: "Permanent signal archive" })
+    ).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
