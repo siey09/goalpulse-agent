@@ -102,4 +102,3 @@ git add -f docs/superpowers/specs/2026-07-14-signals-triage-workspace-design.md 
 git add apps/web/src/features/signals/SignalsPage.tsx apps/web/src/features/signals/SignalsPage.smoke.test.tsx
 git commit -m "feat: redesign signals triage workspace"
 ```
-

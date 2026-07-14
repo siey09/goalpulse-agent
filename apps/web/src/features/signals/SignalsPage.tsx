@@ -46,17 +46,10 @@ function severityTone(severity?: string) {
   }
 
   if (severity?.toUpperCase() === "MEDIUM") {
-    return "border-accent/30 bg-accent/10 text-accent-200";
+    return "border-warning/30 bg-warning/10 text-warning-200";
   }
 
   return "border-white/10 bg-white/5 text-stone-300";
-}
-
-function outcomeTone(outcome: string) {
-  const normalized = outcome.toLowerCase();
-  if (normalized.includes("incorrect")) return "text-danger-200";
-  if (normalized.includes("correct")) return "text-positive-200";
-  return "text-stone-300";
 }
 
 export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: SignalsPageProps) {
@@ -71,7 +64,23 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
   ).length;
   const proofCount = outcomeVerificationItems.filter(({ proofHash }) => Boolean(proofHash)).length;
   const normalizedSearch = search.trim().toLowerCase();
-  const visibleItems = outcomeVerificationItems.filter((item) => {
+  const sortedItems = outcomeVerificationItems
+    .map((item, index) => ({
+      item,
+      index,
+      timestamp: item.signal.createdAt ? Date.parse(item.signal.createdAt) : Number.NaN,
+    }))
+    .sort((left, right) => {
+      const leftIsValid = Number.isFinite(left.timestamp);
+      const rightIsValid = Number.isFinite(right.timestamp);
+
+      if (leftIsValid && rightIsValid) return right.timestamp - left.timestamp || left.index - right.index;
+      if (leftIsValid) return -1;
+      if (rightIsValid) return 1;
+      return left.index - right.index;
+    })
+    .map(({ item }) => item);
+  const visibleItems = sortedItems.filter((item) => {
     const { signal } = item;
     const haystack = `${signal.match ?? ""} ${getSignalTarget(signal)} ${getSignalType(signal)} ${item.source}`
       .replaceAll("_", " ")
@@ -115,7 +124,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
           {
             label: "Proof coverage",
             value: `${proofCount}/${outcomeVerificationItems.length}`,
-            tone: "text-proof-200",
+            tone: proofCount > 0 ? "text-proof-200" : "text-stone-300",
           },
         ].map((metric) => (
           <div key={metric.label} className="min-w-0 border-border p-3 odd:border-r sm:border-r sm:last:border-r-0">
@@ -208,7 +217,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                           </div>
                           <div>
                             <dt className="text-stone-400">Movement</dt>
-                            <dd className="mt-0.5 font-mono text-accent-200">{formatOddsChange(signal.oddsChangePct)}</dd>
+                            <dd className="mt-0.5 font-mono text-info-200">{formatOddsChange(signal.oddsChangePct)}</dd>
                           </div>
                           <div>
                             <dt className="text-stone-400">Confidence</dt>
@@ -218,7 +227,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                           </div>
                           <div>
                             <dt className="text-stone-400">Outcome</dt>
-                            <dd className={`mt-0.5 font-semibold ${outcomeTone(outcome)}`}>{outcome}</dd>
+                            <dd className="mt-0.5 font-semibold text-stone-300">{outcome}</dd>
                           </div>
                         </dl>
                       </div>
@@ -226,19 +235,33 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                       <div className="min-w-0">
                         <p className="text-[11px] font-medium text-stone-300">Evidence chain</p>
                         <div className="mt-2 grid grid-cols-3 overflow-hidden rounded-md border border-border bg-black/20 text-[10px]">
-                          <div className="min-w-0 border-t-2 border-accent p-2">
+                          <div className="min-w-0 border-t-2 border-t-info p-2">
                             <p className="text-stone-400">Market</p>
-                            <p className="mt-1 truncate font-mono text-accent-200">{formatOddsChange(signal.oddsChangePct)}</p>
+                            <p className="mt-1 truncate font-mono text-info-200">{formatOddsChange(signal.oddsChangePct)}</p>
                           </div>
-                          <div className="min-w-0 border-l border-t-2 border-l-border border-t-positive p-2">
+                          <div
+                            className={`min-w-0 border-l border-t-2 border-l-border p-2 ${
+                              isFieldBacked ? "border-t-positive" : "border-t-border"
+                            }`}
+                          >
                             <p className="text-stone-400">Field</p>
                             <p className={`mt-1 truncate font-mono ${isFieldBacked ? "text-positive-200" : "text-stone-300"}`}>
                               {fieldPressure ?? "None"}
                             </p>
                           </div>
-                          <div className="min-w-0 border-l border-t-2 border-l-border border-t-proof p-2">
+                          <div
+                            className={`min-w-0 border-l border-t-2 border-l-border p-2 ${
+                              item.proofHash ? "border-t-proof" : "border-t-border"
+                            }`}
+                          >
                             <p className="text-stone-400">Proof</p>
-                            <p className="mt-1 truncate font-mono text-proof-200">{item.proofHash ? "Linked" : "Pending"}</p>
+                            <p
+                              className={`mt-1 truncate font-mono ${
+                                item.proofHash ? "text-proof-200" : "text-stone-300"
+                              }`}
+                            >
+                              {item.proofHash ? "Linked" : "Pending"}
+                            </p>
                           </div>
                         </div>
                       </div>

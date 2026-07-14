@@ -52,7 +52,7 @@ export function TopStatusBar({
         )}
         <div className="min-w-0">
           <p className="hidden font-mono text-[9px] uppercase tracking-[0.14em] text-stone-500 sm:block">GoalPulse / live intelligence</p>
-          <h1 className="truncate font-display text-base font-bold tracking-tight text-white sm:text-lg">{title}</h1>
+          <p className="truncate font-display text-base font-bold tracking-tight text-white sm:text-lg">{title}</p>
         </div>
       </div>
       <div role="status" aria-label="System status" className="flex max-w-full items-center gap-2 overflow-x-auto pb-0.5 lg:justify-end">

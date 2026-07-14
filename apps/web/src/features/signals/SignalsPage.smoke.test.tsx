@@ -79,10 +79,70 @@ describe("SignalsPage", () => {
     expect(screen.getByRole("region", { name: "Live pattern scan" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Signal explainability" })).toBeInTheDocument();
     expect(screen.getByText("3 signals shown")).toBeInTheDocument();
-    expect(screen.getByText("INCORRECT")).toHaveClass("text-danger-200");
 
     fireEvent.click(screen.getByRole("button", { name: "Inspect signal: Alpha FC v Beta United" }));
     expect(onSelectSignal).toHaveBeenCalledWith(items[0].signal);
+  });
+
+  it("sorts a copied queue newest-first and leaves invalid timestamps at the end deterministically", () => {
+    const invalidTimestamp: OutcomeVerificationItem = {
+      source: "Invalid clock",
+      signal: { ...items[0].signal, id: "signal-invalid", match: "Invalid Date FC", createdAt: "not-a-date" },
+    };
+    const missingTimestamp: OutcomeVerificationItem = {
+      source: "Missing clock",
+      signal: { ...items[0].signal, id: "signal-missing", match: "Missing Date FC", createdAt: undefined },
+    };
+    const input = [items[0], invalidTimestamp, items[2], missingTimestamp, items[1]];
+
+    render(<SignalsPage outcomeVerificationItems={input} onSelectSignal={() => {}} />);
+
+    const queue = screen.getByRole("region", { name: "Signal queue" });
+    expect(within(queue).getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent)).toEqual([
+      "Epsilon Athletic v Zeta Town",
+      "Gamma City v Delta Rovers",
+      "Alpha FC v Beta United",
+      "Invalid Date FC",
+      "Missing Date FC",
+    ]);
+    expect(input.map(({ signal }) => signal.match)).toEqual([
+      "Alpha FC v Beta United",
+      "Invalid Date FC",
+      "Epsilon Athletic v Zeta Town",
+      "Missing Date FC",
+      "Gamma City v Delta Rovers",
+    ]);
+  });
+
+  it("binds semantic colors only to their documented evidence states", () => {
+    render(<SignalsPage outcomeVerificationItems={items} onSelectSignal={() => {}} />);
+    const queue = screen.getByRole("region", { name: "Signal queue" });
+    const highRow = within(queue).getByText("Alpha FC v Beta United").closest("li")!;
+    const lowRow = within(queue).getByText("Gamma City v Delta Rovers").closest("li")!;
+    const mediumRow = within(queue).getByText("Epsilon Athletic v Zeta Town").closest("li")!;
+
+    expect(within(highRow).getByText("HIGH")).toHaveClass("text-danger-200");
+    expect(within(mediumRow).getByText("MEDIUM")).toHaveClass("text-warning-200");
+    expect(within(highRow).getByText("CORRECT")).toHaveClass("text-stone-300");
+    expect(within(mediumRow).getByText("INCORRECT")).toHaveClass("text-stone-300");
+
+    const highFieldCell = within(highRow).getByText("Field").parentElement!;
+    const lowFieldCell = within(lowRow).getByText("Field").parentElement!;
+    expect(highFieldCell).toHaveClass("border-t-positive");
+    expect(within(highFieldCell).getByText("30")).toHaveClass("text-positive-200");
+    expect(lowFieldCell).not.toHaveClass("border-t-positive");
+    expect(within(lowFieldCell).getByText("10")).toHaveClass("text-stone-300");
+
+    const linkedProofCell = within(highRow).getByText("Proof").parentElement!;
+    const pendingProofCell = within(lowRow).getByText("Proof").parentElement!;
+    expect(linkedProofCell).toHaveClass("border-t-proof");
+    expect(within(linkedProofCell).getByText("Linked")).toHaveClass("text-proof-200");
+    expect(pendingProofCell).not.toHaveClass("border-t-proof");
+    expect(within(pendingProofCell).getByText("Pending")).toHaveClass("text-stone-300");
+
+    const marketCell = within(highRow).getByText("Market").parentElement!;
+    expect(marketCell).toHaveClass("border-t-info");
+    expect(within(marketCell).getByText("-24.17%")).toHaveClass("text-info-200");
   });
 
   it("filters the queue by priority, field evidence, and settled outcomes", () => {
@@ -106,10 +166,17 @@ describe("SignalsPage", () => {
   it("searches match, target, signal type, and source", () => {
     render(<SignalsPage outcomeVerificationItems={items} onSelectSignal={() => {}} />);
     const search = screen.getByRole("searchbox", { name: "Search signals" });
+    const queue = screen.getByRole("region", { name: "Signal queue" });
 
-    for (const term of ["Gamma City", "Over 2.5", "sharp money", "Backtest archive"]) {
+    for (const [term, expectedMatch] of [
+      ["Gamma City", "Gamma City v Delta Rovers"],
+      ["Over 2.5", "Epsilon Athletic v Zeta Town"],
+      ["sharp money", "Alpha FC v Beta United"],
+      ["Backtest archive", "Epsilon Athletic v Zeta Town"],
+    ]) {
       fireEvent.change(search, { target: { value: term } });
       expect(screen.getByText("1 signal shown")).toBeInTheDocument();
+      expect(within(queue).getByText(expectedMatch)).toBeInTheDocument();
     }
   });
 

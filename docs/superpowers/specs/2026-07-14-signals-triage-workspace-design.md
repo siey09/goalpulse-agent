@@ -41,4 +41,3 @@ Use a dense signal queue as the primary surface. The queue is more appropriate t
 - Results count is announced with `aria-live="polite"`.
 - No horizontal page overflow at 320px, 390px, or desktop widths.
 - No new dependencies.
-
