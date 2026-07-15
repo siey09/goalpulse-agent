@@ -89,7 +89,7 @@ Buttons remain keyboard accessible, have visible focus states, announce state ch
 - `apps/api/src/server.ts`: thin route registration.
 - `apps/web/src/features/markets/chartTimeline.ts`: pure conversion from snapshots to time-scaled chart points and display labels.
 - `apps/web/src/features/markets/OddsMovementChart.tsx`: time-accurate visualization, cursor, tooltip, and scrub rail.
-- `apps/web/src/features/markets/IntelligenceRail.tsx`: single replay control cluster.
+- `apps/web/src/features/markets/LiveMarketToolbar.tsx`: single replay control cluster.
 - `apps/web/src/App.tsx`: EventSource lifecycle, cursor persistence, speed, pause/resume/restart state.
 
 ## Error and Edge Handling
