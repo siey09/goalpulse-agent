@@ -982,6 +982,19 @@ function findLatest1x2Odds(
     .sort((a, b) => (b.Ts ?? 0) - (a.Ts ?? 0))[0];
 }
 
+function isSame1x2MarketLine(
+  item: TxLineOddsSnapshot,
+  reference: TxLineOddsSnapshot
+): boolean {
+  return (
+    item.SuperOddsType === reference.SuperOddsType &&
+    (item.Bookmaker ?? "") === (reference.Bookmaker ?? "") &&
+    (item.MarketPeriod ?? "") === (reference.MarketPeriod ?? "") &&
+    (item.MarketParameters ?? "") === (reference.MarketParameters ?? "") &&
+    item.InRunning === reference.InRunning
+  );
+}
+
 function selectMovementOdds(
   odds: TxLineOddsSnapshot[],
   limit = 8
@@ -1366,11 +1379,12 @@ export async function fetchTxLineOddsHistoryForMatch(match: Match): Promise<Odds
 
   try {
     const jwt = await getGuestJwt();
+    let oddsUpdates: TxLineOddsSnapshot[] = [];
     let movementOdds: TxLineOddsSnapshot[] = [];
     let latestOdds: TxLineOddsSnapshot | undefined;
 
     try {
-      movementOdds = selectMovementOdds(await getOddsUpdates(fixtureId, jwt));
+      oddsUpdates = await getOddsUpdates(fixtureId, jwt);
     } catch (error) {
       console.warn(
         `TxLINE historical odds updates unavailable for fixture ${match.id}:`,
@@ -1388,6 +1402,13 @@ export async function fetchTxLineOddsHistoryForMatch(match: Match): Promise<Odds
       console.warn(
         `TxLINE historical odds snapshot unavailable for fixture ${match.id}:`,
         error instanceof Error ? error.message : error
+      );
+    }
+
+    const canonicalLine = latestOdds ?? findLatest1x2Odds(oddsUpdates);
+    if (canonicalLine) {
+      movementOdds = selectMovementOdds(
+        oddsUpdates.filter((odds) => isSame1x2MarketLine(odds, canonicalLine))
       );
     }
 

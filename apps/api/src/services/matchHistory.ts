@@ -1,6 +1,7 @@
 import type { Match, OddsSnapshot } from "../types";
-import { mergeOddsSnapshots, store } from "../store";
-import { archiveOddsSnapshots, getArchivedOddsSnapshots } from "./archive";
+import { store } from "../store";
+import { getArchivedOddsSnapshots } from "./archive";
+import { enqueueOddsSnapshotsForArchive } from "./oddsArchiveOutbox";
 import { fetchTxLineOddsHistoryForMatch } from "./txlineClient";
 
 export type MatchHistorySource = "hot" | "archive" | "txline_recovery" | "unavailable";
@@ -19,7 +20,9 @@ export interface MatchHistoryDependencies {
 const defaultDependencies: MatchHistoryDependencies = {
   getArchivedOddsSnapshots,
   fetchTxLineOddsHistoryForMatch,
-  archiveOddsSnapshots,
+  archiveOddsSnapshots: async (snapshots) => {
+    await enqueueOddsSnapshotsForArchive(snapshots);
+  },
 };
 
 const inFlightRecoveries = new Map<string, Promise<MatchHistoryResult>>();
@@ -55,7 +58,6 @@ async function recoverHistory(
   }
 
   if (archived.length > 0) {
-    mergeOddsSnapshots(archived);
     return { history: chronological(archived), source: "archive" };
   }
 
@@ -75,7 +77,6 @@ async function recoverHistory(
     return { history: [], source: "unavailable" };
   }
 
-  mergeOddsSnapshots(recovered);
   try {
     await dependencies.archiveOddsSnapshots(recovered);
   } catch (error) {

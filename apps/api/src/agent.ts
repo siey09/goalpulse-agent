@@ -3,7 +3,8 @@ import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { fetchSimulatedTxLineFeed } from "./services/mockTxLine";
 import { fetchTxLineFeed } from "./services/txlineClient";
 import { sendHighSeverityAlert } from "./services/alerts";
-import { archiveMatch, archiveOddsSnapshots, archiveSignal } from "./services/archive";
+import { archiveMatch, archiveSignal } from "./services/archive";
+import { enqueueOddsSnapshotsForArchive } from "./services/oddsArchiveOutbox";
 import {
   evaluatePendingSignalsForFinishedMatches,
   findPreviousSnapshot,
@@ -96,9 +97,7 @@ const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.cr
       }
     }
 
-    if (acceptedSnapshots.length > 0) {
-      void archiveOddsSnapshots(acceptedSnapshots);
-    }
+    void enqueueOddsSnapshotsForArchive(acceptedSnapshots);
 
     const pendingSignalsBeforeEvaluation = findPendingSignals(store.signals);
     const evaluatedSignals = evaluatePendingSignalsForFinishedMatches();

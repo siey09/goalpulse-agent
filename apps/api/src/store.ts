@@ -1,5 +1,7 @@
 ﻿import { AgentRun, AgentSignal, Match, OddsSnapshot } from "./types";
 
+import { getOddsArchiveOutboxStats } from "./services/oddsArchiveOutbox";
+
 export const store: {
   matches: Match[];
   recentFinishedMatches: Match[];
@@ -166,6 +168,7 @@ export function getStats() {
     closedSignals: closed,
     strategyAccuracy:
       closed === 0 ? 0 : Number(((correct / closed) * 100).toFixed(1)),
+    oddsArchive: getOddsArchiveOutboxStats(),
     lastAgentRun: store.agentRuns[0] ?? null,
   };
 }

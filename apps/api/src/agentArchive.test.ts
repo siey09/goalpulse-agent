@@ -1,15 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Match, OddsSnapshot } from "./types";
 
-const { archiveOddsSnapshotsMock, fetchTxLineFeedMock } = vi.hoisted(() => ({
-  archiveOddsSnapshotsMock: vi.fn().mockResolvedValue(undefined),
+const { enqueueOddsSnapshotsForArchiveMock, fetchTxLineFeedMock } = vi.hoisted(() => ({
+  enqueueOddsSnapshotsForArchiveMock: vi.fn().mockResolvedValue(true),
   fetchTxLineFeedMock: vi.fn(),
 }));
 
 vi.mock("./services/archive", () => ({
   archiveMatch: vi.fn().mockResolvedValue(undefined),
   archiveSignal: vi.fn().mockResolvedValue(undefined),
-  archiveOddsSnapshots: archiveOddsSnapshotsMock,
+}));
+
+vi.mock("./services/oddsArchiveOutbox", () => ({
+  enqueueOddsSnapshotsForArchive: enqueueOddsSnapshotsForArchiveMock,
 }));
 
 vi.mock("./services/txlineClient", () => ({
@@ -56,13 +59,13 @@ describe("processAgentCycle odds durability", () => {
     store.signals = [];
     store.agentRuns = [];
     store.duplicatesDropped = { snapshots: 0, signals: 0 };
-    archiveOddsSnapshotsMock.mockClear();
+    enqueueOddsSnapshotsForArchiveMock.mockClear();
     fetchTxLineFeedMock.mockResolvedValue({ matches: [match], snapshots: [snapshot] });
   });
 
-  it("archives every newly accepted real snapshot", async () => {
+  it("queues every newly accepted real snapshot for durable retry", async () => {
     await processAgentCycle();
 
-    expect(archiveOddsSnapshotsMock).toHaveBeenCalledWith([snapshot]);
+    expect(enqueueOddsSnapshotsForArchiveMock).toHaveBeenCalledWith([snapshot]);
   });
 });

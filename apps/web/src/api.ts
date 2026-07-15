@@ -57,6 +57,11 @@ export interface AgentStats {
   incorrectSignals: number;
   closedSignals: number;
   strategyAccuracy: number;
+  oddsArchive?: {
+    pending: number;
+    failures: number;
+    lastFailureAt: string | null;
+  };
   lastAgentRun: {
     id: string;
     startedAt: string;

@@ -8,11 +8,15 @@ const ODDS_SNAPSHOT_ARCHIVE_TABLE = "odds_snapshot_archive";
 
 export type ArchiveEvent = "created" | "settled";
 
-export async function archiveOddsSnapshots(snapshots: OddsSnapshot[]): Promise<void> {
+export async function archiveOddsSnapshots(snapshots: OddsSnapshot[]): Promise<boolean> {
   const client = getClient();
 
-  if (!client || snapshots.length === 0) {
-    return;
+  if (snapshots.length === 0) {
+    return true;
+  }
+
+  if (!client) {
+    return false;
   }
 
   const uniqueSnapshots = new Map(snapshots.map((snapshot) => [snapshot.id, snapshot]));
@@ -31,9 +35,12 @@ export async function archiveOddsSnapshots(snapshots: OddsSnapshot[]): Promise<v
 
     if (error) {
       console.error("[archive] Failed to archive odds snapshots to Supabase:", error);
+      return false;
     }
+    return true;
   } catch (error) {
     console.error("[archive] Failed to archive odds snapshots to Supabase:", error);
+    return false;
   }
 }
 
@@ -52,7 +59,7 @@ export async function getArchivedOddsSnapshots(
       .from(ODDS_SNAPSHOT_ARCHIVE_TABLE)
       .select("snapshot_data")
       .eq("match_id", matchId)
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(limit);
 
     if (error || !data) {
@@ -60,7 +67,9 @@ export async function getArchivedOddsSnapshots(
       return [];
     }
 
-    return (data as Array<{ snapshot_data: OddsSnapshot }>).map((row) => row.snapshot_data);
+    return (data as Array<{ snapshot_data: OddsSnapshot }>)
+      .map((row) => row.snapshot_data)
+      .reverse();
   } catch (error) {
     console.error("[archive] Failed to read odds snapshot archive from Supabase:", error);
     return [];

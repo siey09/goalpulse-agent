@@ -64,7 +64,7 @@ describe("ensureMatchOddsHistory", () => {
     expect(dependencies.getArchivedOddsSnapshots).not.toHaveBeenCalled();
   });
 
-  it("hydrates archived snapshots into the hot store", async () => {
+  it("returns archived snapshots without growing the capped hot store", async () => {
     const archived = makeSnapshot({ id: "archived" });
     const dependencies = makeDependencies({
       getArchivedOddsSnapshots: vi.fn().mockResolvedValue([archived]),
@@ -73,7 +73,7 @@ describe("ensureMatchOddsHistory", () => {
     const result = await ensureMatchOddsHistory("match-1", dependencies);
 
     expect(result).toEqual({ history: [archived], source: "archive" });
-    expect(store.oddsSnapshots).toContainEqual(archived);
+    expect(store.oddsSnapshots).toEqual([]);
     expect(dependencies.fetchTxLineOddsHistoryForMatch).not.toHaveBeenCalled();
   });
 

@@ -113,7 +113,7 @@ describe("odds snapshot archive", () => {
     upsertMock.mockResolvedValue({ error: null });
     const snapshot = makeSnapshot();
 
-    await archiveOddsSnapshots([snapshot, { ...snapshot }]);
+    await expect(archiveOddsSnapshots([snapshot, { ...snapshot }])).resolves.toBe(true);
 
     expect(fromMock).toHaveBeenCalledWith("odds_snapshot_archive");
     expect(upsertMock).toHaveBeenCalledWith(
@@ -135,7 +135,7 @@ describe("odds snapshot archive", () => {
     const older = makeSnapshot({ id: "older", createdAt: "2026-07-15T09:00:00.000Z" });
     const newer = makeSnapshot({ id: "newer", createdAt: "2026-07-15T10:00:00.000Z" });
     queryResult = {
-      data: [{ snapshot_data: older }, { snapshot_data: newer }],
+      data: [{ snapshot_data: newer }, { snapshot_data: older }],
       count: 2,
       error: null,
     };
@@ -144,7 +144,7 @@ describe("odds snapshot archive", () => {
 
     expect(result).toEqual([older, newer]);
     expect(lastQueryBuilder.eq).toHaveBeenCalledWith("match_id", "match-1");
-    expect(lastQueryBuilder.order).toHaveBeenCalledWith("created_at", { ascending: true });
+    expect(lastQueryBuilder.order).toHaveBeenCalledWith("created_at", { ascending: false });
     expect(lastQueryBuilder.limit).toHaveBeenCalledWith(80);
   });
 
@@ -154,6 +154,14 @@ describe("odds snapshot archive", () => {
     queryResult = { data: null, count: null, error: new Error("supabase down") };
 
     await expect(getArchivedOddsSnapshots("match-1")).resolves.toEqual([]);
+  });
+
+  it("reports a failed write so the outbox can retry it", async () => {
+    config.supabaseUrl = "https://example.supabase.co";
+    config.supabaseServiceKey = "test-key";
+    upsertMock.mockResolvedValue({ error: new Error("temporary outage") });
+
+    await expect(archiveOddsSnapshots([makeSnapshot()])).resolves.toBe(false);
   });
 });
 

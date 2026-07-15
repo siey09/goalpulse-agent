@@ -102,8 +102,11 @@ describe("fetchTxLineOddsHistoryForMatch", () => {
       FixtureId: 18213979,
       MessageId: "odds-older",
       Ts: Date.parse("2026-07-11T20:00:00.000Z"),
+      Bookmaker: "Canonical Sportsbook",
       SuperOddsType: "1X2_PARTICIPANT_RESULT",
       MarketPeriod: null,
+      MarketParameters: "line=main",
+      InRunning: true,
       PriceNames: ["part1", "draw", "part2"],
       Prices: [2100, 3300, 3500],
     };
@@ -113,13 +116,27 @@ describe("fetchTxLineOddsHistoryForMatch", () => {
       Ts: Date.parse("2026-07-11T22:00:00.000Z"),
       Prices: [1800, 3400, 4200],
     };
+    const otherBookmaker = {
+      ...older,
+      MessageId: "odds-other-bookmaker",
+      Bookmaker: "Different Sportsbook",
+      Ts: Date.parse("2026-07-11T21:00:00.000Z"),
+      Prices: [1200, 8000, 12000],
+    };
+    const otherMarketVariant = {
+      ...older,
+      MessageId: "odds-other-variant",
+      MarketParameters: "line=alternate",
+      Ts: Date.parse("2026-07-11T21:30:00.000Z"),
+      Prices: [1300, 7000, 11000],
+    };
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
       const url = String(input);
       if (url.endsWith("/auth/guest/start")) {
         return new Response(JSON.stringify({ token: "guest-jwt" }), { status: 200 });
       }
       if (url.endsWith("/api/odds/updates/18213979")) {
-        return new Response(JSON.stringify([newer, older]), { status: 200 });
+        return new Response(JSON.stringify([otherBookmaker, newer, otherMarketVariant, older]), { status: 200 });
       }
       if (url.endsWith("/api/odds/snapshot/18213979")) {
         return new Response(JSON.stringify([newer]), { status: 200 });
