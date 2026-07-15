@@ -11,6 +11,7 @@ export interface OddsSnapshot extends SnapshotPrices {
   matchId?: string;
   timestamp?: string;
   createdAt?: string;
+  source?: "txline" | "simulated_txline";
   market?: SnapshotPrices;
 }
 

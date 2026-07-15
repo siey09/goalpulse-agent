@@ -82,6 +82,8 @@ export interface LiveMarketsPageProps {
   fieldContext: LiveMarketsFieldContext;
   /** True briefly after an SSE tick fails to parse - a small non-blocking notice, never the raw payload. */
   hasDroppedUpdate: boolean;
+  replaySnapshotCount?: number;
+  replayConnectionFailed?: boolean;
 
   matches: Match[];
   matchStatusFilter?: string;
@@ -110,6 +112,8 @@ export function LiveMarketsPage(props: LiveMarketsPageProps) {
         isOddsStreamLive={props.isOddsStreamLive}
         oddsStreamLastUpdate={props.oddsStreamLastUpdate}
         hasDroppedUpdate={props.hasDroppedUpdate}
+        replaySnapshotCount={props.replaySnapshotCount}
+        replayConnectionFailed={props.replayConnectionFailed}
       />
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(18rem,0.38fr)_minmax(0,1fr)] xl:items-start">

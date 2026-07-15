@@ -258,6 +258,9 @@ function App() {
   const [replayTotal, setReplayTotal] = useState(0);
   const [replayOriginalTimestamp, setReplayOriginalTimestamp] = useState<string>();
   const [replaySession, setReplaySession] = useState(0);
+  const [replaySignals, setReplaySignals] = useState<AgentSignal[]>([]);
+  const [replaySnapshotCount, setReplaySnapshotCount] = useState(0);
+  const [replayConnectionFailed, setReplayConnectionFailed] = useState(false);
   const [streamProgressPercent, setStreamProgressPercent] = useState(0);
   const [selectedMatchId, setSelectedMatchId] = useState("");
   const [selectedSignal, setSelectedSignal] = useState<AgentSignal | null>(null);
@@ -293,7 +296,9 @@ function App() {
   const hasLoadedOnceRef = useRef(false);
   const replayCursorRef = useRef(0);
   const replayRetryRef = useRef(createReplayRetryState());
+  const connectionGenerationRef = useRef(0);
   const isReplayStreamMode = replayStatus !== "live";
+  const marketSignals = isReplayStreamMode ? replaySignals : signals;
   const replayIntervalMs = replayIntervalForSpeed(replaySpeed);
   const replayStreamProgress = replayProgressLabel({
     status: replayStatus,
@@ -817,30 +822,48 @@ function App() {
       resetReplayProgress();
       setReplaySession((current) => current + 1);
     }
+    if (replayConnectionFailed) {
+      resetReplayRetries(replayRetryRef.current, window.clearTimeout);
+      setReplayConnectionFailed(false);
+      setReplaySession((current) => current + 1);
+    }
     setReplayStatus("playing");
-  }, [replayStatus, resetReplayProgress]);
+  }, [replayStatus, replayConnectionFailed, resetReplayProgress]);
 
-  const pauseReplay = useCallback(() => setReplayStatus("paused"), []);
+  const pauseReplay = useCallback(() => {
+    setReplayConnectionFailed(false);
+    setReplayStatus("paused");
+  }, []);
 
   const restartReplay = useCallback(() => {
     setOddsHistory([]);
     resetReplayProgress();
     setReplaySession((current) => current + 1);
+    setReplaySignals([]);
+    setReplayConnectionFailed(false);
     setReplayStatus("playing");
   }, [resetReplayProgress]);
 
   const exitReplay = useCallback(() => {
     resetReplayProgress();
+    setReplaySignals([]);
+    setReplayConnectionFailed(false);
     setReplayStatus("live");
   }, [resetReplayProgress]);
 
   const selectMatch = useCallback((matchId: string) => {
     resetReplayProgress();
+    setReplaySignals([]);
+    setReplaySnapshotCount(0);
+    setReplayConnectionFailed(false);
     setReplayStatus("live");
     setSelectedMatchId(matchId);
   }, [resetReplayProgress]);
 
   useEffect(() => {
+    const connectionGeneration = ++connectionGenerationRef.current;
+    const isCurrentConnection = () => connectionGenerationRef.current === connectionGeneration;
+
     if (!selectedMatchId) {
       setOddsHistory([]);
       setIsOddsStreamLive(false);
@@ -859,11 +882,13 @@ function App() {
     const replayRetryState = replayRetryRef.current;
     const stream = new EventSource(streamUrl);
 
-    stream.addEventListener("open", () => {
+    const handleOpen = () => {
+      if (!isCurrentConnection()) return;
       setIsOddsStreamLive(true);
-    });
+    };
 
-    stream.addEventListener("odds-update", (event) => {
+    const handleOddsUpdate = (event: Event) => {
+      if (!isCurrentConnection()) return;
       try {
         const payload = JSON.parse((event as MessageEvent).data) as {
           history?: OddsSnapshot[];
@@ -881,11 +906,16 @@ function App() {
 
         if (payload.history) {
           setOddsHistory(
-        payload.history.map((snapshot) => ({
-          ...snapshot,
-          timestamp: snapshot.timestamp ?? snapshot.createdAt,
-        }))
-      );
+            payload.history.map((snapshot) => ({
+              ...snapshot,
+              timestamp: snapshot.timestamp ?? snapshot.createdAt,
+            }))
+          );
+          if (payload.streamMode !== "replay_test") {
+            setReplaySnapshotCount(
+              payload.history.filter((snapshot) => snapshot.source === "txline").length
+            );
+          }
         }
 
         if (payload.match) {
@@ -904,7 +934,9 @@ function App() {
           });
         }
 
-        if (payload.signals?.length) {
+        if (payload.streamMode === "replay_test") {
+          setReplaySignals(payload.signals ?? []);
+        } else if (payload.signals?.length) {
           setSignals((currentSignals) => {
             const mergedSignals = [...payload.signals!, ...currentSignals];
             const uniqueSignals = new Map<string, AgentSignal>();
@@ -926,6 +958,7 @@ function App() {
           replayCursorRef.current = payload.replayCursor;
           setReplayCursor(payload.replayCursor);
           setReplayTotal(payload.replayTotal);
+          setReplaySnapshotCount(payload.replayTotal);
           setReplayOriginalTimestamp(payload.replayOriginalTimestamp ?? undefined);
           setStreamProgressPercent(
             payload.replayTotal === 0
@@ -945,29 +978,44 @@ function App() {
         setHasDroppedUpdate(true);
         window.setTimeout(() => setHasDroppedUpdate(false), 4000);
       }
-    });
+    };
 
-    stream.addEventListener("error", () => {
+    const handleError = () => {
+      if (!isCurrentConnection()) return;
       setIsOddsStreamLive(false);
       if (replayStatus === "playing") {
         stream.close();
-        scheduleReplayReconnect({
+        const retryScheduled = scheduleReplayReconnect({
           state: replayRetryState,
           getCursor: () => replayCursorRef.current,
           setTimer: (callback, delayMs) => window.setTimeout(callback, delayMs),
           onReconnect: (latestCursor) => {
+            if (!isCurrentConnection()) return;
             replayCursorRef.current = latestCursor;
             setReplaySession((current) => current + 1);
           },
         });
+        if (!retryScheduled) {
+          setReplayConnectionFailed(true);
+          setReplayStatus("paused");
+        }
       }
-    });
+    };
 
-    return () => {
+    stream.addEventListener("open", handleOpen);
+    stream.addEventListener("odds-update", handleOddsUpdate);
+    stream.addEventListener("error", handleError);
+
+    function cleanupOddsStream() {
+      if (connectionGenerationRef.current === connectionGeneration) {
+        connectionGenerationRef.current += 1;
+      }
       cancelReplayReconnect(replayRetryState, window.clearTimeout);
       stream.close();
       setIsOddsStreamLive(false);
-    };
+    }
+
+    return cleanupOddsStream;
   }, [selectedMatchId, replayStatus, replaySpeed, replaySession, replayIntervalMs]);
 
   useEffect(() => {
@@ -1058,7 +1106,7 @@ function App() {
     let homePressure = 0;
     let awayPressure = 0;
 
-    const relatedSignals = signals.filter((signal) => {
+    const relatedSignals = marketSignals.filter((signal) => {
       const signalMatch = `${signal.match ?? ""}`.toLowerCase();
 
       return signal.matchId === selectedMatch.id || signalMatch === matchLabel;
@@ -1091,7 +1139,7 @@ function App() {
             : "Balanced",
       hasData: relatedSignals.length > 0,
     };
-  }, [selectedMatch, signals]);
+  }, [selectedMatch, marketSignals]);
 
   /** Field-backed / market-only / no-context-yet for the most recent signal on the selected match - reuses SignalIntelligencePanel's exact >= 22 fieldPressureScore threshold and tone convention, never a new scoring model. */
   const selectedMatchFieldContext = useMemo(() => {
@@ -1099,7 +1147,7 @@ function App() {
       return { label: "No field context yet", tone: "neutral" as const };
     }
 
-    const latestRelatedSignal = signals.find((signal) => signal.matchId === selectedMatch.id);
+    const latestRelatedSignal = marketSignals.find((signal) => signal.matchId === selectedMatch.id);
     const fieldPressureScore = latestRelatedSignal?.evidence?.scoresContext?.fieldPressureScore;
 
     if (fieldPressureScore == null) {
@@ -1109,7 +1157,7 @@ function App() {
     return fieldPressureScore >= 22
       ? { label: "Field-backed", tone: "positive" as const }
       : { label: "Market-only", tone: "neutral" as const };
-  }, [selectedMatch, signals]);
+  }, [selectedMatch, marketSignals]);
 
   const matchStatusCounts = useMemo(
     () => ({
@@ -1154,7 +1202,7 @@ function App() {
 
   const chartData = useMemo(() => {
     const relatedSignals = selectedMatch
-      ? signals.filter((signal) => signal.matchId === selectedMatch.id).slice(0, 3)
+      ? marketSignals.filter((signal) => signal.matchId === selectedMatch.id).slice(0, 3)
       : [];
 
     const mustKeepIds = new Set<string>();
@@ -1164,11 +1212,11 @@ function App() {
     }
 
     return buildMarketTimeline(oddsHistory, mustKeepIds, 18);
-  }, [oddsHistory, selectedMatch, signals]);
+  }, [oddsHistory, selectedMatch, marketSignals]);
   const chartSignalMarkers = useMemo(() => {
     if (!selectedMatch || chartData.length === 0) return [];
 
-    const relatedSignals = signals.filter((signal) => signal.matchId === selectedMatch.id);
+    const relatedSignals = marketSignals.filter((signal) => signal.matchId === selectedMatch.id);
 
     return relatedSignals.slice(0, 3).flatMap((signal, index) => {
       const dataKey = chartDataKeyForSignalSide(signal.side);
@@ -1205,7 +1253,7 @@ function App() {
         },
       ];
     });
-  }, [selectedMatch, chartData, signals, oddsHistory]);
+  }, [selectedMatch, chartData, marketSignals, oddsHistory]);
   const chartReadout = useMemo(() => {
     const latestPoint = chartData[chartData.length - 1];
     const firstPoint = chartData[0];
@@ -1422,6 +1470,8 @@ function App() {
             selectedMatchMarketPressure={selectedMatchMarketPressure}
             fieldContext={selectedMatchFieldContext}
             hasDroppedUpdate={hasDroppedUpdate}
+            replaySnapshotCount={replaySnapshotCount}
+            replayConnectionFailed={replayConnectionFailed}
             matches={filteredMatches}
             matchStatusFilter={matchStatusFilter}
             onChangeMatchStatusFilter={setMatchStatusFilter}
@@ -1989,6 +2039,8 @@ function App() {
                     replayStatus={replayStatus}
                     replaySpeed={replaySpeed}
                     replayProgressLabel={replayStreamProgress}
+                    replaySnapshotCount={replaySnapshotCount}
+                    replayConnectionFailed={replayConnectionFailed}
                     isOddsStreamLive={isOddsStreamLive}
                     oddsStreamLastUpdate={oddsStreamLastUpdate}
                     liveStream={health?.liveStream}

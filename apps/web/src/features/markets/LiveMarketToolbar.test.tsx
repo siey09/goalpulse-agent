@@ -91,4 +91,26 @@ describe("LiveMarketToolbar", () => {
     render(<LiveMarketToolbar {...baseToolbarProps} oddsStreamLastUpdate="11:12 PM" />);
     expect(screen.getByText(/Last feed update 11:12 PM/i)).toBeInTheDocument();
   });
+
+  it("disables replay with an accessible explanation until two real snapshots are known", () => {
+    render(<LiveMarketToolbar {...baseToolbarProps} replaySnapshotCount={1} />);
+
+    expect(screen.getByRole("button", { name: /^play replay$/i })).toBeDisabled();
+    expect(screen.getByText(/replay needs at least two real TxLINE snapshots/i)).toBeInTheDocument();
+  });
+
+  it("shows a nonblocking paused notice with recovery actions after connection failure", () => {
+    render(
+      <LiveMarketToolbar
+        {...baseToolbarProps}
+        replayStatus="paused"
+        replaySnapshotCount={4}
+        replayConnectionFailed
+      />
+    );
+
+    expect(screen.getByRole("status", { name: /replay connection/i })).toHaveTextContent(/paused at the last confirmed snapshot/i);
+    expect(screen.getByRole("button", { name: /resume replay/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /restart replay/i })).toBeEnabled();
+  });
 });

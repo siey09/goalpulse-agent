@@ -16,6 +16,8 @@ export interface LiveMarketToolbarProps {
   isOddsStreamLive: boolean;
   oddsStreamLastUpdate?: string;
   hasDroppedUpdate: boolean;
+  replaySnapshotCount?: number;
+  replayConnectionFailed?: boolean;
 }
 
 export function LiveMarketToolbar({
@@ -32,6 +34,8 @@ export function LiveMarketToolbar({
   isOddsStreamLive,
   oddsStreamLastUpdate,
   hasDroppedUpdate,
+  replaySnapshotCount,
+  replayConnectionFailed,
 }: LiveMarketToolbarProps) {
   const freshnessState = getFreshnessState(hasChartData, isReplayStreamMode, isOddsStreamLive, oddsStreamLastUpdate);
   const freshness = FRESHNESS_COPY[freshnessState];
@@ -56,7 +60,7 @@ export function LiveMarketToolbar({
           {freshness.label}
         </span>
         {oddsStreamLastUpdate && <span className="font-mono text-xs text-stone-400">Last feed update {oddsStreamLastUpdate}</span>}
-        <span role="status" aria-label="Replay state" aria-live="polite" className="font-mono text-xs text-info-200">
+        <span role="status" aria-label="Replay state" aria-live="polite" className="max-w-full break-words text-right font-mono text-xs leading-4 text-info-200 sm:whitespace-nowrap">
           {replayProgressLabel}
         </span>
         <ReplayControls
@@ -67,6 +71,8 @@ export function LiveMarketToolbar({
           onRestartReplay={onRestartReplay}
           onExitReplay={onExitReplay}
           onChangeReplaySpeed={onChangeReplaySpeed}
+          replaySnapshotCount={replaySnapshotCount}
+          replayConnectionFailed={replayConnectionFailed}
         />
       </div>
 

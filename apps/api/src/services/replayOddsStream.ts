@@ -104,6 +104,19 @@ export function createReplayOddsStreamHandler(
         | (typeof latestSnapshot & { timestamp?: string })
         | undefined;
       const replayComplete = visibleCount >= history.length;
+      const visibleSnapshotIds = new Set(replayHistory.map((snapshot) => snapshot.id));
+      const latestCaptureTime = timestampedSnapshot
+        ? Date.parse(timestampedSnapshot.createdAt ?? timestampedSnapshot.timestamp ?? "")
+        : Number.NaN;
+      const visibleSignals = relatedSignals.filter((signal) => {
+        const sourceSnapshotId = signal.evidence?.currentSnapshotId;
+        if (sourceSnapshotId) return visibleSnapshotIds.has(sourceSnapshotId);
+
+        const signalTime = Date.parse(signal.createdAt);
+        return Number.isFinite(latestCaptureTime) && Number.isFinite(signalTime)
+          ? signalTime <= latestCaptureTime
+          : replayComplete;
+      });
 
       res.write(
         `event: odds-update\ndata: ${JSON.stringify({
@@ -112,7 +125,7 @@ export function createReplayOddsStreamHandler(
           match,
           latestSnapshot: latestSnapshot ?? null,
           history: replayHistory,
-          signals: relatedSignals,
+          signals: visibleSignals,
           stats: getStats(),
           streamMode: "replay_test",
           historySource: resolved.source,

@@ -180,6 +180,50 @@ describe("replay odds stream", () => {
     ]);
   });
 
+  it("does not reveal a signal before its source snapshot is visible", async () => {
+    const response = makeResponse();
+    const schedule = capturedSchedule();
+    store.signals = [
+      {
+        id: "signal-at-snapshot-2",
+        matchId: match.id,
+        match: `${match.homeTeam} vs ${match.awayTeam}`,
+        target: match.homeTeam,
+        side: "home",
+        signalType: "SHARP_MOVE",
+        severity: "HIGH",
+        oddsBefore: older.homeOdds,
+        oddsAfter: newer.homeOdds,
+        oddsChangePct: -10,
+        momentumScore: 80,
+        explanation: "Move confirmed at the second capture.",
+        createdAt: newer.createdAt,
+        resultStatus: "correct",
+        evidence: {
+          source: "txline",
+          previousSnapshotId: older.id,
+          currentSnapshotId: newer.id,
+        },
+      },
+    ];
+    const handler = createReplayOddsStreamHandler({
+      ensureMatchOddsHistory: vi.fn().mockResolvedValue({
+        history: [older, newer],
+        source: "archive",
+      }),
+      setInterval: schedule.setInterval,
+      clearInterval: schedule.clear,
+    });
+
+    await handler(request({ matchId: "m1" }) as never, response as never);
+    schedule.tick();
+
+    expect(payloads(response).map((payload) => payload.signals.map((signal: { id: string }) => signal.id))).toEqual([
+      [],
+      ["signal-at-snapshot-2"],
+    ]);
+  });
+
   it("completes once without a timer when history is simulated-only", async () => {
     const response = makeResponse();
     const schedule = capturedSchedule();
