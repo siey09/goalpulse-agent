@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { Match } from "../../types";
 import { OddsMovementChart, type OddsMovementChartProps } from "./OddsMovementChart";
-import type { LiveMarketsChartMarker } from "./LiveMarketsPage";
+import type { LiveMarketsChartMarker, LiveMarketsChartPoint } from "./LiveMarketsPage";
 
 const selectedMatch: Match = {
   id: "m1",
@@ -15,7 +15,7 @@ const selectedMatch: Match = {
 
 const marker: LiveMarketsChartMarker = {
   id: "signal-1",
-  x: "S1",
+  x: 0,
   y: 1.85,
   label: "Sharp move",
   target: "Norway",
@@ -23,17 +23,28 @@ const marker: LiveMarketsChartMarker = {
   oddsChangePct: -7.5,
 };
 
+function chartPoint(overrides: Partial<LiveMarketsChartPoint> = {}): LiveMarketsChartPoint {
+  return {
+    id: "snapshot-1",
+    name: "S1",
+    timelineX: 0,
+    hasRealTimestamp: false,
+    rawTimestamp: "",
+    snapshotLabel: "TxLINE snapshot 1",
+    timelineLabel: "Capture time unavailable",
+    ...overrides,
+  };
+}
+
 const baseProps: OddsMovementChartProps = {
   selectedMatch,
   chartData: [
-    {
-      name: "S1",
+    chartPoint({
       home: 1.9,
       draw: 3.4,
       away: 4.1,
-      snapshotLabel: "TxLINE snapshot 1",
       timelineLabel: "Captured at 11:10 PM",
-    },
+    }),
   ],
   chartSignalMarkers: [],
   chartReadout: {
@@ -60,11 +71,11 @@ const baseProps: OddsMovementChartProps = {
 describe("OddsMovementChart", () => {
   it("includes Draw in the accessible series summary only when real draw data exists", () => {
     const { rerender } = render(
-      <OddsMovementChart {...baseProps} chartData={[{ name: "S1", home: 1.9, draw: 3.4, away: 4.1 }]} />
+      <OddsMovementChart {...baseProps} chartData={[chartPoint({ home: 1.9, draw: 3.4, away: 4.1 })]} />
     );
     expect(screen.getByRole("columnheader", { name: "Draw odds" })).toBeInTheDocument();
 
-    rerender(<OddsMovementChart {...baseProps} chartData={[{ name: "S1", home: 1.9, away: 4.1 }]} />);
+    rerender(<OddsMovementChart {...baseProps} chartData={[chartPoint({ home: 1.9, away: 4.1 })]} />);
     expect(screen.queryByRole("columnheader", { name: "Draw odds" })).not.toBeInTheDocument();
   });
 
@@ -79,7 +90,7 @@ describe("OddsMovementChart", () => {
 
   it("uses collision-safe keys for repeated snapshot labels", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const repeatedPoint = { name: "S1", home: 1.9, away: 4.1, timelineLabel: "Captured now" };
+    const repeatedPoint = chartPoint({ home: 1.9, away: 4.1, timelineLabel: "Captured now" });
 
     render(<OddsMovementChart {...baseProps} chartData={[repeatedPoint, repeatedPoint]} />);
 

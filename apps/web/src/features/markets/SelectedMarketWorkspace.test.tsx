@@ -16,8 +16,8 @@ const selectedMatch: Match = {
 const baseProps: SelectedMarketWorkspaceProps = {
   selectedMatch,
   chartData: [
-    { name: "S1", home: 1.9, draw: 3.5, away: 4.1 },
-    { name: "S2", home: 1.85, draw: 3.4, away: 4.2 },
+    { id: "s1", name: "S1", timelineX: 0, hasRealTimestamp: false, rawTimestamp: "", snapshotLabel: "TxLINE snapshot 1", timelineLabel: "Capture time unavailable", home: 1.9, draw: 3.5, away: 4.1 },
+    { id: "s2", name: "S2", timelineX: 1, hasRealTimestamp: false, rawTimestamp: "", snapshotLabel: "TxLINE snapshot 2", timelineLabel: "Capture time unavailable", home: 1.85, draw: 3.4, away: 4.2 },
   ],
   chartReadout: {
     homeCurrent: "1.85",

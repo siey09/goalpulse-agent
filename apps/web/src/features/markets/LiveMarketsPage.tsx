@@ -4,19 +4,13 @@ import { MarketEvidenceStrip } from "./MarketEvidenceStrip";
 import { MarketFixtureRail } from "./MarketFixtureRail";
 import { SelectedMarketWorkspace } from "./SelectedMarketWorkspace";
 import type { Match, Health } from "../../types";
+import type { MarketTimelinePoint } from "./chartTimeline";
 
-export interface LiveMarketsChartPoint {
-  name: string;
-  home?: number;
-  draw?: number;
-  away?: number;
-  snapshotLabel?: string;
-  timelineLabel?: string;
-}
+export interface LiveMarketsChartPoint extends MarketTimelinePoint {}
 
 export interface LiveMarketsChartMarker {
   id: string;
-  x: string;
+  x: number;
   y?: number;
   severity?: string;
   label: string;

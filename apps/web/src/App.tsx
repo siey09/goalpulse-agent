@@ -16,6 +16,10 @@ import { useScrollSpy } from "./hooks/useScrollSpy";
 import { AppShell } from "./app/AppShell";
 import { DEFAULT_DESTINATION, destinationOwnsPageHeading, type DestinationId } from "./app/navigation";
 import { chartDataKeyForSignalSide } from "./features/markets/chartSeries";
+import {
+  buildMarketTimeline,
+  type OddsSnapshot,
+} from "./features/markets/chartTimeline";
 import { GuidedTour } from "./app/GuidedTour";
 import { useProductTour } from "./app/useProductTour";
 // Lazy-loaded: only one destination is ever visible at a time in the
@@ -53,7 +57,6 @@ const SystemHealthPage = lazy(() =>
 import { VerificationReceipt } from "./components/VerificationReceipt";
 import { SignalAuditDrawer } from "./components/signals/SignalAuditDrawer";
 import type {
-  Odds,
   Match,
   AgentSignal,
   OnChainVerifyData,
@@ -131,17 +134,6 @@ type AgentStats = {
   incorrectSignals?: number;
   closedSignals?: number;
   strategyAccuracy?: number;
-};
-
-type OddsSnapshot = {
-  id?: string;
-  matchId?: string;
-  timestamp?: string;
-  createdAt?: string;
-  homeOdds?: number;
-  drawOdds?: number;
-  awayOdds?: number;
-  market?: Odds;
 };
 
 const API_BASE_URL =
@@ -1095,8 +1087,6 @@ function App() {
   }, [signals, searchTerm]);
 
   const chartData = useMemo(() => {
-    const MAX_NON_SIGNAL_CHART_POINTS = 18;
-
     const relatedSignals = selectedMatch
       ? signals.filter((signal) => signal.matchId === selectedMatch.id).slice(0, 3)
       : [];
@@ -1107,37 +1097,7 @@ function App() {
       if (nearest?.id) mustKeepIds.add(nearest.id);
     }
 
-    const mustKeepSnapshots = oddsHistory.filter(
-      (snapshot) => snapshot.id && mustKeepIds.has(snapshot.id)
-    );
-    const nonSignalSnapshots = oddsHistory.filter(
-      (snapshot) => !snapshot.id || !mustKeepIds.has(snapshot.id)
-    );
-    const recentNonSignal = nonSignalSnapshots.slice(-MAX_NON_SIGNAL_CHART_POINTS);
-
-    const merged = [...mustKeepSnapshots, ...recentNonSignal].sort((a, b) => {
-      const aMs = new Date(a.timestamp ?? "").getTime();
-      const bMs = new Date(b.timestamp ?? "").getTime();
-      return aMs - bMs;
-    });
-
-    return merged.map((snapshot, index) => {
-      const odds = snapshot.market ?? snapshot;
-      const snapshotNumber = index + 1;
-      const hasTimestamp = Boolean(snapshot.timestamp);
-
-      return {
-        name: hasTimestamp ? formatTime(snapshot.timestamp) : `S${snapshotNumber}`,
-        snapshotLabel: `TxLINE snapshot ${snapshotNumber}`,
-        timelineLabel: hasTimestamp
-          ? `Captured at ${formatTime(snapshot.timestamp)}`
-          : `Replay snapshot ${snapshotNumber}`,
-        rawTimestamp: snapshot.timestamp ?? "",
-        home: odds.homeOdds,
-        draw: odds.drawOdds,
-        away: odds.awayOdds,
-      };
-    });
+    return buildMarketTimeline(oddsHistory, mustKeepIds, 18);
   }, [oddsHistory, selectedMatch, signals]);
   const chartSignalMarkers = useMemo(() => {
     if (!selectedMatch || chartData.length === 0) return [];
@@ -1149,7 +1109,11 @@ function App() {
 
       const nearestSnapshot = findNearestSnapshot(oddsHistory, signal.createdAt);
       const nearestPoint = nearestSnapshot
-        ? chartData.find((point) => point.rawTimestamp === (nearestSnapshot.timestamp ?? ""))
+        ? chartData.find((point) =>
+            nearestSnapshot.id
+              ? point.id === nearestSnapshot.id
+              : point.rawTimestamp === (nearestSnapshot.timestamp ?? nearestSnapshot.createdAt ?? "")
+          )
         : undefined;
 
       if (!nearestPoint) return [];
@@ -1157,7 +1121,7 @@ function App() {
       return [
         {
           id: signal.id ?? `${signal.matchId}-${index}`,
-          x: nearestPoint.name,
+          x: nearestPoint.timelineX,
           y: Number(signal.oddsAfter ?? nearestPoint[dataKey]),
           dataKey,
           label: signalTypeLabel(getSignalType(signal)),
