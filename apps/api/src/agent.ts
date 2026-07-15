@@ -4,6 +4,7 @@ import { fetchSimulatedTxLineFeed } from "./services/mockTxLine";
 import { fetchTxLineFeed } from "./services/txlineClient";
 import { sendHighSeverityAlert } from "./services/alerts";
 import { archiveMatch, archiveSignal } from "./services/archive";
+import { enqueueOddsSnapshotsForArchive } from "./services/oddsArchiveOutbox";
 import {
   evaluatePendingSignalsForFinishedMatches,
   findPreviousSnapshot,
@@ -12,7 +13,7 @@ import {
   upsertRecentFinishedMatches,
   store,
 } from "./store";
-import { AgentRun, AgentSignal } from "./types";
+import { AgentRun, AgentSignal, OddsSnapshot } from "./types";
 
 export function findPendingSignals(signals: AgentSignal[]): AgentSignal[] {
   return signals.filter((signal) => signal.resultStatus === "pending");
@@ -51,6 +52,7 @@ export async function processAgentCycle(): Promise<AgentRun> {
     let signalsCreated = 0;
     let snapshotsCreated = 0;
     let highSeverityAlertCount = 0;
+    const acceptedSnapshots: OddsSnapshot[] = [];
     const alertStaggerMs = 750;
 
     const orderedSnapshots = [...feed.snapshots].sort(
@@ -72,6 +74,7 @@ const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.cr
         : null;
 
       store.oddsSnapshots.unshift(snapshot);
+      acceptedSnapshots.push(snapshot);
       snapshotsCreated += 1;
 
       if (signal && !signalAlreadyExists(signal)) {
@@ -93,6 +96,8 @@ const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.cr
         store.duplicatesDropped.signals += 1;
       }
     }
+
+    void enqueueOddsSnapshotsForArchive(acceptedSnapshots);
 
     const pendingSignalsBeforeEvaluation = findPendingSignals(store.signals);
     const evaluatedSignals = evaluatePendingSignalsForFinishedMatches();

@@ -42,3 +42,21 @@ create table if not exists match_archive (
   match_data jsonb not null,
   archived_at timestamptz not null default now()
 );
+
+-- Permanent normalized odds history. The API writes and reads this table
+-- only with its server-side service-role key; browser clients have no access.
+create table if not exists odds_snapshot_archive (
+  snapshot_id text primary key,
+  match_id text not null,
+  created_at timestamptz not null,
+  snapshot_data jsonb not null,
+  archived_at timestamptz not null default now()
+);
+
+create index if not exists odds_snapshot_archive_match_created_idx
+  on odds_snapshot_archive (match_id, created_at asc);
+
+alter table odds_snapshot_archive enable row level security;
+revoke all on table odds_snapshot_archive from public, anon, authenticated;
+revoke all on table odds_snapshot_archive from service_role;
+grant select, insert on table odds_snapshot_archive to service_role;

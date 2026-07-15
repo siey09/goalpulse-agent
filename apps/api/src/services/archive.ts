@@ -1,11 +1,80 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { config } from "../config";
-import type { AgentSignal, ArchiveEntry, ArchiveFilters, ArchivePagination, ArchiveQueryResult, Match } from "../types";
+import type { AgentSignal, ArchiveEntry, ArchiveFilters, ArchivePagination, ArchiveQueryResult, Match, OddsSnapshot } from "../types";
 
 const ARCHIVE_TABLE = "signal_archive";
 const MATCH_ARCHIVE_TABLE = "match_archive";
+const ODDS_SNAPSHOT_ARCHIVE_TABLE = "odds_snapshot_archive";
 
 export type ArchiveEvent = "created" | "settled";
+
+export async function archiveOddsSnapshots(snapshots: OddsSnapshot[]): Promise<boolean> {
+  const client = getClient();
+
+  if (snapshots.length === 0) {
+    return true;
+  }
+
+  if (!client) {
+    return false;
+  }
+
+  const uniqueSnapshots = new Map(snapshots.map((snapshot) => [snapshot.id, snapshot]));
+  const rows = [...uniqueSnapshots.values()].map((snapshot) => ({
+    snapshot_id: snapshot.id,
+    match_id: snapshot.matchId,
+    created_at: snapshot.createdAt,
+    snapshot_data: { ...snapshot },
+  }));
+
+  try {
+    const { error } = await client.from(ODDS_SNAPSHOT_ARCHIVE_TABLE).upsert(rows, {
+      onConflict: "snapshot_id",
+      ignoreDuplicates: true,
+    });
+
+    if (error) {
+      console.error("[archive] Failed to archive odds snapshots to Supabase:", error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("[archive] Failed to archive odds snapshots to Supabase:", error);
+    return false;
+  }
+}
+
+export async function getArchivedOddsSnapshots(
+  matchId: string,
+  limit = 100
+): Promise<OddsSnapshot[]> {
+  const client = getClient();
+
+  if (!client || !matchId) {
+    return [];
+  }
+
+  try {
+    const { data, error } = await client
+      .from(ODDS_SNAPSHOT_ARCHIVE_TABLE)
+      .select("snapshot_data")
+      .eq("match_id", matchId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error || !data) {
+      console.error("[archive] Failed to read odds snapshot archive from Supabase:", error);
+      return [];
+    }
+
+    return (data as Array<{ snapshot_data: OddsSnapshot }>)
+      .map((row) => row.snapshot_data)
+      .reverse();
+  } catch (error) {
+    console.error("[archive] Failed to read odds snapshot archive from Supabase:", error);
+    return [];
+  }
+}
 
 function getClient(): SupabaseClient | null {
   if (!config.supabaseUrl || !config.supabaseServiceKey) {
