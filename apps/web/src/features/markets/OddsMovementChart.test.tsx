@@ -96,4 +96,17 @@ describe("OddsMovementChart", () => {
     render(<OddsMovementChart {...baseProps} chartData={[]} />);
     expect(screen.getByText(/no TxLINE snapshots for Norway vs England yet/i)).toBeInTheDocument();
   });
+
+  it("does not promise a future update when finished history is unavailable", () => {
+    render(
+      <OddsMovementChart
+        {...baseProps}
+        selectedMatch={{ ...selectedMatch, status: "finished", homeScore: 1, awayScore: 2 }}
+        chartData={[]}
+      />
+    );
+
+    expect(screen.getByText(/No historical TxLINE odds were available for this finished fixture/i)).toBeInTheDocument();
+    expect(screen.queryByText(/next real update arrives/i)).not.toBeInTheDocument();
+  });
 });

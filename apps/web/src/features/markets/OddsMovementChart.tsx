@@ -30,6 +30,7 @@ export function OddsMovementChart({
   const hasHomeSeries = chartData.some((point) => point.home != null);
   const hasDrawSeries = chartData.some((point) => point.draw != null);
   const hasAwaySeries = chartData.some((point) => point.away != null);
+  const isFinishedMatch = selectedMatch?.status === "finished";
   const matchLabel = selectedMatch ? `${selectedMatch.homeTeam} vs ${selectedMatch.awayTeam}` : "selected market";
   const chartDescriptionId = "live-market-chart-description";
   const marketContextLabel = isReplayStreamMode
@@ -216,8 +217,16 @@ export function OddsMovementChart({
       ) : (
         <div className="flex min-h-44 items-center justify-center rounded-lg border border-dashed border-border bg-black/20 p-6 text-center">
           <div>
-            <p className="text-sm font-semibold text-stone-300">No TxLINE snapshots for {matchLabel} yet.</p>
-            <p className="mt-1 text-xs text-stone-500">The selected fixture stays in view while the next real update arrives.</p>
+            <p className="text-sm font-semibold text-stone-300">
+              {isFinishedMatch
+                ? `No recovered TxLINE snapshots for ${matchLabel}.`
+                : `No TxLINE snapshots for ${matchLabel} yet.`}
+            </p>
+            <p className="mt-1 text-xs text-stone-500">
+              {isFinishedMatch
+                ? "No historical TxLINE odds were available for this finished fixture."
+                : "The selected fixture stays in view while the next real update arrives."}
+            </p>
           </div>
         </div>
       )}
