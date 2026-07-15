@@ -32,9 +32,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     targetId: "guide-odds-chart",
   },
   {
-    title: "Compare normalized markets",
+    title: "Choose a live market",
     detail:
-      "The market board shows normalized home, draw, and away prices plus precise TXODDS status and clock labels.",
+      "The fixture rail keeps live, upcoming, and finished matches beside the selected workspace so every selection immediately updates the current prices and movement chart.",
     destination: "live-markets",
     targetId: "guide-market-board",
   },
@@ -53,9 +53,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     targetId: "guide-outcome-verification",
   },
   {
-    title: "Inspect match state and pressure",
+    title: "Inspect match state and price pressure",
     detail:
-      "Review the selected match, exact score and status, and the current signal-pressure comparison.",
+      "The selected-market tape connects the exact score and status to current Home, Draw, and Away prices and only shows signal pressure when matching evidence exists.",
     destination: "live-markets",
     targetId: "guide-selected-match",
   },
