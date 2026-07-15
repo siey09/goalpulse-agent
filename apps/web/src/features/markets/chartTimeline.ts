@@ -46,6 +46,47 @@ function indexSnapshot(snapshot: OddsSnapshot, originalIndex: number): IndexedSn
   };
 }
 
+/** Finds the capture closest to a target using the same timestamp fallback as the chart model. */
+export function findNearestMarketSnapshot(
+  snapshots: OddsSnapshot[],
+  targetTimestamp?: string
+): OddsSnapshot | undefined {
+  if (!targetTimestamp) return undefined;
+
+  const targetMs = Date.parse(targetTimestamp);
+  if (Number.isNaN(targetMs)) return undefined;
+
+  let nearest: OddsSnapshot | undefined;
+  let nearestDelta = Infinity;
+
+  snapshots.forEach((snapshot, originalIndex) => {
+    const timestampMs = indexSnapshot(snapshot, originalIndex).timestampMs;
+    if (timestampMs === undefined) return;
+
+    const delta = Math.abs(timestampMs - targetMs);
+    if (delta < nearestDelta) {
+      nearest = snapshot;
+      nearestDelta = delta;
+    }
+  });
+
+  return nearest;
+}
+
+function uniqueFallbackId(originalIndex: number, usedIds: Set<string>): string {
+  const baseId = `snapshot-${originalIndex}`;
+  let candidate = baseId;
+  let suffix = 1;
+
+  while (usedIds.has(candidate)) {
+    candidate = `${baseId}-generated-${suffix}`;
+    suffix += 1;
+  }
+
+  usedIds.add(candidate);
+  return candidate;
+}
+
 /** Builds a bounded chart model without presenting inferred capture times as real timestamps. */
 export function buildMarketTimeline(
   snapshots: OddsSnapshot[],
@@ -81,6 +122,9 @@ export function buildMarketTimeline(
     [...required, ...boundedNonSignal].map(({ originalIndex }) => originalIndex)
   );
   const retained = sorted.filter(({ originalIndex }) => retainedIndexes.has(originalIndex));
+  const usedPointIds = new Set(
+    snapshots.flatMap((snapshot) => (snapshot.id ? [snapshot.id] : []))
+  );
 
   let precedingTimelineX = -1;
 
@@ -92,7 +136,7 @@ export function buildMarketTimeline(
     precedingTimelineX = timelineX;
 
     return {
-      id: snapshot.id ?? `snapshot-${originalIndex}`,
+      id: snapshot.id ?? uniqueFallbackId(originalIndex, usedPointIds),
       name: hasRealTimestamp ? formatTime(rawTimestamp) : `S${snapshotNumber}`,
       timelineX,
       hasRealTimestamp,

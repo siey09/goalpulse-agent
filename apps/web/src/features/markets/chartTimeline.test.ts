@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildMarketTimeline, type OddsSnapshot } from "./chartTimeline";
+import {
+  buildMarketTimeline,
+  findNearestMarketSnapshot,
+  type OddsSnapshot,
+} from "./chartTimeline";
 
 function snapshot(
   id: string,
@@ -61,6 +65,19 @@ describe("buildMarketTimeline", () => {
     );
   });
 
+  it("finds and retains a createdAt-only capture adjacent to a signal", () => {
+    const captures: OddsSnapshot[] = [
+      { id: "adjacent", createdAt: "2026-07-15T10:00:30.000Z", homeOdds: 2.1 },
+      { id: "later", createdAt: "2026-07-15T10:05:00.000Z", homeOdds: 2.0 },
+    ];
+    const nearest = findNearestMarketSnapshot(captures, "2026-07-15T10:00:40.000Z");
+
+    expect(nearest?.id).toBe("adjacent");
+    expect(buildMarketTimeline(captures, new Set([nearest!.id!]), 0).map((point) => point.id)).toEqual([
+      "adjacent",
+    ]);
+  });
+
   it("deduplicates snapshots by ID before applying the cap", () => {
     const points = buildMarketTimeline([
       snapshot("same", "2026-07-15T10:00:00.000Z", 2.1, 3.1, 4.1),
@@ -69,6 +86,16 @@ describe("buildMarketTimeline", () => {
 
     expect(points).toHaveLength(1);
     expect(points[0]).toMatchObject({ id: "same", rawTimestamp: "2026-07-15T10:01:00.000Z", home: 2.0 });
+  });
+
+  it("keeps generated IDs distinct from genuine backend snapshot IDs", () => {
+    const points = buildMarketTimeline([
+      { timestamp: "2026-07-15T10:00:00.000Z", homeOdds: 2.1 },
+      snapshot("snapshot-0", "2026-07-15T10:01:00.000Z", 2.0, 3.0, 4.0),
+    ]);
+
+    expect(points.map((point) => point.id)).toHaveLength(2);
+    expect(new Set(points.map((point) => point.id)).size).toBe(2);
   });
 
   it("allows the non-signal cap to be zero", () => {

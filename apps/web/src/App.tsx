@@ -18,6 +18,7 @@ import { DEFAULT_DESTINATION, destinationOwnsPageHeading, type DestinationId } f
 import { chartDataKeyForSignalSide } from "./features/markets/chartSeries";
 import {
   buildMarketTimeline,
+  findNearestMarketSnapshot,
   type OddsSnapshot,
 } from "./features/markets/chartTimeline";
 import { GuidedTour } from "./app/GuidedTour";
@@ -163,32 +164,6 @@ function asArray<T>(payload: unknown, keys: string[] = []): T[] {
   }
 
   return [];
-}
-
-function findNearestSnapshot(
-  history: OddsSnapshot[],
-  targetTimestamp?: string
-): OddsSnapshot | undefined {
-  if (!targetTimestamp || history.length === 0) return undefined;
-
-  const targetMs = new Date(targetTimestamp).getTime();
-  if (Number.isNaN(targetMs)) return undefined;
-
-  let closest: OddsSnapshot | undefined;
-  let closestDelta = Infinity;
-
-  for (const snapshot of history) {
-    const snapshotMs = new Date(snapshot.timestamp ?? "").getTime();
-    if (Number.isNaN(snapshotMs)) continue;
-
-    const delta = Math.abs(snapshotMs - targetMs);
-    if (delta < closestDelta) {
-      closestDelta = delta;
-      closest = snapshot;
-    }
-  }
-
-  return closest;
 }
 
 function PipelineStageLabel({
@@ -1093,7 +1068,7 @@ function App() {
 
     const mustKeepIds = new Set<string>();
     for (const signal of relatedSignals) {
-      const nearest = findNearestSnapshot(oddsHistory, signal.createdAt);
+      const nearest = findNearestMarketSnapshot(oddsHistory, signal.createdAt);
       if (nearest?.id) mustKeepIds.add(nearest.id);
     }
 
@@ -1107,7 +1082,7 @@ function App() {
     return relatedSignals.slice(0, 3).flatMap((signal, index) => {
       const dataKey = chartDataKeyForSignalSide(signal.side);
 
-      const nearestSnapshot = findNearestSnapshot(oddsHistory, signal.createdAt);
+      const nearestSnapshot = findNearestMarketSnapshot(oddsHistory, signal.createdAt);
       const nearestPoint = nearestSnapshot
         ? chartData.find((point) =>
             nearestSnapshot.id
