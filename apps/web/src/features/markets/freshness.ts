@@ -9,10 +9,8 @@ export const FRESHNESS_COPY: Record<LiveMarketsFreshnessState, { label: string; 
 };
 
 /**
- * Honest 5-way read of what the workspace is currently showing - shared by
- * the SelectedMatchPanel header (mode + freshness live there per the
- * command-header brief) and the odds chart (which keeps only its own
- * market-phase label to avoid repeating the same state twice).
+ * Honest 5-way read of what the workspace is currently showing. The page
+ * toolbar is the only visible owner of this feed-level state.
  */
 export function getFreshnessState(
   hasData: boolean,
