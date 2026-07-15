@@ -13,6 +13,8 @@ const AGENT_STATUS_TONE: Record<AgentStatus, StatusTone> = {
 
 export interface TopStatusBarProps {
   title: string;
+  /** Destination pages with their own h1 opt into non-heading title text. */
+  titleAs?: "h1" | "p";
   agentStatus: AgentStatus;
   feedMode: FeedMode;
   /** Human-readable freshness, e.g. "2.4s ago" - caller formats, this component just displays. */
@@ -29,6 +31,7 @@ export interface TopStatusBarProps {
  */
 export function TopStatusBar({
   title,
+  titleAs = "h1",
   agentStatus,
   feedMode,
   freshnessLabel,
@@ -36,6 +39,7 @@ export function TopStatusBar({
   onOpenMobileNav,
 }: TopStatusBarProps) {
   const isRunning = agentStatus === "RUNNING";
+  const TitleElement = titleAs;
 
   return (
     <header className="sticky top-0 z-10 flex flex-col gap-2 border-b border-border bg-surface-1/95 px-3 py-3 backdrop-blur sm:px-6 lg:flex-row lg:items-center lg:justify-between">
@@ -52,7 +56,9 @@ export function TopStatusBar({
         )}
         <div className="min-w-0">
           <p className="hidden font-mono text-[9px] uppercase tracking-[0.14em] text-stone-500 sm:block">GoalPulse / live intelligence</p>
-          <h1 className="truncate font-display text-base font-bold tracking-tight text-white sm:text-lg">{title}</h1>
+          <TitleElement className="truncate font-display text-base font-bold tracking-tight text-white sm:text-lg">
+            {title}
+          </TitleElement>
         </div>
       </div>
       <div role="status" aria-label="System status" className="flex max-w-full items-center gap-2 overflow-x-auto pb-0.5 lg:justify-end">

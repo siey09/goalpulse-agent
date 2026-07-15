@@ -76,9 +76,24 @@ describe("TopStatusBar", () => {
   it("renders title and status badges", () => {
     render(<TopStatusBar title="Command Center" agentStatus="RUNNING" feedMode="LIVE TxLINE" />);
     expect(screen.getByText("Command Center")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Command Center" })).toBeInTheDocument();
     expect(screen.getByText("RUNNING")).toBeInTheDocument();
     expect(screen.getByText("LIVE TxLINE")).toBeInTheDocument();
     expect(screen.getByRole("status", { name: "System status" })).toBeInTheDocument();
+  });
+
+  it("can render its visible title as non-heading text for destinations that own an h1", () => {
+    render(
+      <TopStatusBar
+        title="Signals"
+        titleAs="p"
+        agentStatus="RUNNING"
+        feedMode="LIVE TxLINE"
+      />
+    );
+
+    expect(screen.getByText("Signals")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1, name: "Signals" })).not.toBeInTheDocument();
   });
 
   it("does not render a mobile nav toggle when onOpenMobileNav is omitted", () => {
@@ -120,6 +135,25 @@ describe("AppShell", () => {
     // "Command Center" legitimately appears three times: the sidebar nav label,
     // the status-bar title, and the PageHeader breadcrumb above the page content.
     expect(screen.getAllByText("Command Center")).toHaveLength(3);
+  });
+
+  it("leaves the destination page title as the document's only h1", () => {
+    render(
+      <AppShell
+        active="signals"
+        onSelectDestination={() => {}}
+        title="Signals"
+        titleAs="p"
+        agentStatus="RUNNING"
+        feedMode="LIVE TxLINE"
+      >
+        <h1>Signal Triage</h1>
+      </AppShell>
+    );
+
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 1, name: "Signal Triage" })).toBeInTheDocument();
+    expect(screen.getByText("Signals", { selector: "header *" })).toBeInTheDocument();
   });
 
   it("renders the persistent Compliance footer on every destination", () => {

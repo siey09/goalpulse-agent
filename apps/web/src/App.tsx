@@ -1464,6 +1464,7 @@ function App() {
         <AppShell
           active={previewDestination}
           onSelectDestination={setPreviewDestination}
+          titleAs={previewDestination === "signals" || previewDestination === "archive" ? "p" : "h1"}
           {...shellProps}
         >
           <Suspense
