@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const upsertMock = vi.fn();
+const fromMock = vi.fn();
+let lastQueryBuilder: Record<string, ReturnType<typeof vi.fn>>;
 let queryResult: { data: unknown[] | null; count: number | null; error: unknown } = {
   data: [],
   count: 0,
@@ -16,14 +18,16 @@ function makeQueryBuilder() {
   builder.eq = vi.fn(chain);
   builder.like = vi.fn(chain);
   builder.not = vi.fn(chain);
+  builder.limit = vi.fn(chain);
   builder.then = (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
     Promise.resolve(queryResult).then(resolve, reject);
+  lastQueryBuilder = builder as Record<string, ReturnType<typeof vi.fn>>;
   return builder;
 }
 
 vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn(() => ({
-    from: vi.fn(() => ({
+    from: fromMock.mockImplementation(() => ({
       upsert: upsertMock,
       ...makeQueryBuilder(),
     })),
@@ -31,8 +35,15 @@ vi.mock("@supabase/supabase-js", () => ({
 }));
 
 import { config } from "../config";
-import { archiveMatch, archiveSignal, getArchivedSignals, isTotalsMatchId } from "./archive";
-import type { AgentSignal, Match } from "../types";
+import {
+  archiveMatch,
+  archiveOddsSnapshots,
+  archiveSignal,
+  getArchivedOddsSnapshots,
+  getArchivedSignals,
+  isTotalsMatchId,
+} from "./archive";
+import type { AgentSignal, Match, OddsSnapshot } from "../types";
 
 function makeSignal(overrides: Partial<AgentSignal> = {}): AgentSignal {
   return {
@@ -68,6 +79,83 @@ function makeMatch(overrides: Partial<Match> = {}): Match {
     ...overrides,
   };
 }
+
+function makeSnapshot(overrides: Partial<OddsSnapshot> = {}): OddsSnapshot {
+  return {
+    id: "snapshot-1",
+    matchId: "match-1",
+    homeTeam: "Team A",
+    awayTeam: "Team B",
+    homeOdds: 1.8,
+    drawOdds: 3.2,
+    awayOdds: 4.1,
+    homeScore: 1,
+    awayScore: 0,
+    minute: 70,
+    source: "txline",
+    createdAt: "2026-07-15T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+describe("odds snapshot archive", () => {
+  beforeEach(() => {
+    config.supabaseUrl = "";
+    config.supabaseServiceKey = "";
+    upsertMock.mockReset();
+    fromMock.mockClear();
+    queryResult = { data: [], count: 0, error: null };
+  });
+
+  it("deduplicates snapshots and archives their complete payload", async () => {
+    config.supabaseUrl = "https://example.supabase.co";
+    config.supabaseServiceKey = "test-key";
+    upsertMock.mockResolvedValue({ error: null });
+    const snapshot = makeSnapshot();
+
+    await archiveOddsSnapshots([snapshot, { ...snapshot }]);
+
+    expect(fromMock).toHaveBeenCalledWith("odds_snapshot_archive");
+    expect(upsertMock).toHaveBeenCalledWith(
+      [
+        {
+          snapshot_id: "snapshot-1",
+          match_id: "match-1",
+          created_at: "2026-07-15T10:00:00.000Z",
+          snapshot_data: snapshot,
+        },
+      ],
+      { onConflict: "snapshot_id", ignoreDuplicates: true }
+    );
+  });
+
+  it("reads a match archive chronologically with a bounded limit", async () => {
+    config.supabaseUrl = "https://example.supabase.co";
+    config.supabaseServiceKey = "test-key";
+    const older = makeSnapshot({ id: "older", createdAt: "2026-07-15T09:00:00.000Z" });
+    const newer = makeSnapshot({ id: "newer", createdAt: "2026-07-15T10:00:00.000Z" });
+    queryResult = {
+      data: [{ snapshot_data: older }, { snapshot_data: newer }],
+      count: 2,
+      error: null,
+    };
+
+    const result = await getArchivedOddsSnapshots("match-1", 80);
+
+    expect(result).toEqual([older, newer]);
+    expect(lastQueryBuilder.eq).toHaveBeenCalledWith("match_id", "match-1");
+    expect(lastQueryBuilder.order).toHaveBeenCalledWith("created_at", { ascending: true });
+    expect(lastQueryBuilder.limit).toHaveBeenCalledWith(80);
+  });
+
+  it("fails open when archive reads error", async () => {
+    config.supabaseUrl = "https://example.supabase.co";
+    config.supabaseServiceKey = "test-key";
+    queryResult = { data: null, count: null, error: new Error("supabase down") };
+
+    await expect(getArchivedOddsSnapshots("match-1")).resolves.toEqual([]);
+  });
+});
 
 describe("archiveSignal", () => {
   beforeEach(() => {
