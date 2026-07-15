@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { filterOutConfirmedFinishedFixtures } from "./txlineClient";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { config } from "../config";
+import { fetchTxLineOddsHistoryForMatch, filterOutConfirmedFinishedFixtures } from "./txlineClient";
 import type { Match } from "../types";
 
 type TestFixture = { FixtureId: number; StartTime?: number };
@@ -83,5 +84,76 @@ describe("filterOutConfirmedFinishedFixtures", () => {
     const result = filterOutConfirmedFinishedFixtures(fixtures, priorMatchesById);
 
     expect(result.map((fixture) => fixture.FixtureId)).toEqual([2, 4]);
+  });
+});
+
+describe("fetchTxLineOddsHistoryForMatch", () => {
+  beforeEach(() => {
+    config.txlineApiBaseUrl = "https://txline.example";
+    config.txlineApiKey = "test-api-key";
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("recovers chronological 1X2 history for an arbitrary fixture id", async () => {
+    const older = {
+      FixtureId: 18213979,
+      MessageId: "odds-older",
+      Ts: Date.parse("2026-07-11T20:00:00.000Z"),
+      SuperOddsType: "1X2_PARTICIPANT_RESULT",
+      MarketPeriod: null,
+      PriceNames: ["part1", "draw", "part2"],
+      Prices: [2100, 3300, 3500],
+    };
+    const newer = {
+      ...older,
+      MessageId: "odds-newer",
+      Ts: Date.parse("2026-07-11T22:00:00.000Z"),
+      Prices: [1800, 3400, 4200],
+    };
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.endsWith("/auth/guest/start")) {
+        return new Response(JSON.stringify({ token: "guest-jwt" }), { status: 200 });
+      }
+      if (url.endsWith("/api/odds/updates/18213979")) {
+        return new Response(JSON.stringify([newer, older]), { status: 200 });
+      }
+      if (url.endsWith("/api/odds/snapshot/18213979")) {
+        return new Response(JSON.stringify([newer]), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    }));
+
+    const history = await fetchTxLineOddsHistoryForMatch(
+      makeMatch({
+        id: "18213979",
+        homeTeam: "Norway",
+        awayTeam: "England",
+        homeScore: 1,
+        awayScore: 2,
+      })
+    );
+
+    expect(history.map((snapshot) => snapshot.evidence?.messageId)).toEqual([
+      "odds-older",
+      "odds-newer",
+    ]);
+    expect(history.map((snapshot) => snapshot.matchId)).toEqual(["18213979", "18213979"]);
+    expect(history[0]).toMatchObject({ homeOdds: 2.1, drawOdds: 3.3, awayOdds: 3.5 });
+  });
+
+  it("returns no synthetic history when TxLINE recovery is unavailable", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.endsWith("/auth/guest/start")) {
+        return new Response(JSON.stringify({ token: "guest-jwt" }), { status: 200 });
+      }
+      return new Response("gone", { status: 410, statusText: "Gone" });
+    }));
+
+    await expect(fetchTxLineOddsHistoryForMatch(makeMatch({ id: "99999999" }))).resolves.toEqual([]);
   });
 });

@@ -1353,6 +1353,75 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
 
 
 
+export async function fetchTxLineOddsHistoryForMatch(match: Match): Promise<OddsSnapshot[]> {
+  if (!config.txlineApiKey) {
+    return [];
+  }
+
+  const fixtureId = Number(match.id);
+
+  if (!Number.isFinite(fixtureId)) {
+    return [];
+  }
+
+  try {
+    const jwt = await getGuestJwt();
+    let movementOdds: TxLineOddsSnapshot[] = [];
+    let latestOdds: TxLineOddsSnapshot | undefined;
+
+    try {
+      movementOdds = selectMovementOdds(await getOddsUpdates(fixtureId, jwt));
+    } catch (error) {
+      console.warn(
+        `TxLINE historical odds updates unavailable for fixture ${match.id}:`,
+        error instanceof Error ? error.message : error
+      );
+    }
+
+    try {
+      const currentOdds = await txlineGet<TxLineOddsSnapshot[]>(
+        `/api/odds/snapshot/${fixtureId}`,
+        jwt
+      );
+      latestOdds = findLatest1x2Odds(currentOdds);
+    } catch (error) {
+      console.warn(
+        `TxLINE historical odds snapshot unavailable for fixture ${match.id}:`,
+        error instanceof Error ? error.message : error
+      );
+    }
+
+    const selected: Array<{ odds: TxLineOddsSnapshot; endpoint: string }> = movementOdds.map(
+      (odds) => ({ odds, endpoint: `/api/odds/updates/${fixtureId}` })
+    );
+
+    if (
+      latestOdds &&
+      !selected.some(
+        ({ odds }) =>
+          (odds.MessageId && odds.MessageId === latestOdds?.MessageId) ||
+          odds.Ts === latestOdds?.Ts
+      )
+    ) {
+      selected.push({ odds: latestOdds, endpoint: `/api/odds/snapshot/${fixtureId}` });
+    }
+
+    const uniqueSnapshots = new Map<string, OddsSnapshot>();
+    for (const item of selected) {
+      const snapshot = normalizeOddsSnapshot(match, item.odds, item.endpoint);
+      uniqueSnapshots.set(snapshot.id, snapshot);
+    }
+
+    return sortSnapshotsChronologically([...uniqueSnapshots.values()]);
+  } catch (error) {
+    console.warn(
+      `TxLINE odds history recovery skipped for fixture ${match.id}:`,
+      error instanceof Error ? error.message : error
+    );
+    return [];
+  }
+}
+
 export async function fetchRecentTxLineResults(): Promise<TxLineFeedResult> {
   if (!config.txlineApiKey) {
     return {
