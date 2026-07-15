@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { LiveMarketsPage } from "./LiveMarketsPage";
 import type { Match } from "../../types";
 
@@ -57,20 +57,22 @@ const baseProps = {
 };
 
 describe("LiveMarketsPage", () => {
-  it("renders without throwing", () => {
-    expect(() => render(<LiveMarketsPage {...baseProps} />)).not.toThrow();
-  });
-
-  it("renders the Selected match card with team names and market pressure", () => {
+  it("renders one heading and connects the fixture rail to the selected workspace", () => {
     render(<LiveMarketsPage {...baseProps} />);
-    expect(screen.getByText("Norway vs England")).toBeInTheDocument();
-    expect(screen.getByText("Market pressure")).toBeInTheDocument();
-    expect(screen.getByText("62")).toBeInTheDocument();
-    expect(screen.getByText("38")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole("region", { name: /fixture rail/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /^selected market$/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /odds movement/i })).toBeInTheDocument();
   });
 
-  it("shows a fallback label when no match is selected yet", () => {
-    render(<LiveMarketsPage {...baseProps} selectedMatch={undefined} />);
-    expect(screen.getByText("No match yet")).toBeInTheDocument();
+  it("renders the authoritative feed state once", () => {
+    render(<LiveMarketsPage {...baseProps} isOddsStreamLive />);
+    expect(screen.getAllByLabelText("Feed state: Live")).toHaveLength(1);
+  });
+
+  it("keeps selected identity visible when snapshots are empty", () => {
+    render(<LiveMarketsPage {...baseProps} chartData={[]} />);
+    expect(within(screen.getByRole("region", { name: /^selected market$/i })).getByText("Norway vs England")).toBeInTheDocument();
+    expect(screen.getByText(/no TxLINE snapshots for Norway vs England yet/i)).toBeInTheDocument();
   });
 });

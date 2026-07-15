@@ -1,7 +1,8 @@
-import { SelectedMatchPanel } from "./SelectedMatchPanel";
 import { OddsMovementChart } from "./OddsMovementChart";
-import { IntelligenceRail } from "./IntelligenceRail";
-import { MarketBoard } from "./MarketBoard";
+import { LiveMarketToolbar } from "./LiveMarketToolbar";
+import { MarketEvidenceStrip } from "./MarketEvidenceStrip";
+import { MarketFixtureRail } from "./MarketFixtureRail";
+import { SelectedMarketWorkspace } from "./SelectedMarketWorkspace";
 import type { Match, Health } from "../../types";
 
 export interface LiveMarketsChartPoint {
@@ -86,90 +87,58 @@ export interface LiveMarketsPageProps {
   onSelectSignalId: (signalId: string) => void;
 }
 
-/**
- * Live Markets, composed from four focused pieces instead of one long
- * scroll of markup: SelectedMatchPanel (match command header),
- * OddsMovementChart (the workspace's main visual focus, left column),
- * IntelligenceRail (stream/audit summary, right column), and MarketBoard
- * (the full match list, table on tablet/desktop, cards on mobile). Prop
- * contract is unchanged from the previous single-file version, so App.tsx
- * needs no changes.
- */
-export function LiveMarketsPage({
-  selectedMatch,
-  chartData,
-  chartSignalMarkers,
-  chartReadout,
-  isReplayStreamMode,
-  onToggleReplayStreamMode,
-  isOddsStreamLive,
-  oddsStreamLastUpdate,
-  replayStreamProgress,
-  streamProgressPercent,
-  health,
-  correctSignals,
-  closedSignals,
-  selectedMatchMarketPressure,
-  fieldContext,
-  hasDroppedUpdate,
-  matches,
-  matchStatusFilter,
-  onChangeMatchStatusFilter,
-  matchStatusCounts,
-  selectedMatchId,
-  onSelectMatch,
-  onSelectSignalId,
-}: LiveMarketsPageProps) {
+/** The operator cockpit keeps selection, price movement, and evidence in one connected scan path. */
+export function LiveMarketsPage(props: LiveMarketsPageProps) {
   return (
-    <div className="space-y-4">
-      <SelectedMatchPanel
-        selectedMatch={selectedMatch}
-        selectedMatchMarketPressure={selectedMatchMarketPressure}
-        hasChartData={chartData.length > 0}
-        isReplayStreamMode={isReplayStreamMode}
-        isOddsStreamLive={isOddsStreamLive}
-        oddsStreamLastUpdate={oddsStreamLastUpdate}
+    <div className="min-w-0 space-y-4">
+      <LiveMarketToolbar
+        hasChartData={props.chartData.length > 0}
+        isReplayStreamMode={props.isReplayStreamMode}
+        onToggleReplayStreamMode={props.onToggleReplayStreamMode}
+        isOddsStreamLive={props.isOddsStreamLive}
+        oddsStreamLastUpdate={props.oddsStreamLastUpdate}
+        replayStreamProgress={props.replayStreamProgress}
+        hasDroppedUpdate={props.hasDroppedUpdate}
       />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-8">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(18rem,0.38fr)_minmax(0,1fr)] xl:items-start">
+        <MarketFixtureRail
+          matches={props.matches}
+          matchStatusFilter={props.matchStatusFilter}
+          onChangeMatchStatusFilter={props.onChangeMatchStatusFilter}
+          matchStatusCounts={props.matchStatusCounts}
+          selectedMatchId={props.selectedMatchId}
+          onSelectMatch={props.onSelectMatch}
+        />
+
+        <section aria-label="Selected market workspace" className="min-w-0 overflow-hidden rounded-xl border border-border bg-surface-1">
+          <SelectedMarketWorkspace
+            selectedMatch={props.selectedMatch}
+            chartData={props.chartData}
+            chartReadout={props.chartReadout}
+            selectedMatchMarketPressure={props.selectedMatchMarketPressure}
+            isReplayStreamMode={props.isReplayStreamMode}
+          />
           <OddsMovementChart
-            selectedMatch={selectedMatch}
-            chartData={chartData}
-            chartSignalMarkers={chartSignalMarkers}
-            chartReadout={chartReadout}
-            onSelectSignalId={onSelectSignalId}
-            isReplayStreamMode={isReplayStreamMode}
-            isOddsStreamLive={isOddsStreamLive}
-            streamProgressPercent={streamProgressPercent}
-            replayStreamProgress={replayStreamProgress}
+            selectedMatch={props.selectedMatch}
+            chartData={props.chartData}
+            chartSignalMarkers={props.chartSignalMarkers}
+            onSelectSignalId={props.onSelectSignalId}
+            isReplayStreamMode={props.isReplayStreamMode}
+            isOddsStreamLive={props.isOddsStreamLive}
+            streamProgressPercent={props.streamProgressPercent}
+            replayStreamProgress={props.replayStreamProgress}
           />
-        </div>
-        <div className="xl:col-span-4">
-          <IntelligenceRail
-            chartDataCount={chartData.length}
-            isReplayStreamMode={isReplayStreamMode}
-            onToggleReplayStreamMode={onToggleReplayStreamMode}
-            isOddsStreamLive={isOddsStreamLive}
-            oddsStreamLastUpdate={oddsStreamLastUpdate}
-            replayStreamProgress={replayStreamProgress}
-            health={health}
-            correctSignals={correctSignals}
-            closedSignals={closedSignals}
-            fieldContext={fieldContext}
-            hasDroppedUpdate={hasDroppedUpdate}
+          <MarketEvidenceStrip
+            chartDataCount={props.chartData.length}
+            health={props.health}
+            correctSignals={props.correctSignals}
+            closedSignals={props.closedSignals}
+            fieldContext={props.fieldContext}
+            signalCount={props.chartSignalMarkers.length}
           />
-        </div>
+        </section>
       </div>
-
-      <MarketBoard
-        matches={matches}
-        matchStatusFilter={matchStatusFilter}
-        onChangeMatchStatusFilter={onChangeMatchStatusFilter}
-        matchStatusCounts={matchStatusCounts}
-        selectedMatchId={selectedMatchId}
-        onSelectMatch={onSelectMatch}
-      />
     </div>
   );
 }
