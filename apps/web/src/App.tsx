@@ -27,6 +27,14 @@ import {
   type ReplaySpeed,
   type ReplayStatus,
 } from "./features/markets/replayState";
+import {
+  cancelReplayReconnect,
+  createReplayRetryState,
+  replayStreamUrl,
+  resetReplayRetries,
+  scheduleReplayReconnect,
+} from "./features/markets/replayConnection";
+import { ClassicReplayPanel } from "./features/markets/ClassicReplayPanel";
 import { GuidedTour } from "./app/GuidedTour";
 import { useProductTour } from "./app/useProductTour";
 // Lazy-loaded: only one destination is ever visible at a time in the
@@ -284,6 +292,7 @@ function App() {
   >({});
   const hasLoadedOnceRef = useRef(false);
   const replayCursorRef = useRef(0);
+  const replayRetryRef = useRef(createReplayRetryState());
   const isReplayStreamMode = replayStatus !== "live";
   const replayIntervalMs = replayIntervalForSpeed(replaySpeed);
   const replayStreamProgress = replayProgressLabel({
@@ -794,6 +803,7 @@ function App() {
   }, [loadDashboard]);
 
   const resetReplayProgress = useCallback(() => {
+    resetReplayRetries(replayRetryRef.current, window.clearTimeout);
     replayCursorRef.current = 0;
     setReplayCursor(0);
     setReplayTotal(0);
@@ -842,15 +852,11 @@ function App() {
       return;
     }
 
-    const replayParams = new URLSearchParams({
-      matchId: selectedMatchId,
-      startCursor: String(replayCursorRef.current),
-      intervalMs: String(replayIntervalMs),
-    });
     const liveParams = new URLSearchParams({ matchId: selectedMatchId });
     const streamUrl = replayStatus === "playing"
-      ? `${API_BASE_URL}/api/live/replay-stream?${replayParams.toString()}`
+      ? replayStreamUrl(API_BASE_URL, selectedMatchId, replayCursorRef.current, replayIntervalMs)
       : `${API_BASE_URL}/api/live/odds-stream?${liveParams.toString()}`;
+    const replayRetryState = replayRetryRef.current;
     const stream = new EventSource(streamUrl);
 
     stream.addEventListener("open", () => {
@@ -916,6 +922,7 @@ function App() {
         }
 
         if (payload.streamMode === "replay_test" && payload.replayCursor != null && payload.replayTotal != null) {
+          replayRetryState.attempt = 0;
           replayCursorRef.current = payload.replayCursor;
           setReplayCursor(payload.replayCursor);
           setReplayTotal(payload.replayTotal);
@@ -942,9 +949,22 @@ function App() {
 
     stream.addEventListener("error", () => {
       setIsOddsStreamLive(false);
+      if (replayStatus === "playing") {
+        stream.close();
+        scheduleReplayReconnect({
+          state: replayRetryState,
+          getCursor: () => replayCursorRef.current,
+          setTimer: (callback, delayMs) => window.setTimeout(callback, delayMs),
+          onReconnect: (latestCursor) => {
+            replayCursorRef.current = latestCursor;
+            setReplaySession((current) => current + 1);
+          },
+        });
+      }
     });
 
     return () => {
+      cancelReplayReconnect(replayRetryState, window.clearTimeout);
       stream.close();
       setIsOddsStreamLive(false);
     };
@@ -1928,7 +1948,7 @@ function App() {
                       <p className="text-xs text-stone-400">Selected market</p>
                       <span className="rounded-full border border-border bg-black/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-300">
                         {isReplayStreamMode
-                          ? "Demo replay"
+                          ? "Historical replay"
                           : selectedMatch?.status === "scheduled"
                             ? "Pre-match odds"
                             : selectedMatch?.status === "live"
@@ -1944,7 +1964,7 @@ function App() {
                       </p>
                       <span className="mb-1 rounded-full bg-positive/10 px-2.5 py-1 text-xs font-medium text-positive-300">
                         {isReplayStreamMode
-                          ? "Demo replay tracked odds"
+                          ? "Historical replay tracked odds"
                           : selectedMatch?.status === "scheduled"
                             ? "Pre-match tracked odds"
                             : selectedMatch?.status === "live"
@@ -1964,53 +1984,20 @@ function App() {
                     </p>
                   </div>
 
-                  <div className="max-w-[260px] rounded-xl border border-border bg-black/25 px-3 py-2 text-right">
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
-                      Timeline view
-                    </p>
-                    <p className="mt-1 text-xs font-semibold text-white">
-                      Last {chartData.length} TxLINE snapshots
-                    </p>
-                    <p className="mt-1 text-[10px] leading-4 text-stone-500">
-                      S1-S{chartData.length} are odds captures, not match minutes.
-                    </p>
-                    <p className={`mt-2 text-[10px] font-semibold ${isReplayStreamMode ? "text-info-200" : isOddsStreamLive ? "text-positive-200" : "text-warning-200"}`}>
-                      {isReplayStreamMode ? "DEMO REPLAY STREAM" : isOddsStreamLive ? "DATA STREAM ACTIVE" : "CONNECTING DATA STREAM"}
-                    </p>
-                    {oddsStreamLastUpdate && (
-                      <p className="mt-1 text-[10px] text-stone-500">
-                        Last tick: {oddsStreamLastUpdate}
-                      </p>
-                    )}
-                    {health?.liveStream && (
-                      <p
-                        className={`mt-2 text-[10px] font-semibold ${
-                          health.liveStream.connected ? "text-positive-200" : "text-stone-500"
-                        }`}
-                        title={health.liveStream.lastError ?? undefined}
-                      >
-                        {health.liveStream.connected
-                          ? `⛓ TxLINE push feed connected (${health.liveStream.totalEventsReceived ?? 0} events)`
-                          : "⛓ TxLINE push feed reconnecting…"}
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={isReplayStreamMode ? exitReplay : playReplay}
-                      className={`mt-3 w-full rounded-xl border px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] transition ${
-                        isReplayStreamMode
-                          ? "border-info/40 bg-info-500/15 text-info-100"
-                          : "border-border bg-white/5 text-stone-300 hover:border-white/20"
-                      }`}
-                    >
-                      {isReplayStreamMode ? "Stop demo replay" : "Start demo replay"}
-                    </button>
-                    {isReplayStreamMode && (
-                      <p className="mt-2 rounded-xl border border-info/20 bg-info-500/10 px-3 py-2 text-[10px] leading-4 text-info-100">
-                        {replayStreamProgress || "Demo replay using saved real TxLINE snapshots"}
-                      </p>
-                    )}
-                  </div>
+                  <ClassicReplayPanel
+                    snapshotCount={chartData.length}
+                    replayStatus={replayStatus}
+                    replaySpeed={replaySpeed}
+                    replayProgressLabel={replayStreamProgress}
+                    isOddsStreamLive={isOddsStreamLive}
+                    oddsStreamLastUpdate={oddsStreamLastUpdate}
+                    liveStream={health?.liveStream}
+                    onPlayReplay={playReplay}
+                    onPauseReplay={pauseReplay}
+                    onRestartReplay={restartReplay}
+                    onExitReplay={exitReplay}
+                    onChangeReplaySpeed={setReplaySpeed}
+                  />
                 </div>
 
                 <div className="mb-3 space-y-2 animate-fade-in-up">
@@ -2256,7 +2243,7 @@ function App() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="flex h-full items-center justify-center rounded-3xl bg-black/25 text-sm text-stone-500">
-                      Select a market or start demo replay to load TxLINE snapshots
+                      Select a market or play the historical replay to load TxLINE snapshots
                     </div>
                   )}
                 </div>
@@ -2277,7 +2264,7 @@ function App() {
                     </div>
                     <span className="shrink-0 text-[10px] text-stone-500">
                       {isReplayStreamMode
-                        ? replayStreamProgress || "Demo replay ready"
+                        ? replayStreamProgress
                         : isOddsStreamLive
                           ? "Data stream active"
                           : "Data stream connecting"}

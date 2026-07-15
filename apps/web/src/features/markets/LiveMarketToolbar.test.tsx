@@ -76,6 +76,7 @@ describe("LiveMarketToolbar", () => {
     expect(onExitReplay).toHaveBeenCalledOnce();
     expect(screen.getByRole("status", { name: /replay state/i })).toHaveTextContent("Replay complete · 10 real snapshots");
     expect(screen.getByRole("status", { name: /replay state/i })).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByRole("group", { name: /replay controls/i })).toBeInTheDocument();
   });
 
   it.each([0.5, 1, 2] as const)("changes replay speed to %sx", (speed) => {

@@ -58,4 +58,40 @@ Full web verification before commit:
 
 ## Remaining concern
 
-- The App’s EventSource transitions are verified through code inspection plus component/pure-state tests; this repository has no isolated App-level EventSource harness. A future extraction into a dedicated replay-stream hook would make connection-count assertions inexpensive, but that refactor is outside Task 4’s requested scope.
+- EventSource wiring remains in `App`, but retry scheduling and URL construction are now extracted and directly tested for current-cursor behavior, duplicate suppression, bounded attempts, and backoff.
+
+## Review-fix RED/GREEN evidence
+
+Review identified that native EventSource retry could reuse the original replay URL and rewind after an error, and that `?preview=classic` retained the obsolete demo toggle.
+
+RED command:
+
+```powershell
+npm.cmd test -- src/features/markets/replayConnection.test.ts src/features/markets/ClassicReplayPanel.test.tsx src/features/markets/LiveMarketToolbar.test.tsx
+```
+
+Observed before the review fixes:
+
+- `replayConnection.test.ts` failed because the cursor-aware bounded retry helper did not exist.
+- `ClassicReplayPanel.test.tsx` failed because the shared controlled classic panel did not exist.
+- `LiveMarketToolbar.test.tsx` failed because the labelled container had no `group` role.
+- Summary: 3 failed files; 1 failed existing test and 2 intentionally missing-module suites.
+
+GREEN focused command (same command):
+
+```text
+Test Files  3 passed (3)
+Tests       17 passed (17)
+```
+
+The retry helper test proves:
+
+- repeated errors cannot schedule duplicate retries;
+- the callback reads the latest cursor when the retry fires and produces `startCursor=4`, rather than retaining the original cursor 1 URL;
+- retries stop after three attempts with 250 ms, 500 ms, and 1000 ms backoff.
+
+Final review-fix verification:
+
+- `npm.cmd test`: 26 files passed, 134 tests passed.
+- `npm.cmd run lint`: exit 0 with no findings.
+- `npm.cmd run build`: exit 0; TypeScript and Vite production build succeeded. The existing main-bundle size warning remains informational.
