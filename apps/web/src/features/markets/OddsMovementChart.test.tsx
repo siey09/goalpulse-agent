@@ -4,6 +4,33 @@ import type { Match } from "../../types";
 import { OddsMovementChart, type OddsMovementChartProps } from "./OddsMovementChart";
 import type { LiveMarketsChartMarker, LiveMarketsChartPoint } from "./LiveMarketsPage";
 
+vi.mock("recharts", () => ({
+  Area: ({ type, dataKey, isAnimationActive }: { type?: string; dataKey?: string; isAnimationActive?: boolean }) => (
+    <div
+      data-testid="price-area"
+      data-series={dataKey}
+      data-type={type}
+      data-animation-active={String(isAnimationActive)}
+    />
+  ),
+  AreaChart: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  CartesianGrid: () => null,
+  ReferenceDot: () => null,
+  ReferenceLine: () => null,
+  ResponsiveContainer: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  Tooltip: () => null,
+  XAxis: ({ dataKey, type, scale, tickFormatter }: { dataKey?: string; type?: string; scale?: string; tickFormatter?: (value: number) => string }) => (
+    <div
+      data-testid="historical-x-axis"
+      data-key={dataKey}
+      data-type={type}
+      data-scale={scale}
+      data-missing-time-label={tickFormatter?.(1_700_000_000_001)}
+    />
+  ),
+  YAxis: () => null,
+}));
+
 const selectedMatch: Match = {
   id: "m1",
   homeTeam: "Norway",
@@ -101,6 +128,69 @@ describe("OddsMovementChart", () => {
   it("names the chart and explains snapshot semantics", () => {
     render(<OddsMovementChart {...baseProps} />);
     expect(screen.getByRole("img", { name: /odds movement for Norway vs England/i })).toHaveAccessibleDescription(/TxLINE snapshot/i);
+  });
+
+  it("renders historical captures as an unanimated step tape", () => {
+    render(<OddsMovementChart {...baseProps} />);
+
+    expect(screen.getByText(/Historical capture time/i)).toBeInTheDocument();
+    expect(screen.getByText(/Observed price holds until the next snapshot/i)).toBeInTheDocument();
+    expect(screen.getByTestId("historical-x-axis")).toHaveAttribute("data-key", "timelineX");
+    expect(screen.getByTestId("historical-x-axis")).toHaveAttribute("data-type", "number");
+    expect(screen.getByTestId("historical-x-axis")).toHaveAttribute("data-scale", "time");
+
+    for (const area of screen.getAllByTestId("price-area")) {
+      expect(area).toHaveAttribute("data-type", "stepAfter");
+      expect(area).toHaveAttribute("data-animation-active", "false");
+    }
+  });
+
+  it("announces replay position against the historical snapshot count", () => {
+    render(
+      <OddsMovementChart
+        {...baseProps}
+        chartData={[
+          chartPoint({ id: "snapshot-1", timelineX: 1_700_000_000_000 }),
+          chartPoint({ id: "snapshot-2", timelineX: 1_700_000_060_000 }),
+        ]}
+        isReplayStreamMode
+        streamProgressPercent={67}
+        replayStreamProgress="Demo tick 2/3"
+      />
+    );
+
+    expect(screen.getByRole("status", { name: /replay position/i })).toHaveTextContent(
+      /Snapshot 2 of 3.*Historical/i
+    );
+  });
+
+  it("does not present a synthetic timeline coordinate as a real capture time", () => {
+    render(
+      <OddsMovementChart
+        {...baseProps}
+        chartData={[
+          chartPoint({ id: "real", timelineX: 1_700_000_000_000, hasRealTimestamp: true, rawTimestamp: "2023-11-14T22:13:20Z" }),
+          chartPoint({ id: "missing", timelineX: 1_700_000_000_001 }),
+        ]}
+      />
+    );
+
+    expect(screen.getByTestId("historical-x-axis")).toHaveAttribute("data-missing-time-label", "Time unavailable");
+    expect(screen.getByRole("img", { name: /odds movement/i })).toHaveAccessibleDescription(/unavailable captures use sequence order/i);
+  });
+
+  it("does not claim the current capture is the historical end during an incomplete replay", () => {
+    render(
+      <OddsMovementChart
+        {...baseProps}
+        chartData={[chartPoint({ hasRealTimestamp: true, rawTimestamp: "2023-11-14T22:13:20Z" })]}
+        isReplayStreamMode
+        replayStreamProgress="Demo tick 1/3"
+        streamProgressPercent={33}
+      />
+    );
+
+    expect(screen.getByText("End").parentElement).toHaveTextContent(/Capture time unavailable/i);
   });
 
   it("keeps the selected-fixture context when no snapshots exist", () => {

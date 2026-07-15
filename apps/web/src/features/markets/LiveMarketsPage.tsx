@@ -6,7 +6,7 @@ import { SelectedMarketWorkspace } from "./SelectedMarketWorkspace";
 import type { Match, Health } from "../../types";
 import type { MarketTimelinePoint } from "./chartTimeline";
 
-export interface LiveMarketsChartPoint extends MarketTimelinePoint {}
+export type LiveMarketsChartPoint = MarketTimelinePoint;
 
 export interface LiveMarketsChartMarker {
   id: string;
