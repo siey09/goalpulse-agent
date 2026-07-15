@@ -58,4 +58,5 @@ create index if not exists odds_snapshot_archive_match_created_idx
 
 alter table odds_snapshot_archive enable row level security;
 revoke all on table odds_snapshot_archive from public, anon, authenticated;
+revoke all on table odds_snapshot_archive from service_role;
 grant select, insert on table odds_snapshot_archive to service_role;
