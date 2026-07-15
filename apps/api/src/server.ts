@@ -46,7 +46,8 @@ import {
   parseSimilarSignalsParams,
 } from "./logic/paginationParams";
 import { findSimilarSignals } from "./logic/historicalPatternMatch";
-import { archiveMatch, getArchivedSignals } from "./services/archive";
+import { archiveMatch, archiveOddsSnapshots, getArchivedSignals } from "./services/archive";
+import { ensureMatchOddsHistory, type MatchHistorySource } from "./services/matchHistory";
 import { config } from "./config";
 import { requireApiKey } from "./middleware/apiKeyAuth";
 import { generalApiLimiter, runOnceLimiter } from "./middleware/rateLimiters";
@@ -197,6 +198,7 @@ app.get("/api/recent-results", async (_req, res) => {
     }
 
     mergeOddsSnapshots(recentFeed.snapshots);
+    void archiveOddsSnapshots(recentFeed.snapshots);
   }
 
   res.json({
@@ -284,13 +286,19 @@ app.get("/api/live/replay-stream", (req, res) => {
     res.end();
   });
 });
-app.get("/api/live/odds-stream", (req, res) => {
+app.get("/api/live/odds-stream", async (req, res) => {
   const matchId = String(req.query.matchId ?? "");
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders?.();
+
+  let historySource: MatchHistorySource = matchId ? "unavailable" : "hot";
+  if (matchId) {
+    const resolvedHistory = await ensureMatchOddsHistory(matchId);
+    historySource = resolvedHistory.source;
+  }
 
   let lastSignature = "";
 
@@ -334,6 +342,7 @@ app.get("/api/live/odds-stream", (req, res) => {
         match,
         latestSnapshot,
         history: snapshots,
+        historySource,
         signals: relatedSignals,
         stats: getStats(),
       })}\n\n`
@@ -373,15 +382,18 @@ app.get("/api/pnl", (_req, res) => {
   });
 });
 
-app.get("/api/odds-history", (req, res) => {
+app.get("/api/odds-history", async (req, res) => {
   const matchId = String(req.query.matchId ?? "");
 
-  const snapshots = matchId
-    ? store.oddsSnapshots.filter((snapshot) => snapshot.matchId === matchId)
-    : store.oddsSnapshots;
+  if (matchId) {
+    const result = await ensureMatchOddsHistory(matchId);
+    res.json({ data: result.history, source: result.source });
+    return;
+  }
 
   res.json({
-    data: snapshots.slice(0, 100).reverse(),
+    data: store.oddsSnapshots.slice(0, 100).reverse(),
+    source: "hot",
   });
 });
 
@@ -760,6 +772,7 @@ app.get("/api/replay/backtest", async (_req, res) => {
         store.oddsSnapshots.push(snapshot);
       }
     }
+    void archiveOddsSnapshots(recentFeed.snapshots);
   }
 
   const finishedMatchIds = new Set(
@@ -1147,6 +1160,7 @@ app.listen(config.port, async () => {
   );
 
   await loadSnapshot();
+  void archiveOddsSnapshots(store.oddsSnapshots);
 
   await runGuardedAgentCycle("startup");
 
