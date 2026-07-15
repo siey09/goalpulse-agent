@@ -21,6 +21,12 @@ import {
   findNearestMarketSnapshot,
   type OddsSnapshot,
 } from "./features/markets/chartTimeline";
+import {
+  replayIntervalForSpeed,
+  replayProgressLabel,
+  type ReplaySpeed,
+  type ReplayStatus,
+} from "./features/markets/replayState";
 import { GuidedTour } from "./app/GuidedTour";
 import { useProductTour } from "./app/useProductTour";
 // Lazy-loaded: only one destination is ever visible at a time in the
@@ -238,8 +244,12 @@ function App() {
   const [oddsStreamLastUpdate, setOddsStreamLastUpdate] = useState("");
   /** Briefly true after one SSE tick fails to parse - non-blocking, self-clears, never carries the raw payload. */
   const [hasDroppedUpdate, setHasDroppedUpdate] = useState(false);
-  const [isReplayStreamMode, setIsReplayStreamMode] = useState(false);
-  const [replayStreamProgress, setReplayStreamProgress] = useState("");
+  const [replayStatus, setReplayStatus] = useState<ReplayStatus>("live");
+  const [replaySpeed, setReplaySpeed] = useState<ReplaySpeed>(1);
+  const [replayCursor, setReplayCursor] = useState(0);
+  const [replayTotal, setReplayTotal] = useState(0);
+  const [replayOriginalTimestamp, setReplayOriginalTimestamp] = useState<string>();
+  const [replaySession, setReplaySession] = useState(0);
   const [streamProgressPercent, setStreamProgressPercent] = useState(0);
   const [selectedMatchId, setSelectedMatchId] = useState("");
   const [selectedSignal, setSelectedSignal] = useState<AgentSignal | null>(null);
@@ -273,6 +283,16 @@ function App() {
     Record<string, { loading: boolean; data: OnChainVerifyData | null }>
   >({});
   const hasLoadedOnceRef = useRef(false);
+  const replayCursorRef = useRef(0);
+  const isReplayStreamMode = replayStatus !== "live";
+  const replayIntervalMs = replayIntervalForSpeed(replaySpeed);
+  const replayStreamProgress = replayProgressLabel({
+    status: replayStatus,
+    cursor: replayCursor,
+    total: replayTotal,
+    originalTimestamp: replayOriginalTimestamp,
+    intervalMs: replayIntervalMs,
+  });
 
   const outcomeVerificationItems = useMemo(() => {
     const replayItems =
@@ -773,6 +793,43 @@ function App() {
     return () => window.clearInterval(interval);
   }, [loadDashboard]);
 
+  const resetReplayProgress = useCallback(() => {
+    replayCursorRef.current = 0;
+    setReplayCursor(0);
+    setReplayTotal(0);
+    setReplayOriginalTimestamp(undefined);
+    setStreamProgressPercent(0);
+  }, []);
+
+  const playReplay = useCallback(() => {
+    if (replayStatus === "live") {
+      setOddsHistory([]);
+      resetReplayProgress();
+      setReplaySession((current) => current + 1);
+    }
+    setReplayStatus("playing");
+  }, [replayStatus, resetReplayProgress]);
+
+  const pauseReplay = useCallback(() => setReplayStatus("paused"), []);
+
+  const restartReplay = useCallback(() => {
+    setOddsHistory([]);
+    resetReplayProgress();
+    setReplaySession((current) => current + 1);
+    setReplayStatus("playing");
+  }, [resetReplayProgress]);
+
+  const exitReplay = useCallback(() => {
+    resetReplayProgress();
+    setReplayStatus("live");
+  }, [resetReplayProgress]);
+
+  const selectMatch = useCallback((matchId: string) => {
+    resetReplayProgress();
+    setReplayStatus("live");
+    setSelectedMatchId(matchId);
+  }, [resetReplayProgress]);
+
   useEffect(() => {
     if (!selectedMatchId) {
       setOddsHistory([]);
@@ -780,12 +837,20 @@ function App() {
       return;
     }
 
-    const streamEndpoint = isReplayStreamMode
-      ? "/api/live/replay-stream"
-      : "/api/live/odds-stream";
-    const streamUrl = `${API_BASE_URL}${streamEndpoint}?matchId=${encodeURIComponent(
-      selectedMatchId
-    )}`;
+    if (replayStatus === "paused" || replayStatus === "complete") {
+      setIsOddsStreamLive(false);
+      return;
+    }
+
+    const replayParams = new URLSearchParams({
+      matchId: selectedMatchId,
+      startCursor: String(replayCursorRef.current),
+      intervalMs: String(replayIntervalMs),
+    });
+    const liveParams = new URLSearchParams({ matchId: selectedMatchId });
+    const streamUrl = replayStatus === "playing"
+      ? `${API_BASE_URL}/api/live/replay-stream?${replayParams.toString()}`
+      : `${API_BASE_URL}/api/live/odds-stream?${liveParams.toString()}`;
     const stream = new EventSource(streamUrl);
 
     stream.addEventListener("open", () => {
@@ -804,6 +869,8 @@ function App() {
           replayCursor?: number;
           replayTotal?: number;
           replayComplete?: boolean;
+          replayOriginalTimestamp?: string | null;
+          replayIntervalMs?: number;
         };
 
         if (payload.history) {
@@ -848,13 +915,17 @@ function App() {
           setStats(payload.stats);
         }
 
-        if (payload.streamMode === "replay_test" && payload.replayCursor && payload.replayTotal) {
-          setReplayStreamProgress(`Demo tick ${payload.replayCursor}/${payload.replayTotal}`);
+        if (payload.streamMode === "replay_test" && payload.replayCursor != null && payload.replayTotal != null) {
+          replayCursorRef.current = payload.replayCursor;
+          setReplayCursor(payload.replayCursor);
+          setReplayTotal(payload.replayTotal);
+          setReplayOriginalTimestamp(payload.replayOriginalTimestamp ?? undefined);
           setStreamProgressPercent(
-            Math.min(100, Math.round((payload.replayCursor / payload.replayTotal) * 100))
+            payload.replayTotal === 0
+              ? 100
+              : Math.min(100, Math.round((payload.replayCursor / payload.replayTotal) * 100))
           );
-        } else {
-          setReplayStreamProgress("");
+          if (payload.replayComplete) setReplayStatus("complete");
         }
 
         setOddsStreamLastUpdate(formatTime(payload.timestamp));
@@ -877,7 +948,7 @@ function App() {
       stream.close();
       setIsOddsStreamLive(false);
     };
-  }, [selectedMatchId, isReplayStreamMode]);
+  }, [selectedMatchId, replayStatus, replaySpeed, replaySession, replayIntervalMs]);
 
   useEffect(() => {
     if (!selectedSignal) {
@@ -1310,10 +1381,20 @@ function App() {
             chartSignalMarkers={chartSignalMarkers}
             chartReadout={chartReadout}
             isReplayStreamMode={isReplayStreamMode}
-            onToggleReplayStreamMode={() => setIsReplayStreamMode((current) => !current)}
+            replayStatus={replayStatus}
+            replaySpeed={replaySpeed}
+            replayCursor={replayCursor}
+            replayTotal={replayTotal}
+            replayOriginalTimestamp={replayOriginalTimestamp}
+            replayIntervalMs={replayIntervalMs}
+            replayProgressLabel={replayStreamProgress}
+            onPlayReplay={playReplay}
+            onPauseReplay={pauseReplay}
+            onRestartReplay={restartReplay}
+            onExitReplay={exitReplay}
+            onChangeReplaySpeed={setReplaySpeed}
             isOddsStreamLive={isOddsStreamLive}
             oddsStreamLastUpdate={oddsStreamLastUpdate}
-            replayStreamProgress={replayStreamProgress}
             streamProgressPercent={streamProgressPercent}
             health={health}
             correctSignals={stats?.correctSignals ?? 0}
@@ -1326,7 +1407,7 @@ function App() {
             onChangeMatchStatusFilter={setMatchStatusFilter}
             matchStatusCounts={matchStatusCounts}
             selectedMatchId={selectedMatchId}
-            onSelectMatch={setSelectedMatchId}
+            onSelectMatch={selectMatch}
             onSelectSignalId={(signalId) => setSelectedSignal(signals.find((signal) => signal.id === signalId) ?? null)}
           />
         );
@@ -1915,7 +1996,7 @@ function App() {
                     )}
                     <button
                       type="button"
-                      onClick={() => setIsReplayStreamMode((current) => !current)}
+                      onClick={isReplayStreamMode ? exitReplay : playReplay}
                       className={`mt-3 w-full rounded-xl border px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] transition ${
                         isReplayStreamMode
                           ? "border-info/40 bg-info-500/15 text-info-100"

@@ -36,10 +36,20 @@ const baseProps = {
     },
   },
   isReplayStreamMode: false,
-  onToggleReplayStreamMode: vi.fn(),
+  replayStatus: "live" as const,
+  replaySpeed: 1 as const,
+  replayCursor: 0,
+  replayTotal: 0,
+  replayOriginalTimestamp: undefined,
+  replayIntervalMs: 1000 as const,
+  replayProgressLabel: "Live feed",
+  onPlayReplay: vi.fn(),
+  onPauseReplay: vi.fn(),
+  onRestartReplay: vi.fn(),
+  onExitReplay: vi.fn(),
+  onChangeReplaySpeed: vi.fn(),
   isOddsStreamLive: true,
   oddsStreamLastUpdate: "11:12 PM",
-  replayStreamProgress: undefined,
   streamProgressPercent: 0,
   health: null,
   correctSignals: 3,
@@ -77,5 +87,14 @@ describe("LiveMarketsPage", () => {
     render(<LiveMarketsPage {...baseProps} chartData={[]} />);
     expect(within(screen.getByRole("region", { name: /^selected market$/i })).getByText("Norway vs England")).toBeInTheDocument();
     expect(screen.getByText(/no TxLINE snapshots for Norway vs England yet/i)).toBeInTheDocument();
+  });
+
+  it("keeps the selected fixture stable through replay controls", () => {
+    const { rerender } = render(<LiveMarketsPage {...baseProps} replayStatus="playing" isReplayStreamMode replayCursor={1} replayTotal={2} />);
+    expect(within(screen.getByRole("region", { name: /^selected market$/i })).getByText("Norway vs England")).toBeInTheDocument();
+
+    rerender(<LiveMarketsPage {...baseProps} replayStatus="paused" isReplayStreamMode replayCursor={1} replayTotal={2} />);
+    expect(within(screen.getByRole("region", { name: /^selected market$/i })).getByText("Norway vs England")).toBeInTheDocument();
+    expect(baseProps.onSelectMatch).not.toHaveBeenCalled();
   });
 });

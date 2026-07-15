@@ -5,10 +5,16 @@ import { LiveMarketToolbar, type LiveMarketToolbarProps } from "./LiveMarketTool
 const baseToolbarProps: LiveMarketToolbarProps = {
   hasChartData: true,
   isReplayStreamMode: false,
-  onToggleReplayStreamMode: vi.fn(),
+  replayStatus: "live",
+  replaySpeed: 1,
+  replayProgressLabel: "Live feed",
+  onPlayReplay: vi.fn(),
+  onPauseReplay: vi.fn(),
+  onRestartReplay: vi.fn(),
+  onExitReplay: vi.fn(),
+  onChangeReplaySpeed: vi.fn(),
   isOddsStreamLive: false,
   oddsStreamLastUpdate: undefined,
-  replayStreamProgress: undefined,
   hasDroppedUpdate: false,
 };
 
@@ -27,11 +33,61 @@ describe("LiveMarketToolbar", () => {
   });
 
   it("exposes replay and dropped-update actions without raw payloads", () => {
-    const onToggle = vi.fn();
-    render(<LiveMarketToolbar {...baseToolbarProps} hasDroppedUpdate onToggleReplayStreamMode={onToggle} />);
+    const onPlayReplay = vi.fn();
+    render(<LiveMarketToolbar {...baseToolbarProps} hasDroppedUpdate onPlayReplay={onPlayReplay} />);
 
     expect(screen.getByText(/one update was skipped/i)).toHaveAttribute("role", "status");
-    fireEvent.click(screen.getByRole("button", { name: /start demo replay/i }));
-    expect(onToggle).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: /^play replay$/i }));
+    expect(onPlayReplay).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["playing", "Pause replay", "onPauseReplay"],
+    ["paused", "Resume replay", "onPlayReplay"],
+  ] as const)("offers the one primary action for %s playback", (replayStatus, action, callback) => {
+    const callbacks = {
+      onPlayReplay: vi.fn(),
+      onPauseReplay: vi.fn(),
+    };
+    render(<LiveMarketToolbar {...baseToolbarProps} {...callbacks} isReplayStreamMode replayStatus={replayStatus} />);
+
+    fireEvent.click(screen.getByRole("button", { name: action }));
+    expect(callbacks[callback]).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: replayStatus === "playing" ? /resume replay/i : /pause replay/i })).not.toBeInTheDocument();
+  });
+
+  it("offers restart and live-feed escape while replay is active", () => {
+    const onRestartReplay = vi.fn();
+    const onExitReplay = vi.fn();
+    render(
+      <LiveMarketToolbar
+        {...baseToolbarProps}
+        isReplayStreamMode
+        replayStatus="complete"
+        replayProgressLabel="Replay complete · 10 real snapshots"
+        onRestartReplay={onRestartReplay}
+        onExitReplay={onExitReplay}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /restart replay/i }));
+    fireEvent.click(screen.getByRole("button", { name: /live feed/i }));
+    expect(onRestartReplay).toHaveBeenCalledOnce();
+    expect(onExitReplay).toHaveBeenCalledOnce();
+    expect(screen.getByRole("status", { name: /replay state/i })).toHaveTextContent("Replay complete · 10 real snapshots");
+    expect(screen.getByRole("status", { name: /replay state/i })).toHaveAttribute("aria-live", "polite");
+  });
+
+  it.each([0.5, 1, 2] as const)("changes replay speed to %sx", (speed) => {
+    const onChangeReplaySpeed = vi.fn();
+    render(<LiveMarketToolbar {...baseToolbarProps} isReplayStreamMode replayStatus="paused" onChangeReplaySpeed={onChangeReplaySpeed} />);
+
+    fireEvent.change(screen.getByRole("combobox", { name: /replay speed/i }), { target: { value: String(speed) } });
+    expect(onChangeReplaySpeed).toHaveBeenCalledWith(speed);
+  });
+
+  it("labels the latest timestamp as a feed update", () => {
+    render(<LiveMarketToolbar {...baseToolbarProps} oddsStreamLastUpdate="11:12 PM" />);
+    expect(screen.getByText(/Last feed update 11:12 PM/i)).toBeInTheDocument();
   });
 });

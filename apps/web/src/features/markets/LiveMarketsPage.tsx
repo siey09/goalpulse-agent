@@ -5,6 +5,7 @@ import { MarketFixtureRail } from "./MarketFixtureRail";
 import { SelectedMarketWorkspace } from "./SelectedMarketWorkspace";
 import type { Match, Health } from "../../types";
 import type { MarketTimelinePoint } from "./chartTimeline";
+import type { ReplayInterval, ReplaySpeed, ReplayStatus } from "./replayState";
 
 export type LiveMarketsChartPoint = MarketTimelinePoint;
 
@@ -59,10 +60,20 @@ export interface LiveMarketsPageProps {
   chartSignalMarkers: LiveMarketsChartMarker[];
   chartReadout: LiveMarketsChartReadout;
   isReplayStreamMode: boolean;
-  onToggleReplayStreamMode: () => void;
+  replayStatus: ReplayStatus;
+  replaySpeed: ReplaySpeed;
+  replayCursor: number;
+  replayTotal: number;
+  replayOriginalTimestamp?: string;
+  replayIntervalMs: ReplayInterval;
+  replayProgressLabel: string;
+  onPlayReplay: () => void;
+  onPauseReplay: () => void;
+  onRestartReplay: () => void;
+  onExitReplay: () => void;
+  onChangeReplaySpeed: (speed: ReplaySpeed) => void;
   isOddsStreamLive: boolean;
   oddsStreamLastUpdate?: string;
-  replayStreamProgress?: string;
   streamProgressPercent: number;
   health: Health | null;
   correctSignals: number;
@@ -88,10 +99,16 @@ export function LiveMarketsPage(props: LiveMarketsPageProps) {
       <LiveMarketToolbar
         hasChartData={props.chartData.length > 0}
         isReplayStreamMode={props.isReplayStreamMode}
-        onToggleReplayStreamMode={props.onToggleReplayStreamMode}
+        replayStatus={props.replayStatus}
+        replaySpeed={props.replaySpeed}
+        replayProgressLabel={props.replayProgressLabel}
+        onPlayReplay={props.onPlayReplay}
+        onPauseReplay={props.onPauseReplay}
+        onRestartReplay={props.onRestartReplay}
+        onExitReplay={props.onExitReplay}
+        onChangeReplaySpeed={props.onChangeReplaySpeed}
         isOddsStreamLive={props.isOddsStreamLive}
         oddsStreamLastUpdate={props.oddsStreamLastUpdate}
-        replayStreamProgress={props.replayStreamProgress}
         hasDroppedUpdate={props.hasDroppedUpdate}
       />
 
@@ -122,7 +139,11 @@ export function LiveMarketsPage(props: LiveMarketsPageProps) {
             isReplayStreamMode={props.isReplayStreamMode}
             isOddsStreamLive={props.isOddsStreamLive}
             streamProgressPercent={props.streamProgressPercent}
-            replayStreamProgress={props.replayStreamProgress}
+            replayCursor={props.replayCursor}
+            replayTotal={props.replayTotal}
+            replayStatus={props.replayStatus}
+            replayOriginalTimestamp={props.replayOriginalTimestamp}
+            replayIntervalMs={props.replayIntervalMs}
           />
           <MarketEvidenceStrip
             chartDataCount={props.chartData.length}

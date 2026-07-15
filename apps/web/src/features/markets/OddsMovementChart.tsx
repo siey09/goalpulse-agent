@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { formatOdds, formatOddsChange, severityMarkerStyle } from "../../lib/formatters";
 import type { Match } from "../../types";
 import type { LiveMarketsChartMarker, LiveMarketsChartPoint, LiveMarketsChartReadout } from "./LiveMarketsPage";
+import { replayProgressLabel, type ReplayStatus } from "./replayState";
 
 export interface OddsMovementChartProps {
   selectedMatch?: Match;
@@ -14,7 +15,11 @@ export interface OddsMovementChartProps {
   isReplayStreamMode: boolean;
   isOddsStreamLive: boolean;
   streamProgressPercent: number;
-  replayStreamProgress?: string;
+  replayCursor?: number;
+  replayTotal?: number;
+  replayStatus?: ReplayStatus;
+  replayOriginalTimestamp?: string;
+  replayIntervalMs?: number;
 }
 
 const historicalTimeFormatter = new Intl.DateTimeFormat(undefined, {
@@ -40,10 +45,9 @@ function formatHistoricalCapture(point?: LiveMarketsChartPoint): string {
     : historicalDateTimeFormatter.format(new Date(timestamp));
 }
 
-function replayPosition(replayStreamProgress: string | undefined, fallbackCount: number) {
-  const match = replayStreamProgress?.match(/(\d+)\s*\/\s*(\d+)/);
-  const current = match ? Number(match[1]) : fallbackCount;
-  const total = match ? Number(match[2]) : fallbackCount;
+function replayPosition(cursor: number | undefined, replayTotal: number | undefined, fallbackCount: number) {
+  const current = cursor ?? fallbackCount;
+  const total = replayTotal ?? fallbackCount;
   return {
     current: Math.max(0, Math.min(current, total)),
     total: Math.max(total, fallbackCount),
@@ -58,7 +62,11 @@ export function OddsMovementChart({
   isReplayStreamMode,
   isOddsStreamLive,
   streamProgressPercent,
-  replayStreamProgress,
+  replayCursor,
+  replayTotal,
+  replayStatus = "live",
+  replayOriginalTimestamp,
+  replayIntervalMs = 1000,
 }: OddsMovementChartProps) {
   const hasHomeSeries = chartData.some((point) => point.home != null);
   const hasDrawSeries = chartData.some((point) => point.draw != null);
@@ -74,12 +82,12 @@ export function OddsMovementChart({
         ? "Finished window"
         : "Live window";
   const progressLabel = isReplayStreamMode
-    ? replayStreamProgress || "Replay ready"
+    ? replayProgressLabel({ status: replayStatus, cursor: replayCursor ?? 0, total: replayTotal ?? 0, originalTimestamp: replayOriginalTimestamp, intervalMs: replayIntervalMs })
     : isOddsStreamLive
       ? `${chartData.length} snapshots in view`
       : "Waiting for the next snapshot";
   const latestPoint = chartData[chartData.length - 1];
-  const position = replayPosition(replayStreamProgress, chartData.length);
+  const position = replayPosition(replayCursor, replayTotal, chartData.length);
   const railSegmentCount = Math.max(1, Math.min(position.total, 20));
   const completedRailSegments = Math.round((position.current / Math.max(position.total, 1)) * railSegmentCount);
   const formatHistoricalAxisTime = (value: number) => {

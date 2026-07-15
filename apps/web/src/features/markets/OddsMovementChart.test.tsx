@@ -16,7 +16,9 @@ vi.mock("recharts", () => ({
   AreaChart: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   CartesianGrid: () => null,
   ReferenceDot: () => null,
-  ReferenceLine: () => null,
+  ReferenceLine: ({ x, label, className }: { x?: number; label?: { value?: string }; className?: string }) => (
+    <div data-testid="capture-cursor" data-x={x} data-label={label?.value} className={className} />
+  ),
   ResponsiveContainer: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   Tooltip: () => null,
   XAxis: ({ dataKey, type, scale, tickFormatter }: { dataKey?: string; type?: string; scale?: string; tickFormatter?: (value: number) => string }) => (
@@ -143,6 +145,18 @@ describe("OddsMovementChart", () => {
       expect(area).toHaveAttribute("data-type", "stepAfter");
       expect(area).toHaveAttribute("data-animation-active", "false");
     }
+
+    expect(screen.getByTestId("capture-cursor")).toHaveAttribute("data-label", "Current");
+    expect(screen.getByTestId("capture-cursor")).toHaveClass("market-capture-cursor", "motion-reduce:transition-none");
+  });
+
+  it("moves the capture cursor directly to the latest structured point", () => {
+    render(<OddsMovementChart {...baseProps} chartData={[
+      chartPoint({ id: "first", timelineX: 100, home: 1.9 }),
+      chartPoint({ id: "second", timelineX: 250, home: 1.8 }),
+    ]} />);
+
+    expect(screen.getByTestId("capture-cursor")).toHaveAttribute("data-x", "250");
   });
 
   it("announces replay position against the historical snapshot count", () => {
@@ -155,7 +169,11 @@ describe("OddsMovementChart", () => {
         ]}
         isReplayStreamMode
         streamProgressPercent={67}
-        replayStreamProgress="Demo tick 2/3"
+        replayCursor={2}
+        replayTotal={3}
+        replayStatus="playing"
+        replayOriginalTimestamp="2023-11-14T22:14:20Z"
+        replayIntervalMs={1000}
       />
     );
 
@@ -185,7 +203,10 @@ describe("OddsMovementChart", () => {
         {...baseProps}
         chartData={[chartPoint({ hasRealTimestamp: true, rawTimestamp: "2023-11-14T22:13:20Z" })]}
         isReplayStreamMode
-        replayStreamProgress="Demo tick 1/3"
+        replayCursor={1}
+        replayTotal={3}
+        replayStatus="playing"
+        replayIntervalMs={1000}
         streamProgressPercent={33}
       />
     );
