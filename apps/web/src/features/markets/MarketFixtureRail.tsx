@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { StatusBadge, type StatusTone } from "../../components/ui/StatusBadge";
@@ -8,6 +9,7 @@ export type MatchStatusFilter = "all" | "live" | "scheduled" | "finished";
 
 export interface MarketFixtureRailProps {
   matches: Match[];
+  selectedMatch?: Match;
   matchStatusFilter?: string;
   onChangeMatchStatusFilter: (status: MatchStatusFilter) => void;
   matchStatusCounts: Record<MatchStatusFilter, number>;
@@ -41,13 +43,33 @@ function emptyFilterLabel(filter: MatchStatusFilter) {
 
 export function MarketFixtureRail({
   matches,
+  selectedMatch,
   matchStatusFilter,
   onChangeMatchStatusFilter,
   matchStatusCounts,
   selectedMatchId,
   onSelectMatch,
 }: MarketFixtureRailProps) {
-  const activeFilter = (matchStatusFilter as MatchStatusFilter | undefined) ?? "all";
+  const requestedFilter = matchStatusFilter as MatchStatusFilter | undefined;
+  const activeFilter = FILTER_OPTIONS.some((option) => option.value === requestedFilter) ? requestedFilter! : "all";
+  const [isDesktopRail, setIsDesktopRail] = useState(() =>
+    typeof window === "undefined" || typeof window.matchMedia !== "function"
+      ? true
+      : window.matchMedia("(min-width: 1280px)").matches
+  );
+  const [isCompactOpen, setIsCompactOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(min-width: 1280px)");
+    const onChange = (event: MediaQueryListEvent) => {
+      setIsDesktopRail(event.matches);
+      if (event.matches) setIsCompactOpen(false);
+    };
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+
   const displayMatches =
     activeFilter === "all"
       ? [...matches].sort((a, b) => (STATUS_SCAN_ORDER[a.status ?? ""] ?? 3) - (STATUS_SCAN_ORDER[b.status ?? ""] ?? 3))
@@ -60,6 +82,26 @@ export function MarketFixtureRail({
       aria-label="Fixture rail"
       className="min-w-0 overflow-hidden rounded-xl border border-border bg-surface-1"
     >
+      {!isDesktopRail && (
+        <button
+          type="button"
+          aria-expanded={isCompactOpen}
+          aria-controls="fixture-list-panel"
+          aria-label={`Change fixture${selectedMatch ? `, ${selectedMatch.homeTeam} vs ${selectedMatch.awayTeam}` : ""}`}
+          onClick={() => setIsCompactOpen((current) => !current)}
+          className="flex min-h-14 w-full items-center justify-between gap-3 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60"
+        >
+          <span className="min-w-0">
+            <span className="block font-mono text-[10px] uppercase tracking-[0.16em] text-stone-500">Selected fixture</span>
+            <span className="block truncate text-sm font-semibold text-white">
+              {selectedMatch ? `${selectedMatch.homeTeam} vs ${selectedMatch.awayTeam}` : "Browse fixture list"}
+            </span>
+          </span>
+          <span className="shrink-0 text-xs font-semibold text-accent-100">{isCompactOpen ? "Close list" : "Change fixture"}</span>
+        </button>
+      )}
+
+      {(isDesktopRail || isCompactOpen) && <div id="fixture-list-panel">
       <div className="border-b border-border p-3">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -112,7 +154,7 @@ export function MarketFixtureRail({
           />
         </div>
       ) : (
-        <div className="max-h-[30rem] overflow-y-auto overscroll-contain p-2 xl:max-h-[42rem]">
+        <div className="max-h-[18rem] overflow-y-auto overscroll-contain p-2 md:max-h-[22rem] xl:max-h-[42rem]">
           {displayMatches.map((match) => {
             const isSelected = selectedMatchId === match.id;
             return (
@@ -121,7 +163,10 @@ export function MarketFixtureRail({
                 type="button"
                 aria-label={`Inspect market for ${match.homeTeam ?? "home"} vs ${match.awayTeam ?? "away"}`}
                 aria-pressed={isSelected}
-                onClick={() => onSelectMatch(match.id)}
+                onClick={() => {
+                  onSelectMatch(match.id);
+                  if (!isDesktopRail) setIsCompactOpen(false);
+                }}
                 className={`group grid min-h-14 w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border/60 px-2 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60 ${
                   isSelected ? "bg-accent/10" : "hover:bg-white/5"
                 }`}
@@ -147,6 +192,7 @@ export function MarketFixtureRail({
           })}
         </div>
       )}
+      </div>}
     </section>
   );
 }

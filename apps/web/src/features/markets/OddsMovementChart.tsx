@@ -202,8 +202,8 @@ export function OddsMovementChart({
               </tr>
             </thead>
             <tbody>
-              {chartData.map((point) => (
-                <tr key={`${point.name}-${point.timelineLabel ?? "snapshot"}`}>
+              {chartData.map((point, index) => (
+                <tr key={`${point.name}-${point.timelineLabel ?? "snapshot"}-${index}`}>
                   <th>{point.timelineLabel ?? point.name}</th>
                   {hasHomeSeries && <td>{formatOdds(point.home)}</td>}
                   {hasDrawSeries && <td>{formatOdds(point.draw)}</td>}
@@ -242,6 +242,7 @@ export function OddsMovementChart({
         <div className="mt-3 grid gap-2 sm:grid-cols-2" aria-label="Signals on this chart">
           {chartSignalMarkers.map((marker) => {
             const markerStyle = severityMarkerStyle(marker.severity);
+            const severityLabel = marker.severity?.toUpperCase() ?? "UNRATED";
             return (
               <button
                 key={marker.id}
@@ -254,7 +255,7 @@ export function OddsMovementChart({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs font-semibold text-white">{marker.label}</span>
                   <span className="block truncate font-mono text-[10px] text-stone-500">
-                    {marker.target ?? "Tracked market"} · {formatOddsChange(marker.oddsChangePct)}
+                    {severityLabel} · {marker.target ?? "Tracked market"} · {formatOddsChange(marker.oddsChangePct)}
                   </span>
                 </span>
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-accent-100">Inspect signal</span>

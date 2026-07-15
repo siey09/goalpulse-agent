@@ -36,6 +36,7 @@ export function LiveMarketToolbar({
 
       <div className="flex flex-wrap items-center gap-2">
         <span
+          role="status"
           aria-label={`Feed state: ${freshness.label}`}
           className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 font-mono text-xs font-semibold ${freshness.toneClass}`}
         >

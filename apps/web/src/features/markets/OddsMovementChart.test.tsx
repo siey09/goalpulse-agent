@@ -74,6 +74,17 @@ describe("OddsMovementChart", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /inspect signal.*sharp move/i }));
     expect(onSelectSignalId).toHaveBeenCalledWith(marker.id);
+    expect(screen.getByRole("button", { name: /inspect signal.*sharp move/i })).toHaveTextContent("HIGH");
+  });
+
+  it("uses collision-safe keys for repeated snapshot labels", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const repeatedPoint = { name: "S1", home: 1.9, away: 4.1, timelineLabel: "Captured now" };
+
+    render(<OddsMovementChart {...baseProps} chartData={[repeatedPoint, repeatedPoint]} />);
+
+    expect(consoleError.mock.calls.flat().join(" ")).not.toMatch(/same key/i);
+    consoleError.mockRestore();
   });
 
   it("names the chart and explains snapshot semantics", () => {

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Match } from "../../types";
 import { MarketFixtureRail } from "./MarketFixtureRail";
 
@@ -10,6 +10,8 @@ const matches: Match[] = [
 ];
 
 describe("MarketFixtureRail", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it("orders live fixtures first in All and selects a fixture", () => {
     const onSelectMatch = vi.fn();
 
@@ -48,5 +50,44 @@ describe("MarketFixtureRail", () => {
     fireEvent.click(screen.getByRole("button", { name: /show all fixtures/i }));
     expect(onChange).toHaveBeenCalledWith("all");
     expect(within(screen.getByRole("region", { name: /fixture rail/i })).getByText("Live")).toBeInTheDocument();
+  });
+
+  it("collapses the fixture list behind a compact selector below desktop", () => {
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+
+    render(
+      <MarketFixtureRail
+        matches={matches}
+        selectedMatch={matches[1]}
+        matchStatusFilter="all"
+        onChangeMatchStatusFilter={vi.fn()}
+        matchStatusCounts={{ all: 3, live: 1, scheduled: 1, finished: 1 }}
+        selectedMatchId="live"
+        onSelectMatch={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: /inspect market for Norway vs England/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /change fixture/i }));
+    expect(screen.getByRole("button", { name: /inspect market for Norway vs England/i })).toBeInTheDocument();
+  });
+
+  it("falls back to All for an invalid persisted filter", () => {
+    render(
+      <MarketFixtureRail
+        matches={matches}
+        matchStatusFilter="unexpected"
+        onChangeMatchStatusFilter={vi.fn()}
+        matchStatusCounts={{ all: 3, live: 1, scheduled: 1, finished: 1 }}
+        selectedMatchId="live"
+        onSelectMatch={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: /^All/i })).toHaveAttribute("aria-pressed", "true");
   });
 });

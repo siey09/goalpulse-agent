@@ -133,7 +133,9 @@ export function SelectedMarketWorkspace({
         </div>
 
         <div aria-label="Current decimal odds" className="grid grid-cols-3 divide-x divide-border border-y border-border bg-black/15">
-          {priceCells.map((cell) => <PriceCell key={cell.key} {...cell} />)}
+          {priceCells.map((cell) => (
+            <PriceCell key={cell.key} label={cell.label} value={cell.value} tone={cell.tone} direction={cell.direction} />
+          ))}
         </div>
       </div>
 

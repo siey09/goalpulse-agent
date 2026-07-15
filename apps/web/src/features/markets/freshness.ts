@@ -18,8 +18,8 @@ export function getFreshnessState(
   isOddsStreamLive: boolean,
   oddsStreamLastUpdate?: string
 ): LiveMarketsFreshnessState {
-  if (!hasData) return "waiting";
   if (isReplayStreamMode) return "replay";
+  if (!hasData) return "waiting";
   if (isOddsStreamLive) return "live";
   return oddsStreamLastUpdate ? "stale" : "reconnecting";
 }

@@ -46,3 +46,10 @@ export const NAV_GROUPS: NavGroup[] = [
 ];
 
 export const DEFAULT_DESTINATION: DestinationId = "command-center";
+
+const PAGE_HEADING_DESTINATIONS = new Set<DestinationId>(["live-markets", "signals", "archive"]);
+
+/** Destinations with a page-specific h1 ask the shared status bar to render its title as plain text. */
+export function destinationOwnsPageHeading(destination: DestinationId) {
+  return PAGE_HEADING_DESTINATIONS.has(destination);
+}

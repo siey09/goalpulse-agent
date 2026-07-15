@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Match } from "../../types";
 import { SelectedMarketWorkspace, type SelectedMarketWorkspaceProps } from "./SelectedMarketWorkspace";
 
@@ -39,6 +39,15 @@ const baseProps: SelectedMarketWorkspaceProps = {
 };
 
 describe("SelectedMarketWorkspace", () => {
+  it("renders price cells without React key-spread warnings", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    render(<SelectedMarketWorkspace {...baseProps} />);
+
+    expect(consoleError.mock.calls.flat().join(" ")).not.toMatch(/props object containing a "key" prop/i);
+    consoleError.mockRestore();
+  });
+
   it("connects fixture identity, score, H/D/A prices, and verdict", () => {
     render(<SelectedMarketWorkspace {...baseProps} />);
 

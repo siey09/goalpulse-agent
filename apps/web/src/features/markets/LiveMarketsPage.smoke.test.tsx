@@ -63,6 +63,9 @@ describe("LiveMarketsPage", () => {
     expect(screen.getByRole("region", { name: /fixture rail/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /^selected market$/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /odds movement/i })).toBeInTheDocument();
+    expect(document.getElementById("guide-market-board")).not.toBeNull();
+    expect(document.getElementById("guide-selected-match")).not.toBeNull();
+    expect(document.getElementById("guide-odds-chart")).not.toBeNull();
   });
 
   it("renders the authoritative feed state once", () => {

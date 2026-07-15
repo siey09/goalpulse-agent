@@ -14,7 +14,8 @@ import { SignalCorrelationPanel } from "./components/SignalCorrelationPanel";
 import { AnalystChatWidget } from "./components/AnalystChatWidget";
 import { useScrollSpy } from "./hooks/useScrollSpy";
 import { AppShell } from "./app/AppShell";
-import { DEFAULT_DESTINATION, type DestinationId } from "./app/navigation";
+import { DEFAULT_DESTINATION, destinationOwnsPageHeading, type DestinationId } from "./app/navigation";
+import { chartDataKeyForSignalSide } from "./features/markets/chartSeries";
 import { GuidedTour } from "./app/GuidedTour";
 import { useProductTour } from "./app/useProductTour";
 // Lazy-loaded: only one destination is ever visible at a time in the
@@ -1144,8 +1145,7 @@ function App() {
     const relatedSignals = signals.filter((signal) => signal.matchId === selectedMatch.id);
 
     return relatedSignals.slice(0, 3).flatMap((signal, index) => {
-      const side = (signal.side ?? "").toLowerCase();
-      const dataKey = side === "away" ? "away" : "home";
+      const dataKey = chartDataKeyForSignalSide(signal.side);
 
       const nearestSnapshot = findNearestSnapshot(oddsHistory, signal.createdAt);
       const nearestPoint = nearestSnapshot
@@ -1464,7 +1464,7 @@ function App() {
         <AppShell
           active={previewDestination}
           onSelectDestination={setPreviewDestination}
-          titleAs={previewDestination === "signals" || previewDestination === "archive" ? "p" : "h1"}
+          titleAs={destinationOwnsPageHeading(previewDestination) ? "p" : "h1"}
           {...shellProps}
         >
           <Suspense

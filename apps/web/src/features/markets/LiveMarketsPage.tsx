@@ -104,6 +104,7 @@ export function LiveMarketsPage(props: LiveMarketsPageProps) {
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(18rem,0.38fr)_minmax(0,1fr)] xl:items-start">
         <MarketFixtureRail
           matches={props.matches}
+          selectedMatch={props.selectedMatch}
           matchStatusFilter={props.matchStatusFilter}
           onChangeMatchStatusFilter={props.onChangeMatchStatusFilter}
           matchStatusCounts={props.matchStatusCounts}
