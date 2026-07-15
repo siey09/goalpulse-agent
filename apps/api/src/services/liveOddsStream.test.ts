@@ -72,6 +72,38 @@ describe("live odds stream history recovery", () => {
     expect(setIntervalMock).toHaveBeenCalledTimes(1);
   });
 
+  it("lets newly arriving hot snapshots supersede recovered history", async () => {
+    const { request, response } = makeRequestAndResponse();
+    let tick!: () => void;
+    const handler = createLiveOddsStreamHandler({
+      ensureMatchOddsHistory: vi.fn().mockResolvedValue({
+        history: [snapshot],
+        source: "archive",
+      }),
+      setInterval: vi.fn((callback) => {
+        tick = callback;
+        return 12 as never;
+      }),
+      clearInterval: vi.fn(),
+    });
+
+    await handler(request as never, response as never);
+    store.oddsSnapshots = [
+      {
+        ...snapshot,
+        id: "live-snapshot",
+        homeOdds: 1.8,
+        createdAt: "2026-07-11T22:05:00.000Z",
+      },
+    ];
+    tick();
+
+    const latestWrite = response.write.mock.calls.at(-1)?.[0] as string;
+    expect(response.write).toHaveBeenCalledTimes(2);
+    expect(latestWrite).toContain('"id":"live-snapshot"');
+    expect(latestWrite).toContain('"id":"snapshot-1"');
+  });
+
   it("does not start a write interval when the client disconnects during recovery", async () => {
     const { request, response } = makeRequestAndResponse();
     let resolveRecovery!: (value: { history: OddsSnapshot[]; source: "archive" }) => void;

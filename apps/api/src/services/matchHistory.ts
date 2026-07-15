@@ -26,6 +26,28 @@ const defaultDependencies: MatchHistoryDependencies = {
 };
 
 const inFlightRecoveries = new Map<string, Promise<MatchHistoryResult>>();
+const recoveredHistoryCache = new Map<string, MatchHistoryResult>();
+const MAX_RECOVERED_MATCHES = 200;
+
+function cacheRecoveredHistory(matchId: string, result: MatchHistoryResult): void {
+  const cappedResult = { ...result, history: result.history.slice(-100) };
+  recoveredHistoryCache.delete(matchId);
+  recoveredHistoryCache.set(matchId, cappedResult);
+
+  while (recoveredHistoryCache.size > MAX_RECOVERED_MATCHES) {
+    const oldestMatchId = recoveredHistoryCache.keys().next().value as string | undefined;
+    if (!oldestMatchId) break;
+    recoveredHistoryCache.delete(oldestMatchId);
+  }
+}
+
+function cachedRecoveredHistory(matchId: string): MatchHistoryResult | undefined {
+  const cached = recoveredHistoryCache.get(matchId);
+  if (!cached) return undefined;
+  recoveredHistoryCache.delete(matchId);
+  recoveredHistoryCache.set(matchId, cached);
+  return cached;
+}
 
 function chronological(snapshots: OddsSnapshot[]): OddsSnapshot[] {
   return [...snapshots].sort(
@@ -58,7 +80,12 @@ async function recoverHistory(
   }
 
   if (archived.length > 0) {
-    return { history: chronological(archived), source: "archive" };
+    const result: MatchHistoryResult = {
+      history: chronological(archived),
+      source: "archive",
+    };
+    cacheRecoveredHistory(matchId, result);
+    return result;
   }
 
   const match = findMatch(matchId);
@@ -83,7 +110,12 @@ async function recoverHistory(
     console.error(`[history] Failed to archive recovered history for fixture ${matchId}:`, error);
   }
 
-  return { history: chronological(recovered), source: "txline_recovery" };
+  const result: MatchHistoryResult = {
+    history: chronological(recovered),
+    source: "txline_recovery",
+  };
+  cacheRecoveredHistory(matchId, result);
+  return result;
 }
 
 export async function ensureMatchOddsHistory(
@@ -93,6 +125,11 @@ export async function ensureMatchOddsHistory(
   const hot = hotHistory(matchId);
   if (hot.length > 0) {
     return { history: hot, source: "hot" };
+  }
+
+  const cached = cachedRecoveredHistory(matchId);
+  if (cached) {
+    return cached;
   }
 
   const existingRecovery = inFlightRecoveries.get(matchId);
@@ -110,4 +147,9 @@ export async function ensureMatchOddsHistory(
       inFlightRecoveries.delete(matchId);
     }
   }
+}
+
+export function resetMatchHistoryCacheForTests(): void {
+  recoveredHistoryCache.clear();
+  inFlightRecoveries.clear();
 }

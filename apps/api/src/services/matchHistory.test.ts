@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { store } from "../store";
 import type { Match, OddsSnapshot } from "../types";
-import { ensureMatchOddsHistory, type MatchHistoryDependencies } from "./matchHistory";
+import {
+  ensureMatchOddsHistory,
+  resetMatchHistoryCacheForTests,
+  type MatchHistoryDependencies,
+} from "./matchHistory";
 
 function makeMatch(overrides: Partial<Match> = {}): Match {
   return {
@@ -47,6 +51,7 @@ function makeDependencies(overrides: Partial<MatchHistoryDependencies> = {}): Ma
 
 describe("ensureMatchOddsHistory", () => {
   beforeEach(() => {
+    resetMatchHistoryCacheForTests();
     store.matches = [];
     store.recentFinishedMatches = [makeMatch()];
     store.oddsSnapshots = [];
@@ -75,6 +80,24 @@ describe("ensureMatchOddsHistory", () => {
     expect(result).toEqual({ history: [archived], source: "archive" });
     expect(store.oddsSnapshots).toEqual([]);
     expect(dependencies.fetchTxLineOddsHistoryForMatch).not.toHaveBeenCalled();
+  });
+
+  it("reuses bounded recovered history across later reconnects", async () => {
+    const archived = makeSnapshot({ id: "cached-archive" });
+    const getArchivedOddsSnapshots = vi.fn().mockResolvedValue([archived]);
+    const dependencies = makeDependencies({ getArchivedOddsSnapshots });
+
+    await expect(ensureMatchOddsHistory("match-1", dependencies)).resolves.toEqual({
+      history: [archived],
+      source: "archive",
+    });
+    await expect(ensureMatchOddsHistory("match-1", dependencies)).resolves.toEqual({
+      history: [archived],
+      source: "archive",
+    });
+
+    expect(getArchivedOddsSnapshots).toHaveBeenCalledTimes(1);
+    expect(store.oddsSnapshots).toEqual([]);
   });
 
   it("recovers and archives real TxLINE history for a finished match", async () => {

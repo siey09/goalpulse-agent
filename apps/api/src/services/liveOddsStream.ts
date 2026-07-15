@@ -69,13 +69,19 @@ export function createLiveOddsStreamHandler(
         return;
       }
 
-      const snapshots = recoveredHistory ??
-        (matchId
-          ? store.oddsSnapshots.filter((snapshot) => snapshot.matchId === matchId)
-          : store.oddsSnapshots
+      const hotSnapshots = (matchId
+        ? store.oddsSnapshots.filter((snapshot) => snapshot.matchId === matchId)
+        : store.oddsSnapshots
+      ).slice(0, 100);
+      const snapshots = [...new Map(
+        [...(recoveredHistory ?? []), ...hotSnapshots].map((snapshot) => [snapshot.id, snapshot])
+      ).values()]
+        .sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         )
-          .slice(0, 100)
-          .reverse();
+        .slice(-100);
+      const effectiveHistorySource: MatchHistorySource =
+        hotSnapshots.length > 0 ? "hot" : historySource;
       const latestSnapshot = snapshots[snapshots.length - 1];
       const match = matchId
         ? store.matches.find((item) => item.id === matchId) ??
@@ -105,7 +111,7 @@ export function createLiveOddsStreamHandler(
           match,
           latestSnapshot,
           history: snapshots,
-          historySource,
+          historySource: effectiveHistorySource,
           signals: relatedSignals,
           stats: getStats(),
         })}\n\n`
