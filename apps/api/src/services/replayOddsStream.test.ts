@@ -145,6 +145,62 @@ describe("replay odds stream", () => {
     expect(response.end).toHaveBeenCalledTimes(1);
   });
 
+  it("filters simulated snapshots out of mixed recovered history", async () => {
+    const response = makeResponse();
+    const schedule = capturedSchedule();
+    const simulated: OddsSnapshot = {
+      ...newer,
+      id: "simulated-snapshot",
+      source: "simulated_txline",
+    };
+    const latestReal: OddsSnapshot = {
+      ...newer,
+      id: "snapshot-3",
+      createdAt: "2026-07-11T22:10:00.000Z",
+    };
+    const handler = createReplayOddsStreamHandler({
+      ensureMatchOddsHistory: vi.fn().mockResolvedValue({
+        history: [older, simulated, latestReal],
+        source: "archive",
+      }),
+      setInterval: schedule.setInterval,
+      clearInterval: schedule.clear,
+    });
+
+    await handler(request({ matchId: "m1" }) as never, response as never);
+    schedule.tick();
+
+    expect(payloads(response)).toMatchObject([
+      { replayCursor: 1, replayTotal: 2, replayComplete: false },
+      { replayCursor: 2, replayTotal: 2, replayComplete: true },
+    ]);
+    expect(payloads(response)[1].history.map((item: OddsSnapshot) => item.id)).toEqual([
+      older.id,
+      latestReal.id,
+    ]);
+  });
+
+  it("completes once without a timer when history is simulated-only", async () => {
+    const response = makeResponse();
+    const schedule = capturedSchedule();
+    const handler = createReplayOddsStreamHandler({
+      ensureMatchOddsHistory: vi.fn().mockResolvedValue({
+        history: [{ ...older, source: "simulated_txline" }],
+        source: "archive",
+      }),
+      setInterval: schedule.setInterval,
+      clearInterval: schedule.clear,
+    });
+
+    await handler(request({ matchId: "m1" }) as never, response as never);
+
+    expect(payloads(response)).toMatchObject([
+      { history: [], replayCursor: 0, replayTotal: 0, replayComplete: true },
+    ]);
+    expect(schedule.setInterval).not.toHaveBeenCalled();
+    expect(response.end).toHaveBeenCalledTimes(1);
+  });
+
   it("clamps replay parameters to safe integer bounds", () => {
     expect(parseReplayStreamParams({ startCursor: "-9", intervalMs: "100" })).toEqual({
       startCursor: 0,
@@ -154,6 +210,11 @@ describe("replay odds stream", () => {
       startCursor: 2,
       intervalMs: 2000,
     });
+  });
+
+  it("uses the default interval when intervalMs is empty or whitespace", () => {
+    expect(parseReplayStreamParams({ intervalMs: "" }).intervalMs).toBe(1000);
+    expect(parseReplayStreamParams({ intervalMs: "   " }).intervalMs).toBe(1000);
   });
 
   it("emits one completed event when recovered history is empty", async () => {

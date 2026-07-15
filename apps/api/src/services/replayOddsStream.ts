@@ -19,6 +19,9 @@ const defaultDependencies: ReplayOddsStreamDependencies = {
 
 function integerParam(value: unknown, fallback: number): number {
   const scalar = Array.isArray(value) ? value[0] : value;
+  if (scalar == null || (typeof scalar === "string" && scalar.trim() === "")) {
+    return fallback;
+  }
   const parsed = Number(scalar);
   return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
 }
@@ -80,7 +83,7 @@ export function createReplayOddsStreamHandler(
 
     if (closed) return;
 
-    const history = resolved.history;
+    const history = resolved.history.filter((snapshot) => snapshot.source === "txline");
     const match = matchId
       ? store.matches.find((item) => item.id === matchId) ??
         store.recentFinishedMatches.find((item) => item.id === matchId)
