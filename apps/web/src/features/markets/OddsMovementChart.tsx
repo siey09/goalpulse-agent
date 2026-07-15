@@ -339,8 +339,8 @@ export function OddsMovementChart({
       )}
 
       <div className="mt-3 rounded-lg border border-white/8 bg-black/15 px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/8" aria-hidden="true">
+        <div className="flex items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+          <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/8 max-sm:w-full max-sm:flex-none" aria-hidden="true">
             <div
               className="h-full rounded-full bg-gradient-to-r from-accent via-proof to-positive motion-safe:transition-[width,opacity,transform] motion-safe:duration-500 motion-safe:ease-out motion-reduce:transition-none"
               style={{ width: isReplayStreamMode ? `${streamProgressPercent}%` : isOddsStreamLive ? "100%" : "8%" }}
@@ -354,7 +354,7 @@ export function OddsMovementChart({
               ))}
             </div>
           </div>
-          <span className="shrink-0 font-mono text-[10px] text-stone-500">{progressLabel}</span>
+          <span className="font-mono text-[10px] text-stone-500 max-sm:text-right">{progressLabel}</span>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-2 font-mono text-[9px] text-stone-500">
           <span><span className="block uppercase tracking-wide text-stone-600">Start</span>{formatHistoricalCapture(chartData[0])}</span>

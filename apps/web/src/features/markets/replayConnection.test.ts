@@ -23,8 +23,8 @@ describe("controlled replay reconnects", () => {
       },
     };
 
-    expect(scheduleReplayReconnect(options)).toBe(true);
-    expect(scheduleReplayReconnect(options)).toBe(false);
+    expect(scheduleReplayReconnect(options)).toBe("scheduled");
+    expect(scheduleReplayReconnect(options)).toBe("pending");
     expect(timers).toHaveLength(1);
 
     cursor = 4;
@@ -33,12 +33,31 @@ describe("controlled replay reconnects", () => {
       "https://api.test/api/live/replay-stream?matchId=match+1&startCursor=4&intervalMs=500",
     ]);
 
-    expect(scheduleReplayReconnect(options)).toBe(true);
+    expect(scheduleReplayReconnect(options)).toBe("scheduled");
     timers[1]();
-    expect(scheduleReplayReconnect(options)).toBe(true);
+    expect(scheduleReplayReconnect(options)).toBe("scheduled");
     timers[2]();
-    expect(scheduleReplayReconnect(options)).toBe(false);
+    expect(scheduleReplayReconnect(options)).toBe("exhausted");
     expect(retryUrls).toHaveLength(3);
+  });
+
+  it("reports a duplicate error as pending rather than retry exhaustion", () => {
+    const state = createReplayRetryState();
+    const timers: Array<() => void> = [];
+    const options = {
+      state,
+      getCursor: () => 2,
+      setTimer: (callback: () => void) => {
+        timers.push(callback);
+        return timers.length;
+      },
+      onReconnect: vi.fn(),
+    };
+
+    expect(scheduleReplayReconnect(options)).toBe("scheduled");
+    expect(scheduleReplayReconnect(options)).toBe("pending");
+    expect(state.attempt).toBe(1);
+    expect(timers).toHaveLength(1);
   });
 
   it("backs off each controlled retry", () => {

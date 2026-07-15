@@ -995,7 +995,7 @@ function App() {
             setReplaySession((current) => current + 1);
           },
         });
-        if (!retryScheduled) {
+        if (retryScheduled === "exhausted") {
           setReplayConnectionFailed(true);
           setReplayStatus("paused");
         }
@@ -1207,7 +1207,11 @@ function App() {
 
     const mustKeepIds = new Set<string>();
     for (const signal of relatedSignals) {
-      const nearest = findNearestMarketSnapshot(oddsHistory, signal.createdAt);
+      const nearest = findNearestMarketSnapshot(
+        oddsHistory,
+        signal.createdAt,
+        signal.evidence?.currentSnapshotId
+      );
       if (nearest?.id) mustKeepIds.add(nearest.id);
     }
 
@@ -1221,7 +1225,11 @@ function App() {
     return relatedSignals.slice(0, 3).flatMap((signal, index) => {
       const dataKey = chartDataKeyForSignalSide(signal.side);
 
-      const nearestSnapshot = findNearestMarketSnapshot(oddsHistory, signal.createdAt);
+      const nearestSnapshot = findNearestMarketSnapshot(
+        oddsHistory,
+        signal.createdAt,
+        signal.evidence?.currentSnapshotId
+      );
       const nearestPoint = nearestSnapshot
         ? chartData.find((point) =>
             nearestSnapshot.id

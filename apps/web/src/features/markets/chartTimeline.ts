@@ -47,11 +47,16 @@ function indexSnapshot(snapshot: OddsSnapshot, originalIndex: number): IndexedSn
   };
 }
 
-/** Finds the capture closest to a target using the same timestamp fallback as the chart model. */
+/** Resolves an exact signal source capture first, then uses timestamp proximity for legacy signals. */
 export function findNearestMarketSnapshot(
   snapshots: OddsSnapshot[],
-  targetTimestamp?: string
+  targetTimestamp?: string,
+  sourceSnapshotId?: string
 ): OddsSnapshot | undefined {
+  if (sourceSnapshotId) {
+    return snapshots.find((snapshot) => snapshot.id === sourceSnapshotId);
+  }
+
   if (!targetTimestamp) return undefined;
 
   const targetMs = Date.parse(targetTimestamp);

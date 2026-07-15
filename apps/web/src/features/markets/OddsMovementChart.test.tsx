@@ -182,6 +182,16 @@ describe("OddsMovementChart", () => {
     );
   });
 
+  it("stacks the progress label below the rail on narrow viewports", () => {
+    render(<OddsMovementChart {...baseProps} />);
+
+    const progressLabel = screen.getByText(/snapshots in view/i);
+    expect(progressLabel.parentElement).toHaveClass("max-sm:flex-col", "max-sm:items-stretch");
+    expect(progressLabel.previousElementSibling).toHaveClass("max-sm:w-full", "max-sm:flex-none");
+    expect(progressLabel).not.toHaveClass("shrink-0");
+    expect(progressLabel).toHaveClass("max-sm:text-right");
+  });
+
   it("does not present a synthetic timeline coordinate as a real capture time", () => {
     render(
       <OddsMovementChart

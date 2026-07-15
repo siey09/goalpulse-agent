@@ -161,7 +161,14 @@ describe("App controlled replay lifecycle", () => {
     emitReplayFrame(FakeEventSource.instances[1], 1);
 
     vi.useFakeTimers();
-    for (const delay of [250, 500, 1000]) {
+    act(() => {
+      FakeEventSource.instances.at(-1)!.emit("error");
+      FakeEventSource.instances.at(-1)!.emit("error");
+    });
+    expect(screen.getByRole("button", { name: /pause replay/i })).toBeEnabled();
+    await act(async () => vi.advanceTimersByTime(250));
+
+    for (const delay of [500, 1000]) {
       act(() => FakeEventSource.instances.at(-1)!.emit("error"));
       await act(async () => vi.advanceTimersByTime(delay));
     }

@@ -78,6 +78,33 @@ describe("buildMarketTimeline", () => {
     ]);
   });
 
+  it("resolves a signal to its exact source snapshot before timestamp proximity", () => {
+    const captures: OddsSnapshot[] = [
+      { id: "timestamp-nearest", createdAt: "2026-07-15T10:00:00.000Z", homeOdds: 2.1 },
+      { id: "signal-source", createdAt: "2026-07-15T10:05:00.000Z", homeOdds: 1.8 },
+    ];
+
+    const resolved = findNearestMarketSnapshot(
+      captures,
+      "2026-07-15T10:00:01.000Z",
+      "signal-source"
+    );
+    const markerPoint = buildMarketTimeline(captures).find((point) => point.id === resolved?.id);
+
+    expect(resolved?.id).toBe("signal-source");
+    expect(markerPoint?.timelineX).toBe(Date.parse("2026-07-15T10:05:00.000Z"));
+  });
+
+  it("does not use timestamp proximity when a declared source snapshot is absent", () => {
+    const captures: OddsSnapshot[] = [
+      { id: "timestamp-nearest", createdAt: "2026-07-15T10:00:00.000Z", homeOdds: 2.1 },
+    ];
+
+    expect(
+      findNearestMarketSnapshot(captures, "2026-07-15T10:00:01.000Z", "not-revealed-yet")
+    ).toBeUndefined();
+  });
+
   it("deduplicates snapshots by ID before applying the cap", () => {
     const points = buildMarketTimeline([
       snapshot("same", "2026-07-15T10:00:00.000Z", 2.1, 3.1, 4.1),

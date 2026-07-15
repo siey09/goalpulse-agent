@@ -5,6 +5,8 @@ export interface ReplayRetryState {
   timer?: number;
 }
 
+export type ReplayReconnectResult = "scheduled" | "pending" | "exhausted";
+
 export function createReplayRetryState(): ReplayRetryState {
   return { attempt: 0 };
 }
@@ -28,10 +30,9 @@ export function scheduleReplayReconnect(input: {
   getCursor: () => number;
   setTimer: (callback: () => void, delayMs: number) => number;
   onReconnect: (latestCursor: number) => void;
-}): boolean {
-  if (input.state.timer != null || input.state.attempt >= REPLAY_RETRY_DELAYS_MS.length) {
-    return false;
-  }
+}): ReplayReconnectResult {
+  if (input.state.timer != null) return "pending";
+  if (input.state.attempt >= REPLAY_RETRY_DELAYS_MS.length) return "exhausted";
 
   const delayMs = REPLAY_RETRY_DELAYS_MS[input.state.attempt];
   input.state.attempt += 1;
@@ -39,7 +40,7 @@ export function scheduleReplayReconnect(input: {
     input.state.timer = undefined;
     input.onReconnect(input.getCursor());
   }, delayMs);
-  return true;
+  return "scheduled";
 }
 
 export function cancelReplayReconnect(

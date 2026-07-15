@@ -51,8 +51,8 @@ Retry exhaustion does not reset `replayCursorRef`, `replayCursor`, history, or p
 | Check | Result |
 | --- | --- |
 | API tests | 28 files, 305 tests passed |
-| Web tests | 27 files, 139 tests passed |
-| Total tests | 55 files, 444 tests passed |
+| Web tests | 27 files, 143 tests passed |
+| Total tests | 55 files, 448 tests passed |
 | API build | `tsc`, exit 0 |
 | Web build | `tsc -b && vite build`, exit 0 |
 | Web lint | `eslint .`, exit 0 |
@@ -61,9 +61,24 @@ Retry exhaustion does not reset `replayCursorRef`, `replayCursor`, history, or p
 ## Limitations and concerns
 
 - The API package has no lint script, so API static verification is TypeScript build plus its 305-test suite. Web lint covers all changed browser code.
-- Vite reports that the main minified chunk exceeds 500 kB (760.51 kB, 212.85 kB gzip). Resolving the broader split is outside this replay correctness scope.
+- Vite reports that the main minified chunk exceeds 500 kB (760.65 kB, 212.91 kB gzip). Resolving the broader split is outside this replay correctness scope.
 - Signals lacking both `currentSnapshotId` and a parseable creation time are deliberately withheld until replay completion. That is the safe no-future-evidence behavior, but old archived records should ideally be backfilled with source snapshot IDs.
 
 ## Recommended next step
 
 Backfill `evidence.currentSnapshotId` for any legacy archived signals that lack it, then add a production telemetry counter for timestamp-fallback and completion-only reveals. That will make the conservative compatibility path measurable and eventually removable.
+
+## Final re-review follow-up
+
+The final re-review identified two Important findings and one Minor finding. All three were reproduced with failing tests and corrected:
+
+1. Marker retention and placement now resolve `signal.evidence.currentSnapshotId` to the exact `oddsHistory` capture before using timestamp proximity. Timestamp-nearest lookup remains only as a legacy fallback; a declared-but-absent source is not remapped. The regressions prove a signal timestamp nearest snapshot one still resolves to the declared snapshot-two source and uses snapshot two's timeline X, while an unrevealed declared source produces no marker.
+2. Reconnect scheduling now returns `scheduled`, `pending`, or `exhausted`. A duplicate queued error while a retry timer is pending leaves playback active; only `exhausted` transitions App to the paused failure state.
+3. The chart progress rail and label stack below `sm`, the rail retains full available width, and the label no longer uses `shrink-0` at 390 px.
+
+Follow-up verification:
+
+- Focused web regressions: 4 files, 27 tests passed.
+- Full API suite: 28 files, 305 tests passed.
+- Full web suite: 27 files, 143 tests passed.
+- API build, web build, web lint, and `git diff --check`: passed.
