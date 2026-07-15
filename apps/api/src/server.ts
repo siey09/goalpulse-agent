@@ -50,6 +50,7 @@ import { archiveMatch, getArchivedSignals } from "./services/archive";
 import { ensureMatchOddsHistory } from "./services/matchHistory";
 import { enqueueOddsSnapshotsForArchive } from "./services/oddsArchiveOutbox";
 import { createLiveOddsStreamHandler } from "./services/liveOddsStream";
+import { createReplayOddsStreamHandler } from "./services/replayOddsStream";
 import { config } from "./config";
 import { requireApiKey } from "./middleware/apiKeyAuth";
 import { generalApiLimiter, runOnceLimiter } from "./middleware/rateLimiters";
@@ -208,86 +209,7 @@ app.get("/api/recent-results", async (_req, res) => {
   });
 });
 
-app.get("/api/live/replay-stream", (req, res) => {
-  const matchId = String(req.query.matchId ?? "");
-
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache, no-transform");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders?.();
-
-  const allSnapshots = (matchId
-    ? store.oddsSnapshots.filter((snapshot) => snapshot.matchId === matchId)
-    : store.oddsSnapshots
-  )
-    .slice(0, 100)
-    .reverse();
-
-  const match = matchId
-    ? store.matches.find((item) => item.id === matchId) ??
-      store.recentFinishedMatches.find((item) => item.id === matchId)
-    : store.matches[0];
-
-  const relatedSignals = matchId
-    ? store.signals.filter((signal) => signal.matchId === matchId).slice(0, 10)
-    : store.signals.slice(0, 10);
-
-  if (allSnapshots.length === 0) {
-    res.write(
-      `event: odds-update\ndata: ${JSON.stringify({
-        matchId,
-        timestamp: new Date().toISOString(),
-        match,
-        latestSnapshot: null,
-        history: [],
-        signals: relatedSignals,
-        stats: getStats(),
-        streamMode: "replay_test",
-        replayComplete: true,
-      })}\n\n`
-    );
-    res.end();
-    return;
-  }
-
-  let cursor = 1;
-
-  const sendReplayTick = () => {
-    const replayHistory = allSnapshots.slice(0, cursor);
-    const latestSnapshot = replayHistory[replayHistory.length - 1];
-
-    res.write(
-      `event: odds-update\ndata: ${JSON.stringify({
-        matchId,
-        timestamp: new Date().toISOString(),
-        match,
-        latestSnapshot,
-        history: replayHistory,
-        signals: relatedSignals,
-        stats: getStats(),
-        streamMode: "replay_test",
-        replayCursor: cursor,
-        replayTotal: allSnapshots.length,
-        replayComplete: cursor >= allSnapshots.length,
-      })}\n\n`
-    );
-
-    cursor += 1;
-
-    if (cursor > allSnapshots.length) {
-      cursor = 1;
-    }
-  };
-
-  sendReplayTick();
-
-  const interval = setInterval(sendReplayTick, 1000);
-
-  req.on("close", () => {
-    clearInterval(interval);
-    res.end();
-  });
-});
+app.get("/api/live/replay-stream", createReplayOddsStreamHandler());
 app.get("/api/live/odds-stream", createLiveOddsStreamHandler());
 app.get("/api/signals", (_req, res) => {
   res.json({
