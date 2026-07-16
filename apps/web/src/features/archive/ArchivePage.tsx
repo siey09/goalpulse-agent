@@ -34,7 +34,9 @@ export function ArchivePage({ onSelectSignal }: ArchivePageProps = {}) {
         </div>
       </header>
 
-      <SignalArchivePanel onSelectSignal={onSelectSignal} />
+      <section id="guide-archive-ledger">
+        <SignalArchivePanel onSelectSignal={onSelectSignal} />
+      </section>
 
       <section aria-label="Historical performance" className="grid items-start gap-4 xl:grid-cols-2">
         <SignalPerformancePanel />

@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GUIDE_STEPS } from "./guideSteps";
 import { useProductTour } from "./useProductTour";
 
@@ -7,6 +7,10 @@ describe("useProductTour", () => {
   beforeEach(() => {
     window.localStorage.clear();
     document.body.innerHTML = '<div id="guide-command-center-overview">Overview</div>';
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("resumes saved progress and navigates to that step's destination", () => {
@@ -54,5 +58,31 @@ describe("useProductTour", () => {
     expect(result.current.isOpen).toBe(false);
     expect(result.current.stepIndex).toBe(0);
     expect(window.localStorage.getItem("goalpulse-product-tour-step")).toBeNull();
+  });
+
+  it("retries until a lazy-rendered step target becomes available", () => {
+    vi.useFakeTimers();
+    window.localStorage.setItem("goalpulse-product-tour-step", "1");
+    const onDestinationChange = vi.fn();
+    const { result } = renderHook(() =>
+      useProductTour({
+        destination: "command-center",
+        onDestinationChange,
+        replayBacktestReady: false,
+        isReplayRunning: false,
+        onRunReplayBacktest: vi.fn(),
+      })
+    );
+
+    act(() => result.current.start());
+    act(() => vi.advanceTimersByTime(250));
+
+    const target = document.createElement("div");
+    target.id = GUIDE_STEPS[1].targetId ?? "missing-target";
+    document.body.appendChild(target);
+
+    act(() => vi.advanceTimersByTime(200));
+
+    expect(target).toHaveAttribute("data-guide-active", "true");
   });
 });

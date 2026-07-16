@@ -9,7 +9,13 @@ describe("Live Markets guide steps", () => {
       expect.arrayContaining(["guide-market-board", "guide-selected-match", "guide-odds-chart"])
     );
     expect(marketSteps.map((step) => step.title)).toEqual(
-      expect.arrayContaining(["Choose a live market", "Inspect match state and price pressure"])
+      expect.arrayContaining(["Choose a market", "Read the selected match", "Trace real price movement"])
     );
+  });
+
+  it("keeps the judge tour concise and gives every step a stable target", () => {
+    expect(GUIDE_STEPS).toHaveLength(12);
+    expect(GUIDE_STEPS.every((step) => Boolean(step.targetId))).toBe(true);
+    expect(GUIDE_STEPS.every((step) => !step.targetText)).toBe(true);
   });
 });

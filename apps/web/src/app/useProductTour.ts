@@ -10,6 +10,8 @@ import type { DestinationId } from "./navigation";
 
 const GUIDE_PROGRESS_KEY = "goalpulse-product-tour-step";
 const DEFAULT_POSITION = { top: 16, left: 16 };
+const TARGET_RETRY_DELAY_MS = 120;
+const TARGET_RETRY_LIMIT = 25;
 
 export interface UseProductTourOptions {
   destination: DestinationId;
@@ -67,20 +69,49 @@ export function useProductTour({
   useEffect(() => {
     if (!isOpen || !currentStep) return;
 
+    clearGuideSpotlight();
+
     if (currentStep.requiresReplayBacktest && !replayBacktestReady && !isReplayRunning) {
       void onRunReplayBacktestRef.current();
     }
 
-    const timeout = window.setTimeout(() => {
+    let attempts = 0;
+    let timeout: number;
+
+    const locateTarget = () => {
       const target = getGuideStepElement(currentStep);
-      target?.scrollIntoView?.({ behavior: "smooth", block: "center" });
-      applyGuideSpotlight(target);
-      setPosition(getPanelPosition(target));
-      window.localStorage.setItem(GUIDE_PROGRESS_KEY, String(stepIndex));
-    }, 220);
+
+      if (target) {
+        target.scrollIntoView?.({ behavior: "smooth", block: "center" });
+        applyGuideSpotlight(target);
+        setPosition(getPanelPosition(target));
+        window.localStorage.setItem(GUIDE_PROGRESS_KEY, String(stepIndex));
+        return;
+      }
+
+      if (attempts >= TARGET_RETRY_LIMIT) {
+        const nextIndex = stepIndex + 1;
+        if (nextIndex < GUIDE_STEPS.length) {
+          const nextStep = GUIDE_STEPS[nextIndex];
+          setStepIndex(nextIndex);
+          if (nextStep.destination !== destination) onDestinationChange(nextStep.destination);
+        } else {
+          setIsOpen(false);
+          setStepIndex(0);
+          setPosition(DEFAULT_POSITION);
+          window.localStorage.removeItem(GUIDE_PROGRESS_KEY);
+        }
+        return;
+      }
+
+      attempts += 1;
+      timeout = window.setTimeout(locateTarget, TARGET_RETRY_DELAY_MS);
+    };
+
+    timeout = window.setTimeout(locateTarget, 220);
 
     return () => window.clearTimeout(timeout);
-  }, [currentStep, destination, isOpen, isReplayRunning, replayBacktestReady, stepIndex]);
+  }, [currentStep, destination, isOpen, isReplayRunning, onDestinationChange, replayBacktestReady, stepIndex]);
 
   useEffect(() => () => clearGuideSpotlight(), []);
 
