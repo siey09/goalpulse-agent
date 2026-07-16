@@ -89,6 +89,19 @@ describe("TopStatusBar", () => {
     expect(screen.getByRole("status", { name: "System status" })).toBeInTheDocument();
   });
 
+  it("links to the GoalPulse Discord community outside the system status", () => {
+    render(<TopStatusBar title="Command Center" agentStatus="RUNNING" feedMode="LIVE TxLINE" />);
+
+    const communityLink = screen.getByRole("link", {
+      name: "Join GoalPulse Discord community (opens in a new tab)",
+    });
+    expect(communityLink).toHaveTextContent("Join community");
+    expect(communityLink).toHaveAttribute("href", "https://discord.gg/vCsA8Wuwh");
+    expect(communityLink).toHaveAttribute("target", "_blank");
+    expect(communityLink).toHaveAttribute("rel", "noreferrer");
+    expect(screen.getByRole("status", { name: "System status" })).not.toContainElement(communityLink);
+  });
+
   it("can render its visible title as non-heading text for destinations that own an h1", () => {
     render(
       <TopStatusBar

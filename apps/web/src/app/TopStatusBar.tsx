@@ -1,4 +1,4 @@
-import { Menu } from "lucide-react";
+import { Menu, MessageCircle } from "lucide-react";
 import { StatusBadge, type StatusTone } from "../components/ui/StatusBadge";
 
 export type AgentStatus = "RUNNING" | "DEGRADED" | "RECONNECTING" | "STOPPED";
@@ -61,13 +61,25 @@ export function TopStatusBar({
           </TitleElement>
         </div>
       </div>
-      <div role="status" aria-label="System status" className="flex max-w-full items-center gap-2 overflow-x-auto pb-0.5 lg:justify-end">
-        <span className={isRunning ? "rounded-full animate-glow-pulse" : ""}>
-          <StatusBadge label={agentStatus} tone={AGENT_STATUS_TONE[agentStatus]} withDot />
-        </span>
-        <StatusBadge label={feedMode} tone={feedMode === "LIVE TxLINE" ? "accent" : "info"} />
-        {freshnessLabel && <StatusBadge label={freshnessLabel} tone="neutral" />}
-        {lastDecisionLabel && <StatusBadge label={lastDecisionLabel} tone="neutral" />}
+      <div className="flex min-w-0 items-center gap-2 lg:justify-end">
+        <div role="status" aria-label="System status" className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-0.5 lg:flex-none lg:justify-end">
+          <span className={isRunning ? "rounded-full animate-glow-pulse" : ""}>
+            <StatusBadge label={agentStatus} tone={AGENT_STATUS_TONE[agentStatus]} withDot />
+          </span>
+          <StatusBadge label={feedMode} tone={feedMode === "LIVE TxLINE" ? "accent" : "info"} />
+          {freshnessLabel && <StatusBadge label={freshnessLabel} tone="neutral" />}
+          {lastDecisionLabel && <StatusBadge label={lastDecisionLabel} tone="neutral" />}
+        </div>
+        <a
+          href="https://discord.gg/vCsA8Wuwh"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Join GoalPulse Discord community (opens in a new tab)"
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg border border-proof/25 bg-proof/10 px-3 text-xs font-semibold text-proof-100 transition-colors hover:border-proof/45 hover:bg-proof/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-proof/70 motion-reduce:transition-none"
+        >
+          <MessageCircle className="h-4 w-4" aria-hidden="true" />
+          <span>Join community</span>
+        </a>
       </div>
     </header>
   );
