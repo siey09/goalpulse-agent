@@ -29,7 +29,7 @@ export function getVerificationDepth(
 
   if (!entry.data.available) {
     return {
-      label: `Verification unavailable — ${entry.data.reason ?? "unknown reason"}`,
+      label: `Verification unavailable - ${entry.data.reason ?? "unknown reason"}`,
       tone: "warn",
     };
   }
