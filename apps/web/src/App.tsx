@@ -11,7 +11,8 @@ import { SignalArchivePanel } from "./components/SignalArchivePanel";
 import { SignalPerformancePanel } from "./components/SignalPerformancePanel";
 import { ConfidenceCalibrationPanel } from "./components/ConfidenceCalibrationPanel";
 import { SignalCorrelationPanel } from "./components/SignalCorrelationPanel";
-import { AnalystChatWidget } from "./components/AnalystChatWidget";
+import { AnalystChatWidget, type AnalystChatMessage } from "./components/AnalystChatWidget";
+import { parseGoalPulseCommand, type AnalystReply } from "./lib/goalPulseFeatureCatalog";
 import { useScrollSpy } from "./hooks/useScrollSpy";
 import { AppShell } from "./app/AppShell";
 import { DEFAULT_DESTINATION, destinationOwnsPageHeading, type DestinationId } from "./app/navigation";
@@ -267,13 +268,14 @@ function App() {
   const [isAnalystChatOpen, setIsAnalystChatOpen] = useState(false);
   const [isAnalystReplying, setIsAnalystReplying] = useState(false);
   const [analystQuestion, setAnalystQuestion] = useState("");
-  const [analystMessages, setAnalystMessages] = useState<
-    { role: "user" | "assistant"; content: string }[]
-  >([
+  const [analystMessages, setAnalystMessages] = useState<AnalystChatMessage[]>([
     {
       role: "assistant",
-      content:
-        "Ask me about the latest signal, failed continuation patterns, reversal radar, score reality checks, or the outcome audit.",
+      reply: {
+        kind: "text",
+        content:
+          "Ask me about live intelligence, or type /features to inspect every GoalPulse system, formula, and evidence boundary.",
+      },
     },
   ]);
   const [lastRefresh, setLastRefresh] = useState("");
@@ -609,28 +611,34 @@ function App() {
     }
   }
 
-  async function sendAnalystMessage() {
-    const trimmedQuestion = analystQuestion.trim();
+  async function submitAnalystQuestion(question: string) {
+    const trimmedQuestion = question.trim();
 
     if (!trimmedQuestion || isAnalystReplying) return;
 
     setAnalystMessages((currentMessages) => [
       ...currentMessages,
-      { role: "user", content: trimmedQuestion },
+      { role: "user", reply: { kind: "text", content: trimmedQuestion } },
     ]);
     setAnalystQuestion("");
     setIsAnalystReplying(true);
 
     try {
-      const reply = await generateAnalystReply(trimmedQuestion);
+      const localReply = parseGoalPulseCommand(trimmedQuestion);
+      const reply: AnalystReply =
+        localReply ?? { kind: "text", content: await generateAnalystReply(trimmedQuestion) };
 
       setAnalystMessages((currentMessages) => [
         ...currentMessages,
-        { role: "assistant", content: reply },
+        { role: "assistant", reply },
       ]);
     } finally {
       setIsAnalystReplying(false);
     }
+  }
+
+  async function sendAnalystMessage() {
+    await submitAnalystQuestion(analystQuestion);
   }
   async function runReplayBacktest() {
     try {
@@ -1607,6 +1615,7 @@ function App() {
           question={analystQuestion}
           onQuestionChange={setAnalystQuestion}
           onSend={sendAnalystMessage}
+          onCommand={submitAnalystQuestion}
           isReplying={isAnalystReplying}
         />
 
@@ -1643,6 +1652,7 @@ function App() {
         question={analystQuestion}
         onQuestionChange={setAnalystQuestion}
         onSend={sendAnalystMessage}
+        onCommand={submitAnalystQuestion}
         isReplying={isAnalystReplying}
       />
       <div className="mx-auto grid max-w-[1380px] grid-cols-[70px_minmax(0,1fr)_300px] gap-4">
