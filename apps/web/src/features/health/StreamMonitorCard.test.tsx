@@ -64,4 +64,12 @@ describe("StreamMonitorCard", () => {
     expect(screen.getByText("Stream data unavailable")).toBeInTheDocument();
     expect(screen.queryByText("0 events")).not.toBeInTheDocument();
   });
+
+  it("retains exact health counters when metrics are unavailable", () => {
+    render(<StreamMonitorCard title="TxLINE push stream" stream={stream} metrics={null} isSimulated={false} />);
+
+    expect(screen.getByText("9,354")).toBeInTheDocument();
+    expect(screen.getByText("2", { selector: "dd" })).toBeInTheDocument();
+    expect(screen.getByText("Status data unavailable; health counters retained")).toBeInTheDocument();
+  });
 });

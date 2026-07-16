@@ -1,7 +1,7 @@
 import { Radio, WifiOff } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { StatusBadge, type StatusTone } from "../../components/ui/StatusBadge";
-import { formatHealthDuration, type MetricsStreamState } from "./systemHealthModel";
+import { formatHealthDuration, formatHealthTime, type MetricsStreamState } from "./systemHealthModel";
 
 export interface HealthStreamFacts {
   connected?: boolean;
@@ -44,7 +44,9 @@ export function StreamMonitorCard({ title, stream, metrics, isSimulated }: Strea
         ? stream?.lastError ?? "Connection retry in progress"
         : status === "STREAMING"
           ? "Valid events are arriving"
-          : "Stream data unavailable";
+          : stream
+            ? "Status data unavailable; health counters retained"
+            : "Stream data unavailable";
 
   return (
     <Card className="relative overflow-hidden p-4 sm:p-5" aria-labelledby={`${title.replaceAll(" ", "-")}-title`}>
@@ -68,12 +70,12 @@ export function StreamMonitorCard({ title, stream, metrics, isSimulated }: Strea
         {explanation}
       </p>
 
-      {stream && metrics && (
+      {stream && (
         <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4 sm:grid-cols-4">
-          <Fact label="Connection" value={metrics.connected ? "Connected" : "Disconnected"} />
-          <Fact label="Last valid event" value={formatHealthDuration(metrics.staleForMs)} />
+          <Fact label="Connection" value={(metrics?.connected ?? stream.connected) ? "Connected" : "Disconnected"} />
+          <Fact label="Last valid event" value={metrics ? formatHealthDuration(metrics.staleForMs) : formatHealthTime(stream.lastEventAt)} />
           <Fact label="Events received" value={stream.totalEventsReceived?.toLocaleString() ?? "Unavailable"} />
-          <Fact label="Reconnects" value={metrics.totalReconnects.toLocaleString()} />
+          <Fact label="Reconnects" value={(metrics?.totalReconnects ?? stream.totalReconnects)?.toLocaleString() ?? "Unavailable"} />
         </dl>
       )}
     </Card>

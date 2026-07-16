@@ -130,17 +130,23 @@ export type ReplayBacktest = {
   };
 };
 
+export type HealthStreamState = {
+  connected?: boolean;
+  lastEventAt?: string | null;
+  totalEventsReceived?: number;
+  totalReconnects?: number;
+  lastError?: string | null;
+};
+
 export type Health = {
   ok?: boolean;
+  service?: string;
+  status?: string;
+  timestamp?: string;
   agentIntervalMs?: number;
   useSimulatedFeed?: boolean;
-  liveStream?: {
-    connected?: boolean;
-    lastEventAt?: string | null;
-    totalEventsReceived?: number;
-    totalReconnects?: number;
-    lastError?: string | null;
-  };
+  liveStream?: HealthStreamState;
+  liveOddsStream?: HealthStreamState;
 };
 
 export type SimilarSignalEntry = {

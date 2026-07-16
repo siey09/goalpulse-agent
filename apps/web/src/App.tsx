@@ -1500,7 +1500,16 @@ function App() {
         );
         break;
       case "system-health":
-        destinationContent = <SystemHealthPage health={health} />;
+        destinationContent = (
+          <SystemHealthPage
+            health={health}
+            archiveStatus={stats?.oddsArchive ? {
+              pending: stats.oddsArchive.pending,
+              failures: stats.oddsArchive.failures,
+              lastFailureAt: stats.oddsArchive.lastFailureAt,
+            } : null}
+          />
+        );
         break;
       case "command-center":
       default:
