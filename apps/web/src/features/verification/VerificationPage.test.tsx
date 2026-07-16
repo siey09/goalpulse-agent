@@ -48,6 +48,9 @@ describe("VerificationPage", () => {
       "Norway vs England"
     );
     expect(screen.getByRole("heading", { name: "Trust model" })).toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "On-chain verification requires an exact TxLINE event sequence from the upstream feed. When that sequence is unavailable, GoalPulse preserves the signal but does not invent or infer a proof."
+    );
   });
 
   it("routes queue selection through the existing callback", () => {
