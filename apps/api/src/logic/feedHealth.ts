@@ -1,6 +1,7 @@
 import type { AgentRun, Match, OddsSnapshot } from "../types";
 
 const MISSED_CYCLE_MULTIPLIER = 3;
+const RECENT_HEALTH_RUN_LIMIT = 10;
 
 export const ODDS_STALE_THRESHOLD_MS = 5 * 60 * 1000;
 
@@ -42,10 +43,11 @@ export function assessCycleHealth(
   const cycleGapMs = isRunInProgress ? 0 : now - new Date(lastRunAt).getTime();
   const isCurrentGapExceeded = !isRunInProgress && cycleGapMs > missedThresholdMs;
 
+  const recentRuns = agentRuns.slice(0, RECENT_HEALTH_RUN_LIMIT);
   let recentMissedCycles = 0;
-  for (let i = 0; i < agentRuns.length - 1; i += 1) {
-    const newer = new Date(agentRuns[i].startedAt).getTime();
-    const older = new Date(agentRuns[i + 1].finishedAt).getTime();
+  for (let i = 0; i < recentRuns.length - 1; i += 1) {
+    const newer = new Date(recentRuns[i].startedAt).getTime();
+    const older = new Date(recentRuns[i + 1].finishedAt).getTime();
     if (newer - older > missedThresholdMs) {
       recentMissedCycles += 1;
     }
@@ -152,7 +154,9 @@ export function assessFixtureCoverage(agentRuns: AgentRun[]): FixtureCoverage {
 
   const lastRun = agentRuns[0];
   const isCoverageDropped = hasCoverageDrop(lastRun);
-  const recentCoverageDrops = agentRuns.filter(hasCoverageDrop).length;
+  const recentCoverageDrops = agentRuns
+    .slice(0, RECENT_HEALTH_RUN_LIMIT)
+    .filter(hasCoverageDrop).length;
 
   return {
     lastRunRawFixtureCount: lastRun.rawFixtureCount,
