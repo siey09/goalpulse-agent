@@ -1496,7 +1496,13 @@ function App() {
         break;
       case "verification":
         destinationContent = (
-          <VerificationPage selectedSignal={selectedSignal} onchainVerify={onchainVerify} onVerify={runOnchainVerify} />
+          <VerificationPage
+            verificationObjects={outcomeVerificationItems}
+            selectedSignal={selectedSignal}
+            onSelectSignal={setSelectedSignal}
+            onchainVerify={onchainVerify}
+            onVerify={runOnchainVerify}
+          />
         );
         break;
       case "system-health":
