@@ -24,7 +24,7 @@ export function HealthDiagnosticSpine({ stages }: HealthDiagnosticSpineProps) {
       </div>
       <ol
         aria-label="System diagnostic pipeline"
-        className="grid gap-px bg-border xl:grid-cols-5"
+        className="grid gap-px bg-border lg:grid-cols-5 xl:grid-cols-5"
       >
         {stages.map((stage, index) => {
           const status = STATUS_META[stage.status];
@@ -38,7 +38,7 @@ export function HealthDiagnosticSpine({ stages }: HealthDiagnosticSpineProps) {
                 <span
                   data-testid="diagnostic-connector"
                   aria-hidden="true"
-                  className="absolute -right-px top-7 z-10 hidden h-px w-3 bg-border-strong xl:block"
+                  className="absolute -right-px top-7 z-10 hidden h-px w-3 bg-border-strong lg:block"
                 />
               )}
               <div className="flex items-center justify-between gap-3">

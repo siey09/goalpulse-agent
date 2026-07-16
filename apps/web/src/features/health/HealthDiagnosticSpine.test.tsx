@@ -16,7 +16,7 @@ describe("HealthDiagnosticSpine", () => {
     render(<HealthDiagnosticSpine stages={stages} />);
 
     const pipeline = screen.getByRole("list", { name: "System diagnostic pipeline" });
-    expect(pipeline).toHaveClass("xl:grid-cols-5");
+    expect(pipeline).toHaveClass("lg:grid-cols-5", "xl:grid-cols-5");
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
     expect(screen.getByText("API")).toBeInTheDocument();
     expect(screen.getAllByText("Healthy")).toHaveLength(2);
