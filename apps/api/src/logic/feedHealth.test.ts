@@ -102,6 +102,22 @@ describe("assessCycleHealth", () => {
     expect(result.recentMissedCycles).toBe(1);
   });
 
+  it("ignores missed gaps outside the last ten-run recovery window", () => {
+    const cleanRuns = Array.from({ length: 10 }, (_, index) =>
+      makeRun({
+        startedAt: iso(index * 6_000),
+        finishedAt: iso(Math.max(0, index * 6_000 - 1_000)),
+      })
+    );
+    const olderRuns = [
+      makeRun({ startedAt: iso(100_000), finishedAt: iso(99_000) }),
+      makeRun({ startedAt: iso(200_000), finishedAt: iso(199_000) }),
+    ];
+
+    expect(assessCycleHealth([...cleanRuns, ...olderRuns], NOW, 5_000).recentMissedCycles)
+      .toBe(0);
+  });
+
   it("does not count a long-running cycle as idle time", () => {
     const runs = [
       makeRun({ startedAt: iso(13000), finishedAt: iso(5000) }),
@@ -246,6 +262,19 @@ describe("assessFixtureCoverage", () => {
 
     expect(result.isCoverageDropped).toBe(false);
     expect(result.recentCoverageDrops).toBe(2);
+  });
+
+  it("lets old fixture drops recover after ten clean runs", () => {
+    const cleanRuns = Array.from({ length: 10 }, () =>
+      makeRun({ eligibleFixtureCount: 2, matchesProcessed: 2, oddsEnrichmentFailures: 0 })
+    );
+    const oldDrop = makeRun({
+      eligibleFixtureCount: 3,
+      matchesProcessed: 2,
+      oddsEnrichmentFailures: 0,
+    });
+
+    expect(assessFixtureCoverage([...cleanRuns, oldDrop]).recentCoverageDrops).toBe(0);
   });
 });
 
