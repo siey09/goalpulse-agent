@@ -6,7 +6,7 @@ export interface AgentArenaPageProps {
 
 export function AgentArenaPage({ onSelectSignalId }: AgentArenaPageProps = {}) {
   return (
-    <div className="space-y-4">
+    <div id="guide-agent-arena" className="space-y-4">
       <ArenaPanel onSelectSignalId={onSelectSignalId} />
     </div>
   );

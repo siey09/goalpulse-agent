@@ -151,6 +151,7 @@ export function SystemHealthPage({ health, archiveStatus }: SystemHealthPageProp
   return (
     <div className="space-y-4 overflow-x-clip">
       <Card
+        id="guide-system-health"
         elevated
         role="status"
         aria-label="Overall system health"
