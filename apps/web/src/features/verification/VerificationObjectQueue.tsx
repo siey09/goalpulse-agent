@@ -43,7 +43,7 @@ export function VerificationObjectQueue({
 }: VerificationObjectQueueProps) {
   return (
     <ul aria-label="Verification objects" className="divide-y divide-border">
-      {items.map((item, index) => {
+      {items.map((item) => {
         const status = getVerificationObjectStatus(item, verifyState);
         const statusStyle = STATUS_STYLE[status.kind];
         const StatusIcon = statusStyle.icon;
@@ -52,7 +52,7 @@ export function VerificationObjectQueue({
           Boolean(item.signal.id && item.signal.id === selectedSignal?.id);
 
         return (
-          <li key={item.signal.id ?? `${item.source}-${index}`}>
+          <li key={item.signal.id ?? `${item.source}-${item.signal.match ?? "unknown"}-${item.signal.createdAt ?? "undated"}`}>
             <button
               type="button"
               aria-pressed={selected}

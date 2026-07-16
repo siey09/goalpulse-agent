@@ -57,6 +57,12 @@ export function VerificationPage({
   const activeStatus = activeObject
     ? getVerificationObjectStatus(activeObject, onchainVerify)
     : null;
+  const summaryMetrics = [
+    { label: "Objects", value: summary.total, tone: "text-white" },
+    { label: "On-chain eligible", value: summary.eligible, tone: "text-info" },
+    { label: "Local fingerprints", value: summary.fingerprints, tone: "text-proof-200" },
+    { label: "Verified this session", value: summary.verified, tone: "text-positive" },
+  ];
 
   return (
     <div className="min-w-0 space-y-4 overflow-x-clip">
@@ -81,12 +87,7 @@ export function VerificationPage({
         aria-label="Verification summary"
         className="grid grid-cols-2 border-y border-border bg-surface-2 sm:grid-cols-4"
       >
-        {[
-          { label: "Objects", value: summary.total, tone: "text-white" },
-          { label: "On-chain eligible", value: summary.eligible, tone: "text-info" },
-          { label: "Local fingerprints", value: summary.fingerprints, tone: "text-proof-200" },
-          { label: "Verified this session", value: summary.verified, tone: "text-positive" },
-        ].map((metric) => (
+        {summaryMetrics.map((metric) => (
           <div key={metric.label} className="min-w-0 border-border p-3 odd:border-r sm:border-r sm:last:border-r-0">
             <p className="text-[11px] text-stone-400">{metric.label}</p>
             <p className={`mt-1 font-mono text-lg font-semibold tabular-nums ${metric.tone}`}>
