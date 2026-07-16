@@ -178,6 +178,16 @@ export function VerificationPage({
           <Fingerprint className="h-4 w-4 text-proof-200" aria-hidden="true" />
           <h2 id="trust-model-title" className="text-sm font-semibold text-white">Trust model</h2>
         </div>
+        <div
+          role="note"
+          className="mb-3 flex items-start gap-2.5 rounded-lg border border-proof/20 bg-proof/5 px-3 py-2.5"
+        >
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-proof-200" aria-hidden="true" />
+          <p className="text-xs leading-5 text-stone-300">
+            On-chain verification requires an exact TxLINE event sequence from the upstream feed. When that
+            sequence is unavailable, GoalPulse preserves the signal but does not invent or infer a proof.
+          </p>
+        </div>
         <div className="grid gap-2 md:grid-cols-2">
           {TRUST_DEFINITIONS.map((item) => (
             <details key={item.title} className="group rounded-lg border border-border bg-surface-2 p-3">
