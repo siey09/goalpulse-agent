@@ -79,6 +79,7 @@ import type {
   Health,
   SimilarSignalsResult,
 } from "./types";
+import type { AgentStats } from "./api";
 import {
   formatNumber,
   formatPercent,
@@ -138,17 +139,6 @@ type AgentRun = {
   startedAt?: string;
   finishedAt?: string;
   message?: string;
-};
-
-type AgentStats = {
-  txlineUpdates?: number;
-  signalsGenerated?: number;
-  highSeverity?: number;
-  pendingSignals?: number;
-  correctSignals?: number;
-  incorrectSignals?: number;
-  closedSignals?: number;
-  strategyAccuracy?: number;
 };
 
 const API_BASE_URL =
