@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildVerificationObjects,
   getVerificationObjectStatus,
   selectVerificationObject,
   summarizeVerificationObjects,
@@ -76,5 +77,43 @@ describe("verification workspace model", () => {
       signal: selected,
       source: "Selected signal",
     });
+  });
+
+  it("surfaces an eligible signal before newer signals without a sequence", () => {
+    const newest = { id: "newest", match: "Newest without sequence" };
+    const eligible = {
+      id: "eligible",
+      match: "Eligible",
+      evidence: { fixtureId: "10", scoresContext: { sequence: 8 } },
+    };
+
+    expect(
+      buildVerificationObjects([newest, eligible], null).map(({ signal }) => signal.id)
+    ).toEqual(["eligible", "newest"]);
+  });
+
+  it("prefers a fingerprinted replay copy when signal IDs overlap", () => {
+    const live = [
+      { id: "shared", match: "Live copy" },
+      { id: "plain", match: "Plain" },
+    ];
+    const originalOrder = live.map(({ id }) => id);
+    const result = buildVerificationObjects(live, {
+      signals: [{ id: "shared", match: "Replay copy" }],
+      proof: { hash: "proof-hash" },
+    });
+
+    expect(result.map(({ signal }) => signal.id)).toEqual(["shared", "plain"]);
+    expect(result[0]).toMatchObject({
+      source: "TxLINE replay audit",
+      proofHash: "proof-hash",
+    });
+    expect(live.map(({ id }) => id)).toEqual(originalOrder);
+  });
+
+  it("caps the dense queue at five objects", () => {
+    const many = Array.from({ length: 7 }, (_, index) => ({ id: `s${index}` }));
+
+    expect(buildVerificationObjects(many, null)).toHaveLength(5);
   });
 });
