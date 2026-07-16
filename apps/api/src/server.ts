@@ -51,6 +51,7 @@ import { ensureMatchOddsHistory } from "./services/matchHistory";
 import { enqueueOddsSnapshotsForArchive } from "./services/oddsArchiveOutbox";
 import { createLiveOddsStreamHandler } from "./services/liveOddsStream";
 import { createReplayOddsStreamHandler } from "./services/replayOddsStream";
+import { createAgentScheduler } from "./services/agentScheduler";
 import { config } from "./config";
 import { requireApiKey } from "./middleware/apiKeyAuth";
 import { generalApiLimiter, runOnceLimiter } from "./middleware/rateLimiters";
@@ -1020,7 +1021,8 @@ app.listen(config.port, async () => {
   startLiveStreamMonitor();
   startLiveOddsStreamMonitor();
 
-  setInterval(() => {
-    void runGuardedAgentCycle("scheduled");
-  }, config.agentIntervalMs);
+  createAgentScheduler(
+    () => runGuardedAgentCycle("scheduled"),
+    config.agentIntervalMs
+  ).start();
 });

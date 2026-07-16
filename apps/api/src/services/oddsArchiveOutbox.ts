@@ -38,6 +38,8 @@ export async function flushOddsSnapshotArchive(
           pendingSnapshots.delete(snapshot.id);
         }
       }
+      failures = 0;
+      lastFailureAt = null;
       return true;
     }
 

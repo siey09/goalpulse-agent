@@ -7,6 +7,8 @@ export interface TxLineFeedResult {
   matches: Match[];
   snapshots: OddsSnapshot[];
   rawFixtureCount?: number;
+  eligibleFixtureCount?: number;
+  oddsEnrichmentFailures?: number;
 }
 
 interface TxLineFixture {
@@ -1245,6 +1247,8 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
   const nowIso = new Date().toISOString();
   const matches: Match[] = [];
   const snapshots: OddsSnapshot[] = [];
+  let eligibleFixtureCount = 0;
+  let oddsEnrichmentFailures = 0;
 
   for (const fixture of prioritizedFixtures.slice(0, 14)) {
     let match = normalizeFixture(fixture, nowIso);
@@ -1282,6 +1286,7 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
       movementOdds = selectMovementOdds(historicalOdds, 8);
       totalsMovementOdds = selectTotalsMovementOdds(historicalOdds, 8);
     } catch (error) {
+      oddsEnrichmentFailures += 1;
       console.warn(
         `TxLINE odds enrichment skipped for fixture ${fixture.FixtureId}:`,
         error instanceof Error ? error.message : error
@@ -1296,6 +1301,8 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
     if (selectedOdds.length === 0 && selectedTotalsOdds.length === 0) {
       continue;
     }
+
+    eligibleFixtureCount += 1;
 
     const scoresContext = buildScoresContext(
       scoreSnapshot,
@@ -1359,6 +1366,8 @@ export async function fetchTxLineFeed(): Promise<TxLineFeedResult> {
     matches,
     snapshots: normalizedSnapshots,
     rawFixtureCount: fixtures.length,
+    eligibleFixtureCount,
+    oddsEnrichmentFailures,
   };
 }
 

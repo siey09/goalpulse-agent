@@ -31,7 +31,9 @@ const feedHealth: FeedHealth = {
   oddsFreshness: { staleThresholdMs: 300_000, staleLiveMatchCount: 0, staleLiveMatches: [] },
   fixtureCoverage: {
     lastRunRawFixtureCount: 7,
-    lastRunProcessedCount: 7,
+    lastRunEligibleFixtureCount: 2,
+    lastRunProcessedCount: 2,
+    lastRunOddsEnrichmentFailures: 0,
     isCoverageDropped: false,
     recentCoverageDrops: 0,
   },
@@ -92,7 +94,8 @@ describe("SystemHealthPage", () => {
     expect(screen.getByText("2h 0m")).toBeInTheDocument();
     expect(screen.getByText("1s")).toBeInTheDocument();
     expect(screen.getAllByText(/5m 0s/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("7/7").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2/2").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/7 discovered/).length).toBeGreaterThan(0);
     expect(screen.getAllByText("4 total duplicates dropped")).toHaveLength(2);
     expect(screen.getByText("≥ 4%")).toBeInTheDocument();
     expect(screen.getByText("≥ 8%")).toBeInTheDocument();

@@ -45,7 +45,9 @@ export interface FeedHealth {
   };
   fixtureCoverage: {
     lastRunRawFixtureCount: number | null;
+    lastRunEligibleFixtureCount: number | null;
     lastRunProcessedCount: number | null;
+    lastRunOddsEnrichmentFailures: number;
     isCoverageDropped: boolean;
     recentCoverageDrops: number;
   };
@@ -156,10 +158,12 @@ export function deriveHealthStages(input: {
       id: "fixtures",
       label: "Fixture coverage",
       status: fixtureStatus,
-      value: coverage?.lastRunProcessedCount !== null && coverage?.lastRunProcessedCount !== undefined && coverage.lastRunRawFixtureCount !== null
-        ? `${coverage.lastRunProcessedCount}/${coverage.lastRunRawFixtureCount}`
+      value: coverage?.lastRunProcessedCount !== null && coverage?.lastRunProcessedCount !== undefined && coverage.lastRunEligibleFixtureCount !== null
+        ? `${coverage.lastRunProcessedCount}/${coverage.lastRunEligibleFixtureCount}`
         : "Unavailable",
-      detail: coverage ? `${coverage.recentCoverageDrops} recent coverage drop(s)` : "No fixture evidence",
+      detail: coverage
+        ? `${coverage.lastRunRawFixtureCount ?? "Unknown"} discovered · ${coverage.lastRunOddsEnrichmentFailures} enrichment failure(s)`
+        : "No fixture evidence",
     },
     {
       id: "odds",
@@ -224,18 +228,31 @@ export function deriveHealthIncidents(input: {
     });
   }
   if (coverage?.isCoverageDropped) {
+    const evidenceParts: string[] = [];
+    if (
+      coverage.lastRunEligibleFixtureCount !== null &&
+      (coverage.lastRunProcessedCount ?? 0) < coverage.lastRunEligibleFixtureCount
+    ) {
+      evidenceParts.push(
+        `${coverage.lastRunProcessedCount ?? "Unknown"} of ${coverage.lastRunEligibleFixtureCount} odds-eligible fixtures were processed`
+      );
+    }
+    if (coverage.lastRunOddsEnrichmentFailures > 0) {
+      evidenceParts.push(`${coverage.lastRunOddsEnrichmentFailures} odds enrichment request(s) failed`);
+    }
+    evidenceParts.push(`${coverage.lastRunRawFixtureCount ?? "Unknown"} raw fixtures were discovered`);
     incidents.push({
       id: "fixture-drop-current",
       severity: "critical",
       title: "Current fixture coverage dropped",
-      evidence: `${coverage.lastRunProcessedCount ?? "Unknown"} of ${coverage.lastRunRawFixtureCount ?? "Unknown"} fixtures were processed.`,
+      evidence: `${evidenceParts.join("; ")}.`,
     });
   } else if (coverage && coverage.recentCoverageDrops > 0) {
     incidents.push({
       id: "fixture-drop-recent",
       severity: "warning",
       title: "Fixture coverage recently dropped",
-      evidence: `${coverage.recentCoverageDrops} recent run(s) processed fewer fixtures than received.`,
+      evidence: `${coverage.recentCoverageDrops} recent run(s) lost eligible coverage or had odds enrichment failures.`,
     });
   }
 

@@ -73,7 +73,7 @@ describe("assessCycleHealth", () => {
   });
 
   it("does not flag a current gap within the 3x threshold", () => {
-    const runs = [makeRun({ startedAt: iso(2000) })];
+    const runs = [makeRun({ startedAt: iso(10000), finishedAt: iso(2000) })];
     const result = assessCycleHealth(runs, NOW, 5000);
 
     expect(result.isCurrentGapExceeded).toBe(false);
@@ -82,7 +82,7 @@ describe("assessCycleHealth", () => {
   });
 
   it("flags a current gap beyond the 3x threshold", () => {
-    const runs = [makeRun({ startedAt: iso(20000) })];
+    const runs = [makeRun({ startedAt: iso(28000), finishedAt: iso(20000) })];
     const result = assessCycleHealth(runs, NOW, 5000);
 
     expect(result.isCurrentGapExceeded).toBe(true);
@@ -91,14 +91,27 @@ describe("assessCycleHealth", () => {
 
   it("counts a historical gap between two older runs as a missed cycle", () => {
     const runs = [
-      makeRun({ startedAt: iso(0) }),
-      makeRun({ startedAt: iso(6000) }),
-      makeRun({ startedAt: iso(100000) }),
+      makeRun({ startedAt: iso(0), finishedAt: iso(0) }),
+      makeRun({ startedAt: iso(6000), finishedAt: iso(5000) }),
+      makeRun({ startedAt: iso(100000), finishedAt: iso(90000) }),
     ];
     const result = assessCycleHealth(runs, NOW, 5000);
 
     expect(result.isCurrentGapExceeded).toBe(false);
     expect(result.recentMissedCycles).toBe(1);
+  });
+
+  it("does not count a long-running cycle as idle time", () => {
+    const runs = [
+      makeRun({ startedAt: iso(13000), finishedAt: iso(5000) }),
+      makeRun({ startedAt: iso(26000), finishedAt: iso(18000) }),
+    ];
+
+    const result = assessCycleHealth(runs, NOW, 5000);
+
+    expect(result.cycleGapMs).toBe(5000);
+    expect(result.isCurrentGapExceeded).toBe(false);
+    expect(result.recentMissedCycles).toBe(0);
   });
 });
 
@@ -150,35 +163,73 @@ describe("assessFixtureCoverage", () => {
   it("returns nulls and no drop for an empty run history", () => {
     expect(assessFixtureCoverage([])).toEqual({
       lastRunRawFixtureCount: null,
+      lastRunEligibleFixtureCount: null,
       lastRunProcessedCount: null,
+      lastRunOddsEnrichmentFailures: 0,
       isCoverageDropped: false,
       recentCoverageDrops: 0,
     });
   });
 
-  it("reports no drop when raw and processed counts match", () => {
-    const runs = [makeRun({ rawFixtureCount: 9, matchesProcessed: 9 })];
+  it("reports no drop when every odds-eligible fixture is processed", () => {
+    const runs = [makeRun({
+      rawFixtureCount: 9,
+      eligibleFixtureCount: 4,
+      matchesProcessed: 4,
+      oddsEnrichmentFailures: 0,
+    })];
     const result = assessFixtureCoverage(runs);
 
     expect(result.isCoverageDropped).toBe(false);
+    expect(result.lastRunEligibleFixtureCount).toBe(4);
     expect(result.recentCoverageDrops).toBe(0);
   });
 
-  it("reports a drop when the raw count exceeds the processed count", () => {
-    const runs = [makeRun({ rawFixtureCount: 16, matchesProcessed: 14 })];
+  it("reports a drop when an odds-eligible fixture is not processed", () => {
+    const runs = [makeRun({
+      rawFixtureCount: 16,
+      eligibleFixtureCount: 15,
+      matchesProcessed: 14,
+      oddsEnrichmentFailures: 0,
+    })];
     const result = assessFixtureCoverage(runs);
 
     expect(result.isCoverageDropped).toBe(true);
     expect(result.lastRunRawFixtureCount).toBe(16);
+    expect(result.lastRunEligibleFixtureCount).toBe(15);
     expect(result.lastRunProcessedCount).toBe(14);
     expect(result.recentCoverageDrops).toBe(1);
   });
 
+  it("reports a drop when odds enrichment failed even if eligible fixtures were processed", () => {
+    const runs = [makeRun({
+      rawFixtureCount: 7,
+      eligibleFixtureCount: 2,
+      matchesProcessed: 2,
+      oddsEnrichmentFailures: 1,
+    })];
+
+    const result = assessFixtureCoverage(runs);
+
+    expect(result.isCoverageDropped).toBe(true);
+    expect(result.lastRunOddsEnrichmentFailures).toBe(1);
+  });
+
+  it("treats legacy runs without eligibility evidence as neutral", () => {
+    const runs = [makeRun({ rawFixtureCount: 7, matchesProcessed: 2 })];
+
+    const result = assessFixtureCoverage(runs);
+
+    expect(result.isCoverageDropped).toBe(false);
+    expect(result.lastRunEligibleFixtureCount).toBeNull();
+    expect(result.recentCoverageDrops).toBe(0);
+  });
+
   it("counts multiple historical drops but reports isCoverageDropped only for the last run", () => {
     const runs = [
-      makeRun({ rawFixtureCount: 9, matchesProcessed: 9 }),
-      makeRun({ rawFixtureCount: 18, matchesProcessed: 14 }),
-      makeRun({ rawFixtureCount: 20, matchesProcessed: 14 }),
+      makeRun({ rawFixtureCount: 9, eligibleFixtureCount: 4, matchesProcessed: 4, oddsEnrichmentFailures: 0 }),
+      makeRun({ rawFixtureCount: 18, eligibleFixtureCount: 15, matchesProcessed: 14, oddsEnrichmentFailures: 0 }),
+      makeRun({ rawFixtureCount: 20, eligibleFixtureCount: 14, matchesProcessed: 14, oddsEnrichmentFailures: 1 }),
     ];
     const result = assessFixtureCoverage(runs);
 
@@ -190,7 +241,7 @@ describe("assessFixtureCoverage", () => {
 describe("computeFeedHealthStatus", () => {
   const healthyCycle = { lastRunAt: iso(0), cycleGapMs: 2000, expectedIntervalMs: 5000, isCurrentGapExceeded: false, recentMissedCycles: 0 };
   const healthyOdds = { staleThresholdMs: 300000, staleLiveMatchCount: 0, staleLiveMatches: [] };
-  const healthyCoverage = { lastRunRawFixtureCount: 9, lastRunProcessedCount: 9, isCoverageDropped: false, recentCoverageDrops: 0 };
+  const healthyCoverage = { lastRunRawFixtureCount: 9, lastRunEligibleFixtureCount: 4, lastRunProcessedCount: 4, lastRunOddsEnrichmentFailures: 0, isCoverageDropped: false, recentCoverageDrops: 0 };
 
   it("returns healthy when all three checks are clean", () => {
     expect(computeFeedHealthStatus(healthyCycle, healthyOdds, healthyCoverage)).toBe("healthy");

@@ -37,7 +37,11 @@ describe("odds archive outbox", () => {
 
     await flushOddsSnapshotArchive(writer);
     expect(writer).toHaveBeenCalledTimes(2);
-    expect(getOddsArchiveOutboxStats()).toMatchObject({ pending: 0, failures: 1 });
+    expect(getOddsArchiveOutboxStats()).toEqual({
+      pending: 0,
+      failures: 0,
+      lastFailureAt: null,
+    });
   });
 
   it("deduplicates queued snapshots by id", async () => {
