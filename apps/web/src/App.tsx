@@ -16,6 +16,7 @@ import { useScrollSpy } from "./hooks/useScrollSpy";
 import { AppShell } from "./app/AppShell";
 import { DEFAULT_DESTINATION, destinationOwnsPageHeading, type DestinationId } from "./app/navigation";
 import { chartDataKeyForSignalSide } from "./features/markets/chartSeries";
+import { buildVerificationObjects } from "./features/verification/verificationWorkspaceModel";
 import {
   buildMarketTimeline,
   findNearestMarketSnapshot,
@@ -298,22 +299,10 @@ function App() {
     intervalMs: replayIntervalMs,
   });
 
-  const outcomeVerificationItems = useMemo(() => {
-    const replayItems =
-      replayBacktest?.signals?.map((signal) => ({
-        signal,
-        source: "TxLINE replay audit",
-        proofHash: replayBacktest.proof?.hash,
-      })) ?? [];
-
-    const liveItems = signals.slice(0, 4).map((signal) => ({
-      signal,
-      source: "Live monitor",
-      proofHash: undefined,
-    }));
-
-    return [...replayItems, ...liveItems].slice(0, 5);
-  }, [signals, replayBacktest]);
+  const outcomeVerificationItems = useMemo(
+    () => buildVerificationObjects(signals, replayBacktest),
+    [signals, replayBacktest]
+  );
   type ArenaScoreboardReply = {
     agentId: string;
     label: string;
