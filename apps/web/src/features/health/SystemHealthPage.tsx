@@ -224,7 +224,11 @@ export function SystemHealthPage({ health, archiveStatus }: SystemHealthPageProp
           <TelemetryCard
             icon={<Clock3 size={16} />}
             label="Agent cycle"
-            value={feedHealth ? formatHealthDuration(feedHealth.cycleHealth.cycleGapMs) : "Unavailable"}
+            value={feedHealth?.cycleHealth.isRunInProgress
+              ? "Running"
+              : feedHealth
+                ? formatHealthDuration(feedHealth.cycleHealth.cycleGapMs)
+                : "Unavailable"}
             detail={metrics?.lastAgentCycle
               ? `${formatHealthDuration(metrics.lastAgentCycle.decisionLatencyMs)} decision latency`
               : "Decision latency unavailable"}

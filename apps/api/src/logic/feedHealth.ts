@@ -8,6 +8,7 @@ export interface CycleHealth {
   lastRunAt: string | null;
   cycleGapMs: number | null;
   expectedIntervalMs: number;
+  isRunInProgress: boolean;
   isCurrentGapExceeded: boolean;
   recentMissedCycles: number;
 }
@@ -21,7 +22,8 @@ export interface CycleHealth {
 export function assessCycleHealth(
   agentRuns: AgentRun[],
   now: number,
-  expectedIntervalMs: number
+  expectedIntervalMs: number,
+  isRunInProgress = false
 ): CycleHealth {
   const missedThresholdMs = expectedIntervalMs * MISSED_CYCLE_MULTIPLIER;
 
@@ -30,14 +32,15 @@ export function assessCycleHealth(
       lastRunAt: null,
       cycleGapMs: null,
       expectedIntervalMs,
+      isRunInProgress,
       isCurrentGapExceeded: false,
       recentMissedCycles: 0,
     };
   }
 
   const lastRunAt = agentRuns[0].finishedAt;
-  const cycleGapMs = now - new Date(lastRunAt).getTime();
-  const isCurrentGapExceeded = cycleGapMs > missedThresholdMs;
+  const cycleGapMs = isRunInProgress ? 0 : now - new Date(lastRunAt).getTime();
+  const isCurrentGapExceeded = !isRunInProgress && cycleGapMs > missedThresholdMs;
 
   let recentMissedCycles = 0;
   for (let i = 0; i < agentRuns.length - 1; i += 1) {
@@ -48,7 +51,14 @@ export function assessCycleHealth(
     }
   }
 
-  return { lastRunAt, cycleGapMs, expectedIntervalMs, isCurrentGapExceeded, recentMissedCycles };
+  return {
+    lastRunAt,
+    cycleGapMs,
+    expectedIntervalMs,
+    isRunInProgress,
+    isCurrentGapExceeded,
+    recentMissedCycles,
+  };
 }
 
 export interface StaleLiveMatch {

@@ -355,7 +355,12 @@ app.get("/api/archive/similar-signals", async (req, res) => {
 app.get("/api/feed-health", (_req, res) => {
   const now = Date.now();
 
-  const cycleHealth = assessCycleHealth(store.agentRuns, now, config.agentIntervalMs);
+  const cycleHealth = assessCycleHealth(
+    store.agentRuns,
+    now,
+    config.agentIntervalMs,
+    isAgentCycleRunning
+  );
   const oddsFreshness = assessOddsFreshness(
     store.matches,
     store.oddsSnapshots,

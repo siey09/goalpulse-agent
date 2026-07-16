@@ -67,6 +67,7 @@ describe("assessCycleHealth", () => {
       lastRunAt: null,
       cycleGapMs: null,
       expectedIntervalMs: 5000,
+      isRunInProgress: false,
       isCurrentGapExceeded: false,
       recentMissedCycles: 0,
     });
@@ -112,6 +113,16 @@ describe("assessCycleHealth", () => {
     expect(result.cycleGapMs).toBe(5000);
     expect(result.isCurrentGapExceeded).toBe(false);
     expect(result.recentMissedCycles).toBe(0);
+  });
+
+  it("does not call an active cycle an overdue idle scheduler", () => {
+    const runs = [makeRun({ startedAt: iso(28000), finishedAt: iso(20000) })];
+
+    const result = assessCycleHealth(runs, NOW, 5000, true);
+
+    expect(result.cycleGapMs).toBe(0);
+    expect(result.isRunInProgress).toBe(true);
+    expect(result.isCurrentGapExceeded).toBe(false);
   });
 });
 
@@ -239,7 +250,7 @@ describe("assessFixtureCoverage", () => {
 });
 
 describe("computeFeedHealthStatus", () => {
-  const healthyCycle = { lastRunAt: iso(0), cycleGapMs: 2000, expectedIntervalMs: 5000, isCurrentGapExceeded: false, recentMissedCycles: 0 };
+  const healthyCycle = { lastRunAt: iso(0), cycleGapMs: 2000, expectedIntervalMs: 5000, isRunInProgress: false, isCurrentGapExceeded: false, recentMissedCycles: 0 };
   const healthyOdds = { staleThresholdMs: 300000, staleLiveMatchCount: 0, staleLiveMatches: [] };
   const healthyCoverage = { lastRunRawFixtureCount: 9, lastRunEligibleFixtureCount: 4, lastRunProcessedCount: 4, lastRunOddsEnrichmentFailures: 0, isCoverageDropped: false, recentCoverageDrops: 0 };
 

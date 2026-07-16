@@ -15,6 +15,7 @@ const feedHealth: FeedHealth = {
     lastRunAt: "2026-07-16T07:00:00.000Z",
     cycleGapMs: 3_000,
     expectedIntervalMs: 3_000,
+    isRunInProgress: false,
     isCurrentGapExceeded: false,
     recentMissedCycles: 0,
   },
@@ -75,6 +76,27 @@ describe("systemHealthModel", () => {
   it("does not call missing feed health healthy", () => {
     expect(summarizeHealthVerdict(null)).toEqual({ label: "Unavailable", tone: "unknown" });
     expect(summarizeHealthVerdict(feedHealth)).toEqual({ label: "Healthy", tone: "healthy" });
+  });
+
+  it("shows an active cycle as running instead of overdue", () => {
+    const stages = deriveHealthStages({
+      health: { ok: true },
+      feedHealth: {
+        ...feedHealth,
+        cycleHealth: {
+          ...feedHealth.cycleHealth,
+          cycleGapMs: 0,
+          isRunInProgress: true,
+        },
+      },
+      archiveStatus: { pending: 0, failures: 0, lastFailureAt: null },
+    });
+
+    expect(stages.find((stage) => stage.id === "cycle")).toMatchObject({
+      status: "healthy",
+      value: "Running",
+      detail: "Current cycle is actively processing",
+    });
   });
 
   it("treats stopped streams as intentional when simulated mode is on", () => {

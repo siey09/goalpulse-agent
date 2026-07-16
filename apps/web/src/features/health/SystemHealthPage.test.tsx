@@ -25,6 +25,7 @@ const feedHealth: FeedHealth = {
     lastRunAt: "2026-07-16T07:00:00.000Z",
     cycleGapMs: 3000,
     expectedIntervalMs: 3000,
+    isRunInProgress: false,
     isCurrentGapExceeded: false,
     recentMissedCycles: 0,
   },

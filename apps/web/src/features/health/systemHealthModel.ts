@@ -30,6 +30,7 @@ export interface FeedHealth {
     lastRunAt: string | null;
     cycleGapMs: number | null;
     expectedIntervalMs: number;
+    isRunInProgress: boolean;
     isCurrentGapExceeded: boolean;
     recentMissedCycles: number;
   };
@@ -151,8 +152,12 @@ export function deriveHealthStages(input: {
       id: "cycle",
       label: "Agent cycle",
       status: cycleStatus,
-      value: cycle ? formatHealthDuration(cycle.cycleGapMs) : "Unavailable",
-      detail: cycle ? `Expected every ${formatHealthDuration(cycle.expectedIntervalMs)}` : "No scheduler evidence",
+      value: cycle?.isRunInProgress ? "Running" : cycle ? formatHealthDuration(cycle.cycleGapMs) : "Unavailable",
+      detail: cycle?.isRunInProgress
+        ? "Current cycle is actively processing"
+        : cycle
+          ? `Expected every ${formatHealthDuration(cycle.expectedIntervalMs)}`
+          : "No scheduler evidence",
     },
     {
       id: "fixtures",
