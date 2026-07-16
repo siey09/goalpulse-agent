@@ -53,6 +53,7 @@ export type AgentSignal = {
   evidence?: {
     marketType?: string;
     fixtureId?: string;
+    currentSnapshotId?: string;
     scoresContext?: {
       sequence?: number;
       fieldPressureScore?: number;

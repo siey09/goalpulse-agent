@@ -1,28 +1,44 @@
-import { Play, Square } from "lucide-react";
 import { FRESHNESS_COPY, getFreshnessState } from "./freshness";
+import { ReplayControls } from "./ReplayControls";
+import type { ReplaySpeed, ReplayStatus } from "./replayState";
 
 export interface LiveMarketToolbarProps {
   hasChartData: boolean;
   isReplayStreamMode: boolean;
-  onToggleReplayStreamMode: () => void;
+  replayStatus: ReplayStatus;
+  replaySpeed: ReplaySpeed;
+  replayProgressLabel: string;
+  onPlayReplay: () => void;
+  onPauseReplay: () => void;
+  onRestartReplay: () => void;
+  onExitReplay: () => void;
+  onChangeReplaySpeed: (speed: ReplaySpeed) => void;
   isOddsStreamLive: boolean;
   oddsStreamLastUpdate?: string;
-  replayStreamProgress?: string;
   hasDroppedUpdate: boolean;
+  replaySnapshotCount?: number;
+  replayConnectionFailed?: boolean;
 }
 
 export function LiveMarketToolbar({
   hasChartData,
   isReplayStreamMode,
-  onToggleReplayStreamMode,
+  replayStatus,
+  replaySpeed,
+  replayProgressLabel,
+  onPlayReplay,
+  onPauseReplay,
+  onRestartReplay,
+  onExitReplay,
+  onChangeReplaySpeed,
   isOddsStreamLive,
   oddsStreamLastUpdate,
-  replayStreamProgress,
   hasDroppedUpdate,
+  replaySnapshotCount,
+  replayConnectionFailed,
 }: LiveMarketToolbarProps) {
   const freshnessState = getFreshnessState(hasChartData, isReplayStreamMode, isOddsStreamLive, oddsStreamLastUpdate);
   const freshness = FRESHNESS_COPY[freshnessState];
-  const ReplayIcon = isReplayStreamMode ? Square : Play;
 
   return (
     <header className="flex flex-col gap-3 border-b border-border pb-3 lg:flex-row lg:items-end lg:justify-between">
@@ -43,16 +59,21 @@ export function LiveMarketToolbar({
           {freshnessState === "live" && <span className="h-1.5 w-1.5 rounded-full bg-positive motion-safe:animate-pulse" aria-hidden="true" />}
           {freshness.label}
         </span>
-        {oddsStreamLastUpdate && <span className="font-mono text-xs text-stone-400">Last tick {oddsStreamLastUpdate}</span>}
-        {isReplayStreamMode && replayStreamProgress && <span className="font-mono text-xs text-info-200">{replayStreamProgress}</span>}
-        <button
-          type="button"
-          onClick={onToggleReplayStreamMode}
-          className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-black/20 px-3 text-xs font-semibold text-stone-200 transition-colors hover:border-accent/30 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
-        >
-          <ReplayIcon className="h-3.5 w-3.5" aria-hidden="true" />
-          {isReplayStreamMode ? "Stop demo replay" : "Start demo replay"}
-        </button>
+        {oddsStreamLastUpdate && <span className="font-mono text-xs text-stone-400">Last feed update {oddsStreamLastUpdate}</span>}
+        <span role="status" aria-label="Replay state" aria-live="polite" className="max-w-full break-words text-right font-mono text-xs leading-4 text-info-200 sm:whitespace-nowrap">
+          {replayProgressLabel}
+        </span>
+        <ReplayControls
+          replayStatus={replayStatus}
+          replaySpeed={replaySpeed}
+          onPlayReplay={onPlayReplay}
+          onPauseReplay={onPauseReplay}
+          onRestartReplay={onRestartReplay}
+          onExitReplay={onExitReplay}
+          onChangeReplaySpeed={onChangeReplaySpeed}
+          replaySnapshotCount={replaySnapshotCount}
+          replayConnectionFailed={replayConnectionFailed}
+        />
       </div>
 
       {hasDroppedUpdate && (

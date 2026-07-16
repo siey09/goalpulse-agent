@@ -85,7 +85,7 @@ export function SelectedMarketWorkspace({
       ? "Scheduled"
       : `${selectedMatch.homeScore ?? 0}–${selectedMatch.awayScore ?? 0}`;
   const marketContextLabel = isReplayStreamMode
-    ? "Demo replay"
+    ? "Historical replay"
     : isScheduled
       ? "Pre-match odds"
       : isLive

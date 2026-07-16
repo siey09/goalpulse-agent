@@ -1,8 +1,9 @@
-import { Area, AreaChart, CartesianGrid, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ChevronRight } from "lucide-react";
 import { formatOdds, formatOddsChange, severityMarkerStyle } from "../../lib/formatters";
 import type { Match } from "../../types";
 import type { LiveMarketsChartMarker, LiveMarketsChartPoint, LiveMarketsChartReadout } from "./LiveMarketsPage";
+import { replayProgressLabel, type ReplayStatus } from "./replayState";
 
 export interface OddsMovementChartProps {
   selectedMatch?: Match;
@@ -14,7 +15,43 @@ export interface OddsMovementChartProps {
   isReplayStreamMode: boolean;
   isOddsStreamLive: boolean;
   streamProgressPercent: number;
-  replayStreamProgress?: string;
+  replayCursor?: number;
+  replayTotal?: number;
+  replayStatus?: ReplayStatus;
+  replayOriginalTimestamp?: string;
+  replayIntervalMs?: number;
+}
+
+const historicalTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+const historicalDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "medium",
+});
+
+function formatHistoricalTimestamp(value: number): string {
+  if (!Number.isFinite(value) || value < 10_000_000_000) return "Time unavailable";
+  return historicalTimeFormatter.format(new Date(value));
+}
+
+function formatHistoricalCapture(point?: LiveMarketsChartPoint): string {
+  if (!point?.hasRealTimestamp || !point.rawTimestamp) return "Capture time unavailable";
+  const timestamp = Date.parse(point.rawTimestamp);
+  return Number.isNaN(timestamp)
+    ? "Capture time unavailable"
+    : historicalDateTimeFormatter.format(new Date(timestamp));
+}
+
+function replayPosition(cursor: number | undefined, replayTotal: number | undefined, fallbackCount: number) {
+  const current = cursor ?? fallbackCount;
+  const total = replayTotal ?? fallbackCount;
+  return {
+    current: Math.max(0, Math.min(current, total)),
+    total: Math.max(total, fallbackCount),
+  };
 }
 
 export function OddsMovementChart({
@@ -25,7 +62,11 @@ export function OddsMovementChart({
   isReplayStreamMode,
   isOddsStreamLive,
   streamProgressPercent,
-  replayStreamProgress,
+  replayCursor,
+  replayTotal,
+  replayStatus = "live",
+  replayOriginalTimestamp,
+  replayIntervalMs = 1000,
 }: OddsMovementChartProps) {
   const hasHomeSeries = chartData.some((point) => point.home != null);
   const hasDrawSeries = chartData.some((point) => point.draw != null);
@@ -41,18 +82,47 @@ export function OddsMovementChart({
         ? "Finished window"
         : "Live window";
   const progressLabel = isReplayStreamMode
-    ? replayStreamProgress || "Replay ready"
+    ? replayProgressLabel({ status: replayStatus, cursor: replayCursor ?? 0, total: replayTotal ?? 0, originalTimestamp: replayOriginalTimestamp, intervalMs: replayIntervalMs })
     : isOddsStreamLive
       ? `${chartData.length} snapshots in view`
       : "Waiting for the next snapshot";
+  const latestPoint = chartData[chartData.length - 1];
+  const position = replayPosition(replayCursor, replayTotal, chartData.length);
+  const railSegmentCount = Math.max(1, Math.min(position.total, 20));
+  const completedRailSegments = Math.round((position.current / Math.max(position.total, 1)) * railSegmentCount);
+  const formatHistoricalAxisTime = (value: number) => {
+    const capturedPoint = chartData.find((point) => point.timelineX === value);
+    return capturedPoint && !capturedPoint.hasRealTimestamp
+      ? "Time unavailable"
+      : formatHistoricalTimestamp(value);
+  };
+  const historicalEndLabel = isReplayStreamMode && position.current < position.total
+    ? "Capture time unavailable"
+    : formatHistoricalCapture(latestPoint);
+  const chartDescription = chartData.every((point) => point.hasRealTimestamp)
+    ? "Each point is a real TxLINE snapshot plotted by its capture timestamp."
+    : "Timestamped TxLINE snapshots use capture timestamps; unavailable captures use sequence order and remain labelled unavailable.";
 
   return (
     <section id="guide-odds-chart" aria-labelledby="odds-movement-title" className="min-w-0 p-3 sm:p-4">
+      <style>{`
+        @media (prefers-reduced-motion: no-preference) {
+          @keyframes market-capture-cursor-in {
+            from { opacity: 0.2; transform: scaleX(0.985); }
+            to { opacity: 0.9; transform: scaleX(1); }
+          }
+          .market-capture-cursor {
+            animation: market-capture-cursor-in 300ms ease-out;
+            transform-box: fill-box;
+            transform-origin: center;
+          }
+        }
+      `}</style>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-stone-500">Selected price tape</p>
           <h3 id="odds-movement-title" className="font-display text-base font-bold text-white">Odds movement</h3>
-          <p className="mt-0.5 text-[11px] text-stone-500">Each point is a TxLINE snapshot; lower decimal odds mean stronger market favor.</p>
+          <p className="mt-0.5 text-[11px] text-stone-500">Observed price holds until the next snapshot; lower decimal odds mean stronger market favor.</p>
         </div>
         <span className="rounded-md border border-border bg-black/25 px-2 py-1 font-mono text-[10px] uppercase tracking-wide text-stone-400">
           {marketContextLabel}
@@ -68,9 +138,13 @@ export function OddsMovementChart({
             className="h-[17rem] min-w-0 rounded-lg bg-black/20 p-2 sm:h-[20rem]"
           >
             <p id={chartDescriptionId} className="sr-only">
-              Each point is a real TxLINE snapshot. Lower decimal odds indicate stronger market favor.
+              {chartDescription} Observed prices hold until the next snapshot. Lower decimal odds indicate stronger market favor.
             </p>
-            <ResponsiveContainer width="100%" height="100%">
+            <div className="mb-1 flex items-center justify-between px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-stone-500" aria-hidden="true">
+              <span>Historical capture time</span>
+              <span>Decimal odds</span>
+            </div>
+            <ResponsiveContainer width="100%" height="94%">
               <AreaChart data={chartData} margin={{ top: 12, right: 18, left: 0, bottom: 4 }}>
                 <defs>
                   <pattern id="lmPixelHome" width="8" height="8" patternUnits="userSpaceOnUse">
@@ -82,8 +156,17 @@ export function OddsMovementChart({
                     <rect width="4" height="4" fill="#2fd6b4" fillOpacity={0.4} />
                   </pattern>
                 </defs>
-                <CartesianGrid stroke="rgba(158,196,224,0.22)" strokeDasharray="1 7" strokeLinecap="round" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#a8a29e", fontSize: 10 }} />
+                <CartesianGrid stroke="rgba(158,196,224,0.11)" strokeDasharray="1 8" strokeLinecap="round" />
+                <XAxis
+                  dataKey="timelineX"
+                  type="number"
+                  scale="time"
+                  domain={["dataMin", "dataMax"]}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#a8a29e", fontSize: 10 }}
+                  tickFormatter={formatHistoricalAxisTime}
+                />
                 <YAxis
                   orientation="right"
                   axisLine={false}
@@ -101,13 +184,14 @@ export function OddsMovementChart({
                     const point = payload[0]?.payload as LiveMarketsChartPoint | undefined;
                     const marker = chartSignalMarkers.find((currentMarker) => currentMarker.x === tooltipProps.label);
                     if (!point) return null;
+                    const snapshotNumber = chartData.findIndex((candidate) => candidate.id === point.id) + 1;
 
                     return (
                       <div className="w-[240px] rounded-lg border border-border bg-surface-1/95 p-3 text-xs text-stone-100 shadow-2xl shadow-black/50">
                         <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-info-200/70">
-                          {point.snapshotLabel ?? "TxLINE snapshot"}
+                          Snapshot {snapshotNumber || "—"} of {chartData.length}
                         </p>
-                        <p className="mt-1 text-[11px] text-stone-400">{point.timelineLabel ?? "Odds history point"}</p>
+                        <p className="mt-1 text-[11px] text-stone-300">{formatHistoricalCapture(point)}</p>
                         <div className="mt-3 grid gap-1.5">
                           {point.home != null && (
                             <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
@@ -128,14 +212,23 @@ export function OddsMovementChart({
                             </div>
                           )}
                         </div>
-                        {marker && <p className="mt-2 text-[11px] font-semibold text-accent-100">Signal · {marker.label}</p>}
+                        {marker && (
+                          <div className="mt-2 border-t border-white/10 pt-2 text-[11px]">
+                            <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-accent-100">Signal evidence</p>
+                            <p className="mt-1 font-semibold text-white">{marker.label}</p>
+                            <p className="mt-0.5 text-stone-400">
+                              {marker.target ?? "Tracked market"} · {formatOddsChange(marker.oddsChangePct)}
+                            </p>
+                            {marker.explanation && <p className="mt-1 leading-4 text-stone-400">{marker.explanation}</p>}
+                          </div>
+                        )}
                       </div>
                     );
                   }}
                 />
                 {hasHomeSeries && (
                   <Area
-                    type="monotone"
+                    type="stepAfter"
                     dataKey="home"
                     stroke="#ffb020"
                     strokeWidth={2.8}
@@ -148,7 +241,7 @@ export function OddsMovementChart({
                 )}
                 {hasDrawSeries && (
                   <Area
-                    type="monotone"
+                    type="stepAfter"
                     dataKey="draw"
                     stroke="#a78bfa"
                     strokeWidth={2}
@@ -160,7 +253,7 @@ export function OddsMovementChart({
                 )}
                 {hasAwaySeries && (
                   <Area
-                    type="monotone"
+                    type="stepAfter"
                     dataKey="away"
                     stroke="#2fd6b4"
                     strokeWidth={2}
@@ -188,6 +281,20 @@ export function OddsMovementChart({
                     />
                   );
                 })}
+                {latestPoint && (
+                  <ReferenceLine
+                    key={latestPoint.id}
+                    x={latestPoint.timelineX}
+                    stroke="#f8fafc"
+                    strokeWidth={1.5}
+                    strokeOpacity={0.9}
+                    label={{ value: "Current", position: "insideTopRight", fill: "#f8fafc", fontSize: 9 }}
+                    className="market-capture-cursor motion-reduce:transition-none"
+                  />
+                )}
+                {latestPoint?.home != null && <ReferenceDot x={latestPoint.timelineX} y={latestPoint.home} r={3.5} fill="#ffb020" stroke="#fff7e6" strokeWidth={1.5} />}
+                {latestPoint?.draw != null && <ReferenceDot x={latestPoint.timelineX} y={latestPoint.draw} r={3.5} fill="#a78bfa" stroke="#f3efff" strokeWidth={1.5} />}
+                {latestPoint?.away != null && <ReferenceDot x={latestPoint.timelineX} y={latestPoint.away} r={3.5} fill="#2fd6b4" stroke="#e6fffa" strokeWidth={1.5} />}
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -204,7 +311,7 @@ export function OddsMovementChart({
             </thead>
             <tbody>
               {chartData.map((point, index) => (
-                <tr key={`${point.name}-${point.timelineLabel ?? "snapshot"}-${index}`}>
+                <tr key={`${point.id}-${index}`}>
                   <th>{point.timelineLabel ?? point.name}</th>
                   {hasHomeSeries && <td>{formatOdds(point.home)}</td>}
                   {hasDrawSeries && <td>{formatOdds(point.draw)}</td>}
@@ -231,14 +338,32 @@ export function OddsMovementChart({
         </div>
       )}
 
-      <div className="mt-3 flex items-center gap-2">
-        <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/8" aria-hidden="true">
-          <div
-            className="h-1 rounded-full bg-gradient-to-r from-accent via-proof to-positive transition-[width] duration-500 motion-reduce:transition-none"
-            style={{ width: isReplayStreamMode ? `${streamProgressPercent}%` : isOddsStreamLive ? "100%" : "8%" }}
-          />
+      <div className="mt-3 rounded-lg border border-white/8 bg-black/15 px-3 py-2.5">
+        <div className="flex items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+          <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/8 max-sm:w-full max-sm:flex-none" aria-hidden="true">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-accent via-proof to-positive motion-safe:transition-[width,opacity,transform] motion-safe:duration-500 motion-safe:ease-out motion-reduce:transition-none"
+              style={{ width: isReplayStreamMode ? `${streamProgressPercent}%` : isOddsStreamLive ? "100%" : "8%" }}
+            />
+            <div className="absolute inset-0 flex gap-px">
+              {Array.from({ length: railSegmentCount }, (_, index) => (
+                <span
+                  key={index}
+                  className={`h-full flex-1 border-r border-black/35 ${index < completedRailSegments ? "opacity-20" : "opacity-80"}`}
+                />
+              ))}
+            </div>
+          </div>
+          <span className="font-mono text-[10px] text-stone-500 max-sm:text-right">{progressLabel}</span>
         </div>
-        <span className="shrink-0 font-mono text-[10px] text-stone-500">{progressLabel}</span>
+        <div className="mt-2 grid grid-cols-3 gap-2 font-mono text-[9px] text-stone-500">
+          <span><span className="block uppercase tracking-wide text-stone-600">Start</span>{formatHistoricalCapture(chartData[0])}</span>
+          <span className="text-center"><span className="block uppercase tracking-wide text-stone-600">Current</span>{formatHistoricalCapture(latestPoint)}</span>
+          <span className="text-right"><span className="block uppercase tracking-wide text-stone-600">End</span>{historicalEndLabel}</span>
+        </div>
+        <p role="status" aria-label="Replay position" aria-live="polite" className="sr-only">
+          Snapshot {position.current} of {position.total}. Historical capture position. {formatHistoricalCapture(latestPoint)}.
+        </p>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3 text-[10px] text-stone-500">
