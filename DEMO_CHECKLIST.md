@@ -79,7 +79,25 @@ on the compliance boundary."
 
 *(Full detail: see section 4 below.)*
 
-### 5. Deep dive — Agent vs Agent Arena
+### 5. Ask GoalPulse — breadth to technical depth
+
+[Open Ask GoalPulse, enter `/features`, select "Composite Confidence
+Score", then return to the catalog and select "Solana Verification"]
+
+**Say:** "GoalPulse can explain its own system without calling an external
+language model. `/features` exposes all 15 implemented capabilities, and
+every detail is source-backed: what it does, how it works, the actual
+formula or deterministic rule, the evidence it uses, and its honest
+limit. Confidence is explicitly a quality score, not win probability;
+Solana verification separately explains what is genuinely proven
+on-chain versus the local SHA-256 audit fingerprint."
+
+**Say (keep this to about 20 seconds):** "The catalog resolves locally,
+so opening these explanations adds no model or API usage. Judges can use
+it as a technical index during Q&A, while ordinary questions still read
+the current GoalPulse data."
+
+### 6. Deep dive — Agent vs Agent Arena
 
 [Scroll/navigate to the Arena panel]
 
@@ -104,7 +122,7 @@ this is analytics only."
 
 *(Full detail: see section 10 below.)*
 
-### 6. Deep dive — Signal detail: Historical Pattern Match + Verification Depth
+### 7. Deep dive — Signal detail: Historical Pattern Match + Verification Depth
 
 [Click any signal card to open its detail modal]
 
@@ -135,7 +153,7 @@ this exact signal."
 
 *(Full detail: see section 11 below.)*
 
-### 7. Deep dive — Signal Correlation
+### 8. Deep dive — Signal Correlation
 
 [Scroll/navigate to the Signal Correlation panel]
 
@@ -157,7 +175,7 @@ than manufacturing a result to look busy."
 
 *(Full detail: see section 12 below.)*
 
-### 8. Close — Compliance Boundary
+### 9. Close — Compliance Boundary
 
 **Say:** "Last thing, and it matters: GoalPulse is analytics-only. It
 does not place wagers, custody funds, execute trades, connect to
@@ -232,6 +250,20 @@ Click "Guide" (bottom-right). Walks through all 22 steps in order:
 
 Suggested line: This tour was built to let a judge see the full system
 in one guided pass without needing me to narrate every panel.
+
+#### Ask GoalPulse judge shortcut
+
+Open the persistent Ask GoalPulse control from any destination:
+
+1. Enter `/features` and confirm all four categories and 15 feature buttons.
+2. Open Composite Confidence Score and point out the implementation flow,
+   weighted formula, evidence source, and sample-size limitation.
+3. Open Solana Verification and distinguish the real mainnet Merkle-proof
+   check from the local SHA-256 audit fingerprint.
+4. Enter `/help` if a judge wants examples of other supported questions.
+
+The catalog is bundled frontend data and resolves before live-data intent
+routing. It uses no external LLM and does not create a new backend API.
 
 ### 5. Market Board
 
@@ -470,11 +502,12 @@ execution.
 1. Opening Problem
 2. Production app + API health
 3. Guided Tour (all 22 steps, fast pass)
-4. Agent vs Agent Arena (deep dive)
-5. Signal detail: Historical Pattern Match + Verification Depth (deep
+4. Ask GoalPulse: `/features` → Confidence → Solana Verification
+5. Agent vs Agent Arena (deep dive)
+6. Signal detail: Historical Pattern Match + Verification Depth (deep
    dive)
-6. Signal Correlation (deep dive)
-7. Compliance statement
+7. Signal Correlation (deep dive)
+8. Compliance statement
 
 **Extended/full walkthrough (if there's more time, or for Q&A):** every
 numbered section in the Full Checklist above, in order.
@@ -490,6 +523,11 @@ Run locally or verify production:
 - Odds chart shows severity-colored markers with confidence/field
   pressure in the hover tooltip
 - Guided Tour opens and all 22 steps navigate without console errors
+- Ask GoalPulse `/features` shows four categories and 15 feature buttons
+- A feature detail shows its workflow, formula/rules, evidence, and limit;
+  `/help` renders command guidance
+- Ask GoalPulse has no horizontal overflow at a 390px viewport, and
+  selecting a long detail anchors its title inside the chat panel
 - Arena scoreboard loads all three agents (Momentum Follower, Contrarian,
   Kelly Criterion) with non-empty position data
 - Arena's "Verify underlying data on Solana ⛓" returns a result

@@ -80,7 +80,10 @@ Important frontend files:
 - apps/web/src/features/*/  (one page per destination: overview, markets, signals, arena, market-maker, replay, verification, archive, health)
 - apps/web/src/lib/arena.ts (shared Arena types + getMetaAgentRecommendation, used by both ArenaPanel and CommandCenterPage)
 - apps/web/src/components/ui/ (Card, StatusBadge, MetricCard, SectionHeader, EmptyState, EvidenceStamp, CalibrationBar — the shared design system)
-- apps/web/src/components/AnalystChatWidget.tsx (deterministic "Ask GoalPulse" chat, no external LLM call — keyword-matched against live signal/replay/audit state)
+- apps/web/src/lib/goalPulseFeatureCatalog.ts (canonical 15-feature knowledge catalog, aliases, typed replies, and deterministic slash-command parser)
+- apps/web/src/lib/goalPulseFeatureCatalog.test.ts (catalog integrity, alias resolution, unknown-feature recovery, and local-command routing tests)
+- apps/web/src/components/AnalystChatWidget.tsx (structured Ask GoalPulse renderer for text, grouped feature index, feature detail, and help replies; no external LLM call)
+- apps/web/src/components/AnalystChatWidget.test.tsx (feature-card interaction, formula/evidence/limit rendering, help, text-reply compatibility, and contained auto-scroll tests)
 - apps/web/src/components/signals/SignalAuditDrawer.tsx (per-signal detail drawer: evidence, Arena decisions, on-chain verification)
 - apps/web/src/components/SignalIntelligencePanel.tsx
 - apps/web/src/components/MarketMakerPanel.tsx
@@ -92,6 +95,21 @@ Important frontend files:
 - apps/web/src/components/SteamMoveDetectionPanel.tsx (live-polled, sustained same-direction tick-sequence detection)
 - apps/web/src/components/SignalCorrelationPanel.tsx (cross-match signal cluster detection)
 - apps/web/src/data/pinnedCaseStudies.ts (frontend-bundled pinned signal data)
+
+## Ask GoalPulse Knowledge Commands
+
+Ask GoalPulse has no generative model dependency. `apps/web/src/lib/goalPulseFeatureCatalog.ts` is the canonical, typed knowledge source for 15 implemented capabilities across four categories: Live Intelligence, Strategy, Trust & Verification, and Operations. Every `GoalPulseFeature` carries a stable id, aliases, summary, implementation steps, formulas or deterministic rules, evidence source, and an explicit limitation.
+
+Supported local commands:
+
+- `/features` returns an `AnalystReply` with `kind: "feature-index"` and all catalog ids.
+- `/features <name>` and `/feature <name>` resolve ids, names, and aliases such as `confidence`, `kelly`, `steam`, and `solana`, then return `kind: "feature-detail"`.
+- `/help` returns `kind: "help"` with command guidance.
+- Unknown feature names return an honest `kind: "text"` recovery response; they are never treated as implemented functionality.
+
+`App.tsx` calls `parseGoalPulseCommand()` before `generateAnalystReply()`. A recognized slash command therefore returns immediately from local frontend data and cannot trigger a live endpoint or external model call. Ordinary natural-language questions remain backward compatible: the existing analyst intent branches can still read current signals or request Arena, Market Maker, archive, calibration, steam, correlation, and Solana verification data from the API.
+
+`AnalystChatWidget.tsx` renders the discriminated reply union rather than injecting HTML. Feature cards are semantic buttons, details use ordered implementation steps plus separate formula, evidence, and limitation blocks, and new replies scroll only the chat conversation container so the surrounding fixed dashboard does not jump. The full catalog is intentionally not duplicated in Markdown; formulas and feature-level limits stay closest to the tested TypeScript source to reduce documentation drift.
 
 ## TxLINE and TXODDS Scores Usage
 

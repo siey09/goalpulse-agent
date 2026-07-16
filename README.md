@@ -15,6 +15,7 @@ The CI badge above reflects whether `main` currently passes. Run `npm run test` 
 - Frontend: https://goalpulse-agent.vercel.app
 - Backend API: https://goalpulse-agent-api.onrender.com
 - Health Check: https://goalpulse-agent-api.onrender.com/health
+- Community: https://discord.gg/vCsA8Wuwh
 - Repository: https://github.com/siey09/goalpulse-agent
 
 ## Core Idea
@@ -86,7 +87,18 @@ Running live against real TxLINE Service Level 12 data across multiple World Cup
 - React dashboard restructured into a 9-destination Command Center (Operations: Command Center, Live Markets, Signals; Strategy: Agent Arena, Market Maker, Replay Lab; Trust: Verification, Archive, System Health), also reachable in a single-scroll layout at `?preview=classic`
 - Shared design token system and primitives (`Card`, `StatusBadge`, `MetricCard`, `SectionHeader`) so every panel draws from one visual language
 - A calibration-bar signature element showing where an observed value lands against the deterministic threshold it crossed
-- In-app deterministic "Ask GoalPulse" analyst chat, answering questions about the latest signal, failed-continuation patterns, reversal risk, and score reality checks using only live data — no external LLM call
+- In-app deterministic "Ask GoalPulse" analyst chat with a clickable 15-feature knowledge catalog, source-backed workflows, formulas/rules, evidence boundaries, and honest limitations — no external LLM call
+
+## Ask GoalPulse Commands
+
+Ask GoalPulse combines two deterministic paths:
+
+- `/features` — browse all 15 implemented features in four groups: Live Intelligence, Strategy, Trust & Verification, and Operations
+- `/features <name>` — open one feature's purpose, implementation flow, exact formulas or deterministic rules, evidence source, and limitation (for example, `/features confidence`, `/features kelly`, or `/features solana`)
+- `/help` — show the supported commands and example live-data questions
+- Natural-language questions such as `latest signal`, `current steam move`, or `verify on Solana` continue through the existing live-data analyst path
+
+Slash commands resolve locally in the frontend before any live-data request, so browsing the feature guide adds no model/API usage. The catalog is maintained in `apps/web/src/lib/goalPulseFeatureCatalog.ts`; its formula text mirrors the production implementation rather than generating explanations at runtime. GoalPulse remains analytics-only and never turns these explanations into betting advice.
 
 ## Scores Intelligence Layer
 
