@@ -117,6 +117,8 @@ const isChronologicallyValid = !previousSnapshot || new Date(previousSnapshot.cr
       snapshotsCreated,
       signalsCreated,
       rawFixtureCount: feed.rawFixtureCount ?? feed.matches.length,
+      eligibleFixtureCount: feed.eligibleFixtureCount,
+      oddsEnrichmentFailures: feed.oddsEnrichmentFailures,
       status: "success",
       message: `Processed ${feed.matches.length} matches, stored ${snapshotsCreated} new snapshot(s), generated ${signalsCreated} signal(s), and evaluated ${evaluatedSignals} pending signal(s).`,
     };

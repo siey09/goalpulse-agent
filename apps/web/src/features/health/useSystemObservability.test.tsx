@@ -23,7 +23,9 @@ const feedHealth: FeedHealth = {
   oddsFreshness: { staleThresholdMs: 300_000, staleLiveMatchCount: 0, staleLiveMatches: [] },
   fixtureCoverage: {
     lastRunRawFixtureCount: 7,
-    lastRunProcessedCount: 7,
+    lastRunEligibleFixtureCount: 2,
+    lastRunProcessedCount: 2,
+    lastRunOddsEnrichmentFailures: 0,
     isCoverageDropped: false,
     recentCoverageDrops: 0,
   },

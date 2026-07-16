@@ -25,7 +25,9 @@ const feedHealth: FeedHealth = {
   },
   fixtureCoverage: {
     lastRunRawFixtureCount: 7,
-    lastRunProcessedCount: 7,
+    lastRunEligibleFixtureCount: 2,
+    lastRunProcessedCount: 2,
+    lastRunOddsEnrichmentFailures: 0,
     isCoverageDropped: false,
     recentCoverageDrops: 0,
   },
@@ -111,5 +113,25 @@ describe("systemHealthModel", () => {
       "push-stream-reconnecting",
       "archive-pending",
     ]);
+  });
+
+  it("explains eligible coverage separately from raw discovery", () => {
+    const incidents = deriveHealthIncidents({
+      health: { useSimulatedFeed: false },
+      metrics,
+      feedHealth: {
+        ...feedHealth,
+        fixtureCoverage: {
+          ...feedHealth.fixtureCoverage,
+          lastRunEligibleFixtureCount: 3,
+          lastRunProcessedCount: 2,
+          isCoverageDropped: true,
+        },
+      },
+      archiveStatus: { pending: 0, failures: 0, lastFailureAt: null },
+    });
+
+    expect(incidents.find((incident) => incident.id === "fixture-drop-current")?.evidence)
+      .toBe("2 of 3 odds-eligible fixtures were processed; 7 raw fixtures were discovered.");
   });
 });

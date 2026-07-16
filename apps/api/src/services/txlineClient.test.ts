@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { config } from "../config";
-import { fetchTxLineOddsHistoryForMatch, filterOutConfirmedFinishedFixtures } from "./txlineClient";
+import { fetchTxLineFeed, fetchTxLineOddsHistoryForMatch, filterOutConfirmedFinishedFixtures } from "./txlineClient";
 import type { Match } from "../types";
+import { store } from "../store";
 
 type TestFixture = { FixtureId: number; StartTime?: number };
 
@@ -172,5 +173,91 @@ describe("fetchTxLineOddsHistoryForMatch", () => {
     }));
 
     await expect(fetchTxLineOddsHistoryForMatch(makeMatch({ id: "99999999" }))).resolves.toEqual([]);
+  });
+});
+
+describe("fetchTxLineFeed health evidence", () => {
+  beforeEach(() => {
+    config.txlineApiBaseUrl = "https://txline.example";
+    config.txlineApiKey = "test-api-key";
+    store.matches = [];
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("distinguishes raw discovery from supported-market eligibility", async () => {
+    const supportedOdds = {
+      FixtureId: 101,
+      MessageId: "main-line",
+      Ts: Date.parse("2026-07-16T08:00:00.000Z"),
+      Bookmaker: "Canonical Sportsbook",
+      SuperOddsType: "1X2_PARTICIPANT_RESULT",
+      InRunning: true,
+      PriceNames: ["part1", "draw", "part2"],
+      Prices: [2100, 3300, 3500],
+    };
+
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.endsWith("/auth/guest/start")) {
+        return new Response(JSON.stringify({ token: "guest-jwt" }), { status: 200 });
+      }
+      if (url.endsWith("/api/fixtures/snapshot")) {
+        return new Response(JSON.stringify([
+          { FixtureId: 101, Participant1: "A", Participant2: "B" },
+          { FixtureId: 102, Participant1: "C", Participant2: "D" },
+        ]), { status: 200 });
+      }
+      if (url.includes("/api/scores/snapshot/")) {
+        return new Response(JSON.stringify({}), { status: 200 });
+      }
+      if (url.endsWith("/api/odds/snapshot/101")) {
+        return new Response(JSON.stringify([supportedOdds]), { status: 200 });
+      }
+      if (url.includes("/api/odds/")) {
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    }));
+
+    const feed = await fetchTxLineFeed();
+
+    expect(feed).toMatchObject({
+      rawFixtureCount: 2,
+      eligibleFixtureCount: 1,
+      oddsEnrichmentFailures: 0,
+    });
+    expect(feed.matches).toHaveLength(1);
+  });
+
+  it("reports an odds enrichment failure separately", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.endsWith("/auth/guest/start")) {
+        return new Response(JSON.stringify({ token: "guest-jwt" }), { status: 200 });
+      }
+      if (url.endsWith("/api/fixtures/snapshot")) {
+        return new Response(JSON.stringify([
+          { FixtureId: 103, Participant1: "E", Participant2: "F" },
+        ]), { status: 200 });
+      }
+      if (url.endsWith("/api/scores/snapshot/103")) {
+        return new Response(JSON.stringify({}), { status: 200 });
+      }
+      if (url.endsWith("/api/odds/snapshot/103")) {
+        return new Response("upstream error", { status: 503, statusText: "Unavailable" });
+      }
+      return new Response(JSON.stringify([]), { status: 200 });
+    }));
+
+    const feed = await fetchTxLineFeed();
+
+    expect(feed).toMatchObject({
+      rawFixtureCount: 1,
+      eligibleFixtureCount: 0,
+      oddsEnrichmentFailures: 1,
+    });
   });
 });

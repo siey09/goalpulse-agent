@@ -46,6 +46,8 @@ export function fetchSimulatedTxLineFeed(): {
   matches: Match[];
   snapshots: OddsSnapshot[];
   rawFixtureCount: number;
+  eligibleFixtureCount: number;
+  oddsEnrichmentFailures: number;
 } {
   tick += 1;
 
@@ -123,5 +125,7 @@ export function fetchSimulatedTxLineFeed(): {
     matches: updatedMatches,
     snapshots,
     rawFixtureCount: updatedMatches.length,
+    eligibleFixtureCount: updatedMatches.length,
+    oddsEnrichmentFailures: 0,
   };
 }

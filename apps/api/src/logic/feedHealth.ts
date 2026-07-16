@@ -14,11 +14,9 @@ export interface CycleHealth {
 
 /**
  * agentRuns is expected newest-first (matching store.agentRuns's unshift
- * convention). A gap - either the current gap since the last run, or any
- * gap between two consecutive historical runs - counts as "missed" when it
- * exceeds 3x the expected interval, generous enough to absorb normal jitter
- * (a slow TxLINE response, a GC pause) without false-positiving on every
- * cycle.
+ * convention). Health measures idle time, not time spent doing useful work:
+ * the current gap starts when the latest run finished, while historical gaps
+ * run from an older completion to the next start.
  */
 export function assessCycleHealth(
   agentRuns: AgentRun[],
@@ -37,14 +35,14 @@ export function assessCycleHealth(
     };
   }
 
-  const lastRunAt = agentRuns[0].startedAt;
+  const lastRunAt = agentRuns[0].finishedAt;
   const cycleGapMs = now - new Date(lastRunAt).getTime();
   const isCurrentGapExceeded = cycleGapMs > missedThresholdMs;
 
   let recentMissedCycles = 0;
   for (let i = 0; i < agentRuns.length - 1; i += 1) {
     const newer = new Date(agentRuns[i].startedAt).getTime();
-    const older = new Date(agentRuns[i + 1].startedAt).getTime();
+    const older = new Date(agentRuns[i + 1].finishedAt).getTime();
     if (newer - older > missedThresholdMs) {
       recentMissedCycles += 1;
     }
@@ -112,35 +110,45 @@ export function assessOddsFreshness(
 
 export interface FixtureCoverage {
   lastRunRawFixtureCount: number | null;
+  lastRunEligibleFixtureCount: number | null;
   lastRunProcessedCount: number | null;
+  lastRunOddsEnrichmentFailures: number;
   isCoverageDropped: boolean;
   recentCoverageDrops: number;
 }
 
 /**
- * A drop is rawFixtureCount > matchesProcessed on a given run -
- * self-contained, never hardcodes the underlying 14-fixture cap constant,
- * so it stays correct even if that constant changes elsewhere.
+ * Raw discovery includes fixtures without a supported market and is context,
+ * not a coverage denominator. A drop requires explicit evidence that an
+ * odds-eligible fixture was not processed or that odds enrichment failed.
+ * Legacy persisted runs without eligibility evidence remain neutral.
  */
 export function assessFixtureCoverage(agentRuns: AgentRun[]): FixtureCoverage {
   if (agentRuns.length === 0) {
     return {
       lastRunRawFixtureCount: null,
+      lastRunEligibleFixtureCount: null,
       lastRunProcessedCount: null,
+      lastRunOddsEnrichmentFailures: 0,
       isCoverageDropped: false,
       recentCoverageDrops: 0,
     };
   }
 
+  const hasCoverageDrop = (run: AgentRun) =>
+    run.eligibleFixtureCount !== undefined &&
+    (run.eligibleFixtureCount > run.matchesProcessed ||
+      (run.oddsEnrichmentFailures ?? 0) > 0);
+
   const lastRun = agentRuns[0];
-  const isCoverageDropped = lastRun.rawFixtureCount > lastRun.matchesProcessed;
-  const recentCoverageDrops = agentRuns.filter(
-    (run) => run.rawFixtureCount > run.matchesProcessed
-  ).length;
+  const isCoverageDropped = hasCoverageDrop(lastRun);
+  const recentCoverageDrops = agentRuns.filter(hasCoverageDrop).length;
 
   return {
     lastRunRawFixtureCount: lastRun.rawFixtureCount,
+    lastRunEligibleFixtureCount: lastRun.eligibleFixtureCount ?? null,
     lastRunProcessedCount: lastRun.matchesProcessed,
+    lastRunOddsEnrichmentFailures: lastRun.oddsEnrichmentFailures ?? 0,
     isCoverageDropped,
     recentCoverageDrops,
   };

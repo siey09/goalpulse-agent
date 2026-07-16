@@ -141,8 +141,8 @@ export function SystemHealthPage({ health, archiveStatus }: SystemHealthPageProp
     health && archiveStatus && metricsState === "fresh" && feedHealthState === "fresh"
   );
   const coverage = feedHealth?.fixtureCoverage;
-  const coverageRatio = coverage?.lastRunRawFixtureCount && coverage.lastRunProcessedCount !== null
-    ? Math.min(100, (coverage.lastRunProcessedCount / coverage.lastRunRawFixtureCount) * 100)
+  const coverageRatio = coverage?.lastRunEligibleFixtureCount && coverage.lastRunProcessedCount !== null
+    ? Math.min(100, (coverage.lastRunProcessedCount / coverage.lastRunEligibleFixtureCount) * 100)
     : null;
   const duplicateCount = metrics
     ? metrics.duplicatesDropped.snapshots + metrics.duplicatesDropped.signals
@@ -240,10 +240,12 @@ export function SystemHealthPage({ health, archiveStatus }: SystemHealthPageProp
           <TelemetryCard
             icon={<Database size={16} />}
             label="Fixture coverage"
-            value={coverage?.lastRunProcessedCount !== null && coverage?.lastRunProcessedCount !== undefined && coverage.lastRunRawFixtureCount !== null
-              ? `${coverage.lastRunProcessedCount}/${coverage.lastRunRawFixtureCount}`
+            value={coverage?.lastRunProcessedCount !== null && coverage?.lastRunProcessedCount !== undefined && coverage.lastRunEligibleFixtureCount !== null
+              ? `${coverage.lastRunProcessedCount}/${coverage.lastRunEligibleFixtureCount}`
               : "Unavailable"}
-            detail={coverage ? `${coverage.recentCoverageDrops} recent coverage drop(s)` : "Coverage data unavailable"}
+            detail={coverage
+              ? `${coverage.lastRunRawFixtureCount ?? "Unknown"} discovered · ${coverage.lastRunOddsEnrichmentFailures} enrichment failure(s)`
+              : "Coverage data unavailable"}
           >
             {coverageRatio !== null && (
               <div className="mt-3 h-1 overflow-hidden rounded-full bg-surface-3" aria-label={`${Math.round(coverageRatio)}% fixture coverage`}>

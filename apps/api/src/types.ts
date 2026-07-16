@@ -158,6 +158,8 @@ export interface AgentRun {
   snapshotsCreated: number;
   signalsCreated: number;
   rawFixtureCount: number;
+  eligibleFixtureCount?: number;
+  oddsEnrichmentFailures?: number;
   status: "success" | "error";
   message: string;
 }
