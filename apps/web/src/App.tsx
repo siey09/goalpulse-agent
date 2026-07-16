@@ -79,6 +79,7 @@ import type {
   Health,
   SimilarSignalsResult,
 } from "./types";
+import type { AgentStats } from "./api";
 import {
   formatNumber,
   formatPercent,
@@ -138,17 +139,6 @@ type AgentRun = {
   startedAt?: string;
   finishedAt?: string;
   message?: string;
-};
-
-type AgentStats = {
-  txlineUpdates?: number;
-  signalsGenerated?: number;
-  highSeverity?: number;
-  pendingSignals?: number;
-  correctSignals?: number;
-  incorrectSignals?: number;
-  closedSignals?: number;
-  strategyAccuracy?: number;
 };
 
 const API_BASE_URL =
@@ -1519,13 +1509,31 @@ function App() {
             kpis={{
               liveFixtures: matchStatusCounts.live,
               feedFreshnessLabel: dataFreshnessLabel(selectedMatch?.lastUpdated) ?? "—",
-              signalsInWindow: stats?.signalsGenerated ?? 0,
-              openSimulatedPositions: pnl?.openPositions ?? 0,
+              signalsInWindow: stats?.signalsGenerated ?? null,
+              openSimulatedPositions: pnl?.openPositions ?? null,
             }}
-            selectedFixtureLabel={
-              selectedMatch ? `${selectedMatch.homeTeam} vs ${selectedMatch.awayTeam}` : "No match selected"
-            }
-            chartData={chartData.map((point) => ({ name: point.name, home: point.home, away: point.away }))}
+            fixturePipeline={{
+              live: matchStatusCounts.live,
+              upcoming: matchStatusCounts.scheduled,
+              finished: matchStatusCounts.finished,
+            }}
+            signalOutcomes={stats ? {
+              confirmed: stats.correctSignals,
+              rejected: stats.incorrectSignals,
+              pending: stats.pendingSignals,
+              strategyAccuracy: stats.strategyAccuracy,
+            } : null}
+            pnl={pnl ? {
+              netUnits: pnl.netUnits,
+              roiPercent: pnl.roiPercent,
+              openPositions: pnl.openPositions,
+              openExposure: pnl.openExposure,
+              settledBets: pnl.settledBets,
+            } : null}
+            archiveStatus={stats ? {
+              pending: stats.oddsArchive?.pending ?? 0,
+              failures: stats.oddsArchive?.failures ?? 0,
+            } : null}
             decisionFeed={agentTimeline}
             latestSignal={
               latestSignal
