@@ -844,6 +844,13 @@ function statusFromScoreState(
   return fallbackStatus;
 }
 
+export function resolveScoreLastUpdated(eventTimestamp: number | undefined, fallbackTimestamp: string): string {
+  if (!eventTimestamp) return fallbackTimestamp;
+
+  const eventDate = new Date(eventTimestamp);
+  return Number.isNaN(eventDate.getTime()) ? fallbackTimestamp : eventDate.toISOString();
+}
+
 function applyScoreSnapshot(
   match: Match,
   score: TxLineScoreSnapshot | TxLineScoreSnapshot[] | undefined,
@@ -874,7 +881,7 @@ function applyScoreSnapshot(
     statusLabel: statusId ? STATUS_LABELS[statusId] : scoreEvent.Status ?? scoreEvent.GameState ?? undefined,
     clockSeconds,
     clockLabel: formatClockLabel(clockSeconds, minute),
-    lastUpdated: nowIso,
+    lastUpdated: resolveScoreLastUpdated(scoreEvent.Ts, nowIso),
   };
 }
 
