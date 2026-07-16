@@ -176,7 +176,9 @@ export function MarketFixtureRail({
                   <span className="block truncate text-sm font-semibold text-white">
                     {match.homeTeam} vs {match.awayTeam}
                   </span>
-                  <span className="block truncate text-[10px] text-stone-500">{dataFreshnessLabel(match.lastUpdated)}</span>
+                  <span className="block truncate text-[10px] text-stone-500">
+                    {match.status === "finished" ? "Final result" : dataFreshnessLabel(match.lastUpdated)}
+                  </span>
                 </span>
                 <span className="flex items-center gap-1 text-right font-mono text-xs tabular-nums text-stone-300">
                   <span>

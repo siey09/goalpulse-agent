@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { config } from "../config";
-import { fetchTxLineFeed, fetchTxLineOddsHistoryForMatch, filterOutConfirmedFinishedFixtures } from "./txlineClient";
+import {
+  fetchTxLineFeed,
+  fetchTxLineOddsHistoryForMatch,
+  filterOutConfirmedFinishedFixtures,
+  resolveScoreLastUpdated,
+} from "./txlineClient";
 import type { Match } from "../types";
 import { store } from "../store";
 
@@ -85,6 +90,16 @@ describe("filterOutConfirmedFinishedFixtures", () => {
     const result = filterOutConfirmedFinishedFixtures(fixtures, priorMatchesById);
 
     expect(result.map((fixture) => fixture.FixtureId)).toEqual([2, 4]);
+  });
+});
+
+describe("resolveScoreLastUpdated", () => {
+  it("keeps the real TxLINE event time instead of the later fetch time", () => {
+    const eventTime = Date.parse("2026-06-28T22:00:00.000Z");
+
+    expect(resolveScoreLastUpdated(eventTime, "2026-07-16T14:30:30.424Z")).toBe(
+      "2026-06-28T22:00:00.000Z"
+    );
   });
 });
 

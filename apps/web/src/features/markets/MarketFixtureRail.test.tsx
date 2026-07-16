@@ -32,6 +32,23 @@ describe("MarketFixtureRail", () => {
     expect(onSelectMatch).toHaveBeenCalledWith("live");
   });
 
+  it("labels completed fixtures as final instead of implying continued updates", () => {
+    render(
+      <MarketFixtureRail
+        matches={[{ ...matches[0], lastUpdated: new Date().toISOString() }]}
+        matchStatusFilter="finished"
+        onChangeMatchStatusFilter={vi.fn()}
+        matchStatusCounts={{ all: 1, live: 0, scheduled: 0, finished: 1 }}
+        selectedMatchId="finished"
+        onSelectMatch={vi.fn()}
+      />
+    );
+
+    const fixture = screen.getByRole("button", { name: /inspect market for Japan vs Spain/i });
+    expect(within(fixture).getByText("Final result")).toBeInTheDocument();
+    expect(within(fixture).queryByText(/updated .* ago/i)).not.toBeInTheDocument();
+  });
+
   it("changes filters and offers a return to All from an empty filter", () => {
     const onChange = vi.fn();
 
