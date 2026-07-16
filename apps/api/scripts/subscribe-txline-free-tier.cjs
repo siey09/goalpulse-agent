@@ -14,7 +14,7 @@ const {
   getAssociatedTokenAddressSync,
   TOKEN_2022_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
-} = require("@solana/spl-token");
+} = require("./solana-token-utils.cjs");
 
 const SERVICE_LEVEL_ID = 12; // World Cup & Int Friendlies Real-time Free
 const DURATION_WEEKS = 4;

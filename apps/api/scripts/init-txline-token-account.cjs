@@ -11,7 +11,7 @@ const {
   getOrCreateAssociatedTokenAccount,
   TOKEN_2022_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
-} = require("@solana/spl-token");
+} = require("./solana-token-utils.cjs");
 
 const RPC_URL = "https://api.mainnet-beta.solana.com";
 
