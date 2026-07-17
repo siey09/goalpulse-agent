@@ -40,6 +40,7 @@ import { ClassicReplayPanel } from "./features/markets/ClassicReplayPanel";
 import { GuidedTour } from "./app/GuidedTour";
 import { useProductTour } from "./app/useProductTour";
 import { LoadingScreen } from "./components/ui/LoadingScreen";
+import { hideBootSplash } from "./lib/bootSplash";
 // Lazy-loaded: only one destination is ever visible at a time in the
 // Command Center preview, so there's no reason to bundle all 9 pages'
 // code into the initial chunk a default-page (non-preview) visitor
@@ -776,6 +777,7 @@ function App() {
       setLastRefresh(new Date().toLocaleTimeString());
       hasLoadedOnceRef.current = true;
       setIsConnecting(false);
+      hideBootSplash();
     } catch (currentError) {
       setError(
         currentError instanceof Error
@@ -784,6 +786,7 @@ function App() {
       );
       hasLoadedOnceRef.current = true;
       setIsConnecting(false);
+      hideBootSplash();
     }
   }, []);
 
