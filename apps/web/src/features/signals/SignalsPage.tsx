@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { ArrowUpRight, Search } from "lucide-react";
+import { ArrowUpRight, Minus, Search, TrendingDown, TrendingUp } from "lucide-react";
 import { SignalIntelligencePanel } from "../../components/SignalIntelligencePanel";
 import { SteamMoveDetectionPanel } from "../../components/SteamMoveDetectionPanel";
 import { SignalCorrelationPanel } from "../../components/SignalCorrelationPanel";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { StatusBadge, type StatusTone } from "../../components/ui/StatusBadge";
 import {
   formatOdds,
   formatOddsChange,
@@ -29,11 +30,11 @@ export interface SignalsPageProps {
 
 type SignalFilter = "all" | "high" | "field" | "settled";
 
-const filters: Array<{ value: SignalFilter; label: string }> = [
+const filters: Array<{ value: SignalFilter; label: string; hint?: string }> = [
   { value: "all", label: "All" },
-  { value: "high", label: "High priority" },
-  { value: "field", label: "Field-backed" },
-  { value: "settled", label: "Settled" },
+  { value: "high", label: "High priority", hint: "Sharp odds movement, >= 15%" },
+  { value: "field", label: "Field-backed", hint: "Also supported by match-context pressure, not odds alone" },
+  { value: "settled", label: "Settled", hint: "Outcome already confirmed correct or incorrect" },
 ];
 
 function signalCountLabel(count: number) {
@@ -50,6 +51,23 @@ function severityTone(severity?: string) {
   }
 
   return "border-white/10 bg-white/5 text-stone-300";
+}
+
+/** Mirrors SignalArchivePanel's resultStatusTone so "settled correctly" always
+ * reads the same color across the app, instead of flat gray text a first-time
+ * operator has to read closely to interpret. */
+function outcomeTone(resultStatus?: string): StatusTone {
+  if (resultStatus === "correct") return "positive";
+  if (resultStatus === "incorrect") return "danger";
+  return "warning";
+}
+
+/** Direction-only indicator alongside the existing odds-change percentage -
+ * lets an operator scan the queue for shortening/drifting markets without
+ * reading every number. */
+function movementIcon(changePct?: number) {
+  if (changePct === undefined || Number.isNaN(changePct) || changePct === 0) return Minus;
+  return changePct > 0 ? TrendingUp : TrendingDown;
 }
 
 export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: SignalsPageProps) {
@@ -167,6 +185,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                     key={option.value}
                     type="button"
                     aria-pressed={isActive}
+                    title={option.hint}
                     onClick={() => setFilter(option.value)}
                     className={`min-h-11 rounded-lg border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${
                       isActive
@@ -194,9 +213,13 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                 const proofPreview = item.proofHash
                   ? `${item.proofHash.slice(0, 10)}…${item.proofHash.slice(-6)}`
                   : "Pending";
+                const TrendIcon = movementIcon(signal.oddsChangePct);
 
                 return (
-                  <li key={`${item.source}-${signal.id ?? index}`} className="min-w-0 bg-black/10 p-3 sm:p-4">
+                  <li
+                    key={`${item.source}-${signal.id ?? index}`}
+                    className="min-w-0 bg-black/10 p-3 transition-colors hover:bg-black/[0.15] sm:p-4"
+                  >
                     <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(12rem,0.8fr)_minmax(9rem,0.55fr)]">
                       <div className="min-w-0">
                         <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -217,17 +240,33 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                           </div>
                           <div>
                             <dt className="text-stone-400">Movement</dt>
-                            <dd className="mt-0.5 font-mono text-info-200">{formatOddsChange(signal.oddsChangePct)}</dd>
+                            <dd className="mt-0.5 flex items-center gap-1 font-mono text-info-200">
+                              <TrendIcon aria-hidden="true" className="h-3 w-3 shrink-0" />
+                              {formatOddsChange(signal.oddsChangePct)}
+                            </dd>
                           </div>
                           <div>
                             <dt className="text-stone-400">Confidence</dt>
                             <dd className="mt-0.5 font-mono text-stone-100">
                               {typeof confidence === "number" ? `${confidence}%` : "Not scored"}
                             </dd>
+                            {typeof confidence === "number" && (
+                              <div
+                                className="mt-1.5 h-1 w-full max-w-16 overflow-hidden rounded-full bg-surface-3"
+                                aria-hidden="true"
+                              >
+                                <div
+                                  className="h-full rounded-full bg-accent"
+                                  style={{ width: `${Math.min(100, Math.max(0, confidence))}%` }}
+                                />
+                              </div>
+                            )}
                           </div>
                           <div>
                             <dt className="text-stone-400">Outcome</dt>
-                            <dd className="mt-0.5 font-semibold text-stone-300">{outcome}</dd>
+                            <dd className="mt-1">
+                              <StatusBadge label={outcome} tone={outcomeTone(signal.resultStatus)} />
+                            </dd>
                           </div>
                         </dl>
                       </div>
@@ -235,7 +274,10 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                       <div className="min-w-0">
                         <p className="text-[11px] font-medium text-stone-300">Evidence chain</p>
                         <div className="mt-2 grid grid-cols-3 overflow-hidden rounded-md border border-border bg-black/20 text-[10px]">
-                          <div className="min-w-0 border-t-2 border-t-info p-2">
+                          <div
+                            className="min-w-0 border-t-2 border-t-info p-2"
+                            title="Market signal: detected from live odds movement"
+                          >
                             <p className="text-stone-400">Market</p>
                             <p className="mt-1 truncate font-mono text-info-200">{formatOddsChange(signal.oddsChangePct)}</p>
                           </div>
@@ -243,6 +285,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                             className={`min-w-0 border-l border-t-2 border-l-border p-2 ${
                               isFieldBacked ? "border-t-positive" : "border-t-border"
                             }`}
+                            title="Field signal: match-context pressure score (fatigue, pace, injuries)"
                           >
                             <p className="text-stone-400">Field</p>
                             <p className={`mt-1 truncate font-mono ${isFieldBacked ? "text-positive-200" : "text-stone-300"}`}>
@@ -253,6 +296,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                             className={`min-w-0 border-l border-t-2 border-l-border p-2 ${
                               item.proofHash ? "border-t-proof" : "border-t-border"
                             }`}
+                            title="Proof: on-chain verification hash, linked once the signal outcome settles"
                           >
                             <p className="text-stone-400">Proof</p>
                             <p
