@@ -124,11 +124,26 @@ textarea {
   transform-origin: left;
 }
 
+/* Indeterminate sweep for the branded loading screen's progress bar. */
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+.animate-loading-bar {
+  animation: loading-bar 1.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in-up,
   .animate-glow-pulse,
   .animate-glow-pulse-amber,
-  .animate-calibration-sweep {
+  .animate-calibration-sweep,
+  .animate-loading-bar {
     animation: none;
   }
 }
