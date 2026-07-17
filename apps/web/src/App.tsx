@@ -39,6 +39,7 @@ import {
 import { ClassicReplayPanel } from "./features/markets/ClassicReplayPanel";
 import { GuidedTour } from "./app/GuidedTour";
 import { useProductTour } from "./app/useProductTour";
+import { LoadingScreen } from "./components/ui/LoadingScreen";
 // Lazy-loaded: only one destination is ever visible at a time in the
 // Command Center preview, so there's no reason to bundle all 9 pages'
 // code into the initial chunk a default-page (non-preview) visitor
@@ -1585,13 +1586,7 @@ function App() {
           titleAs={destinationOwnsPageHeading(previewDestination) ? "p" : "h1"}
           {...shellProps}
         >
-          <Suspense
-            fallback={
-              <div className="rounded-xl border border-border bg-surface-2 p-5 text-sm text-stone-400">
-                Loading...
-              </div>
-            }
-          >
+          <Suspense fallback={<LoadingScreen />}>
             {destinationContent}
           </Suspense>
         </AppShell>
