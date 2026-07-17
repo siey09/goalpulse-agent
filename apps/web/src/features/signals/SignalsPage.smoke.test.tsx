@@ -123,8 +123,10 @@ describe("SignalsPage", () => {
 
     expect(within(highRow).getByText("HIGH")).toHaveClass("text-danger-200");
     expect(within(mediumRow).getByText("MEDIUM")).toHaveClass("text-warning-200");
-    expect(within(highRow).getByText("CORRECT")).toHaveClass("text-stone-300");
-    expect(within(mediumRow).getByText("INCORRECT")).toHaveClass("text-stone-300");
+    // Outcome is now color-coded (was flat gray text) so operators can tell
+    // correct/incorrect apart at a glance, matching SignalArchivePanel's tones.
+    expect(within(highRow).getByText("CORRECT")).toHaveClass("text-positive");
+    expect(within(mediumRow).getByText("INCORRECT")).toHaveClass("text-danger");
 
     const highFieldCell = within(highRow).getByText("Field").parentElement!;
     const lowFieldCell = within(lowRow).getByText("Field").parentElement!;
