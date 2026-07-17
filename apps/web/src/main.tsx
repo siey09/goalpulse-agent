@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { hideBootSplash } from './lib/bootSplash'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -9,16 +10,9 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-// The static #boot-splash in index.html covers the gap between "browser
-// requested the page" and "React has actually painted something" - a real
-// gap on a hard refresh, not just lazy-route loading (that's LoadingScreen's
-// job). Fade it out once the app has painted, rather than on a fixed timer.
-const bootSplash = document.getElementById('boot-splash')
-if (bootSplash) {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      bootSplash.classList.add('boot-splash-hide')
-      window.setTimeout(() => bootSplash.remove(), 400)
-    })
-  })
-}
+// Safety net only. The real trigger is App calling hideBootSplash() once
+// its first dashboard load attempt settles (apps/web/src/App.tsx,
+// loadDashboard). Render's free tier can cold-start slowly, so this is a
+// generous ceiling - it exists so the splash can never get stuck forever,
+// not to define normal timing.
+window.setTimeout(hideBootSplash, 10000)
