@@ -25,3 +25,16 @@ export const runOnceLimiter = rateLimit({
   limit: 10,
   message: { error: "Too many requests to this endpoint. Please wait before trying again." },
 });
+
+/**
+ * Strict limit for POST /api/replay/anchor-proof. Each successful call
+ * submits a real (fee-less devnet) Solana transaction, so this is capped
+ * tightly to avoid needlessly draining the demo wallet's devnet SOL faucet
+ * balance from repeated clicks or abuse.
+ */
+export const anchorProofLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 5,
+  message: { error: "Too many anchoring requests. Please wait before trying again." },
+});
+
