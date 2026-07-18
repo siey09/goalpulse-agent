@@ -145,18 +145,18 @@ export function OddsMovementChart({
               <span>Decimal odds</span>
             </div>
             <ResponsiveContainer width="100%" height="94%">
-              <AreaChart data={chartData} margin={{ top: 12, right: 18, left: 0, bottom: 4 }}>
+              <AreaChart data={chartData} margin={{ top: 22, right: 26, left: 4, bottom: 4 }}>
                 <defs>
-                  <pattern id="lmPixelHome" width="8" height="8" patternUnits="userSpaceOnUse">
-                    <rect width="8" height="8" fill="transparent" />
-                    <rect width="4" height="4" fill="#ffb020" fillOpacity={0.56} />
-                  </pattern>
-                  <pattern id="lmPixelAway" width="8" height="8" patternUnits="userSpaceOnUse">
-                    <rect width="8" height="8" fill="transparent" />
-                    <rect width="4" height="4" fill="#2fd6b4" fillOpacity={0.4} />
-                  </pattern>
+                  <linearGradient id="lmAreaHome" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ffb020" stopOpacity={0.38} />
+                    <stop offset="100%" stopColor="#ffb020" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="lmAreaAway" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#2fd6b4" stopOpacity={0.32} />
+                    <stop offset="100%" stopColor="#2fd6b4" stopOpacity={0} />
+                  </linearGradient>
                 </defs>
-                <CartesianGrid stroke="rgba(158,196,224,0.11)" strokeDasharray="1 8" strokeLinecap="round" />
+                <CartesianGrid stroke="rgba(158,196,224,0.08)" strokeDasharray="2 6" strokeLinecap="round" vertical={false} />
                 <XAxis
                   dataKey="timelineX"
                   type="number"
@@ -231,10 +231,11 @@ export function OddsMovementChart({
                     type="stepAfter"
                     dataKey="home"
                     stroke="#ffb020"
-                    strokeWidth={2.8}
-                    fill="url(#lmPixelHome)"
+                    strokeWidth={2.25}
+                    strokeLinecap="round"
+                    fill="url(#lmAreaHome)"
                     dot={false}
-                    activeDot={{ r: 5, strokeWidth: 2 }}
+                    activeDot={{ r: 5, strokeWidth: 2, style: { filter: "drop-shadow(0 0 4px rgba(255,176,32,0.7))" } }}
                     isAnimationActive={false}
                     name="Home odds"
                   />
@@ -244,9 +245,11 @@ export function OddsMovementChart({
                     type="stepAfter"
                     dataKey="draw"
                     stroke="#a78bfa"
-                    strokeWidth={2}
+                    strokeWidth={1.75}
+                    strokeLinecap="round"
                     fillOpacity={0}
                     dot={false}
+                    activeDot={{ r: 4, strokeWidth: 2, style: { filter: "drop-shadow(0 0 4px rgba(167,139,250,0.7))" } }}
                     isAnimationActive={false}
                     name="Draw odds"
                   />
@@ -256,10 +259,11 @@ export function OddsMovementChart({
                     type="stepAfter"
                     dataKey="away"
                     stroke="#2fd6b4"
-                    strokeWidth={2}
-                    fill="url(#lmPixelAway)"
+                    strokeWidth={1.75}
+                    strokeLinecap="round"
+                    fill="url(#lmAreaAway)"
                     dot={false}
-                    activeDot={{ r: 4 }}
+                    activeDot={{ r: 4, strokeWidth: 2, style: { filter: "drop-shadow(0 0 4px rgba(47,214,180,0.7))" } }}
                     isAnimationActive={false}
                     name="Away odds"
                   />
@@ -275,7 +279,16 @@ export function OddsMovementChart({
                       stroke="#ffecc7"
                       strokeWidth={2}
                       fill={markerStyle.fill}
-                      label={{ value: "Signal", position: "top", fill: "#ffd98f", fontSize: 10 }}
+                      label={{
+                        value: "Signal",
+                        position: "bottom",
+                        fill: "#ffd98f",
+                        fontSize: 10,
+                        fontWeight: 600,
+                        stroke: "#0b0f14",
+                        strokeWidth: 3,
+                        paintOrder: "stroke",
+                      }}
                       onClick={() => onSelectSignalId(marker.id)}
                       style={{ cursor: "pointer" }}
                     />
@@ -288,7 +301,16 @@ export function OddsMovementChart({
                     stroke="#f8fafc"
                     strokeWidth={1.5}
                     strokeOpacity={0.9}
-                    label={{ value: "Current", position: "insideTopRight", fill: "#f8fafc", fontSize: 9 }}
+                    label={{
+                      value: "Current",
+                      position: "insideBottomRight",
+                      fill: "#f8fafc",
+                      fontSize: 9,
+                      fontWeight: 600,
+                      stroke: "#0b0f14",
+                      strokeWidth: 3,
+                      paintOrder: "stroke",
+                    }}
                     className="market-capture-cursor motion-reduce:transition-none"
                   />
                 )}
