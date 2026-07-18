@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUpRight, Minus, Search, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, Minus, Search, TrendingDown, TrendingUp } from "lucide-react";
 import { SignalIntelligencePanel } from "../../components/SignalIntelligencePanel";
 import { SteamMoveDetectionPanel } from "../../components/SteamMoveDetectionPanel";
 import { SignalCorrelationPanel } from "../../components/SignalCorrelationPanel";
@@ -153,7 +153,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
       </section>
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.38fr)]">
-        <Card className="min-w-0 overflow-hidden" role="region" aria-label="Signal queue">
+        <Card className="flex min-w-0 flex-col overflow-hidden" role="region" aria-label="Signal queue">
           <div className="border-b border-border p-3 sm:p-4">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div>
@@ -201,6 +201,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
           </div>
 
           {visibleItems.length > 0 ? (
+            <div className="flex flex-1 flex-col">
             <ol className="divide-y divide-border">
               {visibleItems.map((item, index) => {
                 const { signal } = item;
@@ -329,8 +330,33 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                 );
               })}
             </ol>
+
+              {hasFilters && (
+                <div className="border-t border-border p-3 text-right">
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="min-h-11 rounded-lg px-3 text-xs font-semibold text-stone-300 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              )}
+
+              {/* Claims whatever height the grid's equal-height stretch leaves
+                  over once the sidebar (steam move + correlation panels) is
+                  taller than the row list - an explicit "that's everything"
+                  marker reads as intentional, instead of the card trailing
+                  off into ambiguous blank space. */}
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
+                <CheckCircle2 aria-hidden="true" className="h-4 w-4 text-stone-600" />
+                <p className="text-[11px] uppercase tracking-[0.16em] text-stone-600">
+                  End of queue - you&apos;re caught up
+                </p>
+              </div>
+            </div>
           ) : (
-            <div className="p-4">
+            <div className="flex flex-1 flex-col p-4">
               {outcomeVerificationItems.length === 0 ? (
                 <EmptyState reason="GoalPulse is waiting for a live signal or replay before it can build the triage queue." />
               ) : (
@@ -347,18 +373,6 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
                   }
                 />
               )}
-            </div>
-          )}
-
-          {visibleItems.length > 0 && hasFilters && (
-            <div className="border-t border-border p-3 text-right">
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="min-h-11 rounded-lg px-3 text-xs font-semibold text-stone-300 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
-              >
-                Clear filters
-              </button>
             </div>
           )}
         </Card>
