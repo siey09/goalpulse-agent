@@ -1541,6 +1541,8 @@ function App() {
             onSelectSignal={setSelectedSignal}
             onchainVerify={onchainVerify}
             onVerify={runOnchainVerify}
+            anchorProof={anchorProof}
+            onAnchorProof={runAnchorProof}
           />
         );
         break;
