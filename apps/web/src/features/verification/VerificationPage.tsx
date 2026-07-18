@@ -83,6 +83,20 @@ export function VerificationPage({
         </p>
       </header>
 
+      {summary.total > 0 && summary.eligible === 0 && (
+        <EmptyState
+          reason={
+            <>
+              No signals are on-chain eligible right now. Verification needs the exact TXODDS
+              event sequence number from a live match, and no fixture is currently live, so all{" "}
+              {summary.total} {summary.total === 1 ? "object" : "objects"} below show "No sequence."
+              GoalPulse keeps the signals as-is rather than inventing a proof - this resolves on
+              its own once a match kicks off.
+            </>
+          }
+        />
+      )}
+
       <section
         aria-label="Verification summary"
         className="grid grid-cols-2 border-y border-border bg-surface-2 sm:grid-cols-4"
