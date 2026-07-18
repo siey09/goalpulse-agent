@@ -150,11 +150,16 @@ describe("OddsMovementChart", () => {
     expect(screen.getByTestId("capture-cursor")).toHaveClass("market-capture-cursor", "motion-reduce:transition-none");
   });
 
-  it("animates the price tape while replay is streaming, so snapshots glide instead of snapping", () => {
+  it("keeps the price tape unanimated even while replay is streaming, so the step path never re-warps", () => {
+    // Recharts tweens the whole path (and the axis domain) on every data change. Since replay
+    // grows the array and the odds range shifts snapshot to snapshot, animating this path made
+    // the entire chart visibly twist/rescale on every tick instead of just extending smoothly -
+    // confusing motion, not a glide. Smoothness for replay lives in the cursor fade-in and the
+    // price-readout pulse instead; the line itself stays a clean, instant step.
     render(<OddsMovementChart {...baseProps} isReplayStreamMode replayIntervalMs={1000} />);
 
     for (const area of screen.getAllByTestId("price-area")) {
-      expect(area).toHaveAttribute("data-animation-active", "true");
+      expect(area).toHaveAttribute("data-animation-active", "false");
     }
   });
 
