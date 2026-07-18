@@ -336,7 +336,7 @@ export function ArenaPanel({ onSelectSignalId }: ArenaPanelProps = {}) {
                 ? "Verifying on Solana…"
                 : arena.proof.verifiableStat
                   ? "Verify underlying data on Solana ⛓"
-                  : "No settled signal to verify yet"}
+                  : "No live-match signal to verify yet"}
             </button>
 
             {onchainVerify.data && (

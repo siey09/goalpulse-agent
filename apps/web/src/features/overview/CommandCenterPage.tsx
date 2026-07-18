@@ -141,7 +141,7 @@ export function CommandCenterPage({
   const proofState = arena
     ? arena.proof.verifiableStat
       ? "Ready to verify"
-      : "No settled signal yet"
+      : "No live-match signal yet"
     : isArenaUnavailable
       ? "Arena data unavailable."
       : "Waiting for arena data.";

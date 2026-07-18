@@ -199,7 +199,7 @@ describe("CommandCenterPage", () => {
     expect(await screen.findByText("Momentum Follower")).toBeInTheDocument();
     expect(screen.getByText("+20%")).toBeInTheDocument();
     expect(screen.getByText("12 settled · 0 open")).toBeInTheDocument();
-    expect(screen.getByText("No settled signal yet")).toBeInTheDocument();
+    expect(screen.getByText("No live-match signal yet")).toBeInTheDocument();
     expect(screen.getByText(/Hash abc123def456/)).toBeInTheDocument();
   });
 
