@@ -19,7 +19,7 @@ const REPO_URL = "https://github.com/siey09/goalpulse-agent";
 
 const LIVE_LINKS = [
   { label: "Frontend", href: "https://goalpulse-agent.vercel.app", description: "This dashboard" },
-  { label: "Backend API", href: "https://goalpulse-agent-api.onrender.com", description: "Express API root" },
+  { label: "Backend API", href: "https://goalpulse-agent-api.onrender.com/api/docs", description: "Interactive Swagger docs for the live API" },
   { label: "Health check", href: "https://goalpulse-agent-api.onrender.com/health", description: "Live agent + feed status" },
   { label: "API docs", href: "https://goalpulse-agent-api.onrender.com/api/docs", description: "Interactive OpenAPI / Swagger" },
   { label: "Repository", href: REPO_URL, description: "Source code on GitHub" },
