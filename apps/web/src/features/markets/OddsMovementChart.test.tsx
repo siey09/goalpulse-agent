@@ -150,6 +150,14 @@ describe("OddsMovementChart", () => {
     expect(screen.getByTestId("capture-cursor")).toHaveClass("market-capture-cursor", "motion-reduce:transition-none");
   });
 
+  it("animates the price tape while replay is streaming, so snapshots glide instead of snapping", () => {
+    render(<OddsMovementChart {...baseProps} isReplayStreamMode replayIntervalMs={1000} />);
+
+    for (const area of screen.getAllByTestId("price-area")) {
+      expect(area).toHaveAttribute("data-animation-active", "true");
+    }
+  });
+
   it("moves the capture cursor directly to the latest structured point", () => {
     render(<OddsMovementChart {...baseProps} chartData={[
       chartPoint({ id: "first", timelineX: 100, home: 1.9 }),

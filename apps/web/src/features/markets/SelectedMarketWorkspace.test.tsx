@@ -60,6 +60,14 @@ describe("SelectedMarketWorkspace", () => {
     expect(within(workspace).getByText("Market steady")).toBeInTheDocument();
   });
 
+  it("pulses the price readout during replay but stays static during live polling", () => {
+    const { rerender } = render(<SelectedMarketWorkspace {...baseProps} isReplayStreamMode={false} />);
+    expect(screen.getByText("1.85")).not.toHaveClass("price-tick-pulse");
+
+    rerender(<SelectedMarketWorkspace {...baseProps} isReplayStreamMode />);
+    expect(screen.getByText("1.85")).toHaveClass("price-tick-pulse");
+  });
+
   it("does not invent pressure when no selected-match signal exists", () => {
     render(
       <SelectedMarketWorkspace
