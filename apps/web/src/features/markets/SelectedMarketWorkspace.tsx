@@ -36,12 +36,29 @@ function TickIndicator({ direction }: { direction: TickDirection }) {
   );
 }
 
-function PriceCell({ label, value, tone, direction }: { label: string; value: string; tone: string; direction: TickDirection }) {
+function PriceCell({
+  label,
+  value,
+  tone,
+  direction,
+  animateOnChange,
+}: {
+  label: string;
+  value: string;
+  tone: string;
+  direction: TickDirection;
+  animateOnChange: boolean;
+}) {
   return (
     <div className="min-w-0 px-3 py-2.5">
       <p className="truncate text-[10px] uppercase tracking-[0.16em] text-stone-500">{label}</p>
       <div className="mt-1 flex items-center gap-1">
-        <span className={`font-mono text-lg font-bold tabular-nums sm:text-xl ${tone}`}>{value}</span>
+        <span
+          key={animateOnChange ? value : undefined}
+          className={`font-mono text-lg font-bold tabular-nums sm:text-xl ${tone} ${animateOnChange ? "price-tick-pulse" : ""}`}
+        >
+          {value}
+        </span>
         <TickIndicator direction={direction} />
       </div>
     </div>
@@ -120,6 +137,17 @@ export function SelectedMarketWorkspace({
 
   return (
     <section id="guide-selected-match" role="region" aria-label="Selected market" className="border-b border-border bg-black/15">
+      <style>{`
+        @media (prefers-reduced-motion: no-preference) {
+          @keyframes price-tick-pulse {
+            0% { opacity: 0.4; filter: brightness(1.6); }
+            100% { opacity: 1; filter: brightness(1); }
+          }
+          .price-tick-pulse {
+            animation: price-tick-pulse 420ms ease-out;
+          }
+        }
+      `}</style>
       <div className="grid gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.82fr)] lg:items-center">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -134,7 +162,14 @@ export function SelectedMarketWorkspace({
 
         <div aria-label="Current decimal odds" className="grid grid-cols-3 divide-x divide-border border-y border-border bg-black/15">
           {priceCells.map((cell) => (
-            <PriceCell key={cell.key} label={cell.label} value={cell.value} tone={cell.tone} direction={cell.direction} />
+            <PriceCell
+              key={cell.key}
+              label={cell.label}
+              value={cell.value}
+              tone={cell.tone}
+              direction={cell.direction}
+              animateOnChange={isReplayStreamMode}
+            />
           ))}
         </div>
       </div>

@@ -99,6 +99,7 @@ export function OddsMovementChart({
   const historicalEndLabel = isReplayStreamMode && position.current < position.total
     ? "Capture time unavailable"
     : formatHistoricalCapture(latestPoint);
+  const areaAnimationDuration = Math.min(500, Math.max(220, Math.round(replayIntervalMs * 0.6)));
   const chartDescription = chartData.every((point) => point.hasRealTimestamp)
     ? "Each point is a real TxLINE snapshot plotted by its capture timestamp."
     : "Timestamped TxLINE snapshots use capture timestamps; unavailable captures use sequence order and remain labelled unavailable.";
@@ -236,7 +237,9 @@ export function OddsMovementChart({
                     fill="url(#lmAreaHome)"
                     dot={false}
                     activeDot={{ r: 5, strokeWidth: 2, style: { filter: "drop-shadow(0 0 4px rgba(255,176,32,0.7))" } }}
-                    isAnimationActive={false}
+                    isAnimationActive={isReplayStreamMode}
+                    animationDuration={areaAnimationDuration}
+                    animationEasing="ease-out"
                     name="Home odds"
                   />
                 )}
@@ -250,7 +253,9 @@ export function OddsMovementChart({
                     fillOpacity={0}
                     dot={false}
                     activeDot={{ r: 4, strokeWidth: 2, style: { filter: "drop-shadow(0 0 4px rgba(167,139,250,0.7))" } }}
-                    isAnimationActive={false}
+                    isAnimationActive={isReplayStreamMode}
+                    animationDuration={areaAnimationDuration}
+                    animationEasing="ease-out"
                     name="Draw odds"
                   />
                 )}
@@ -264,7 +269,9 @@ export function OddsMovementChart({
                     fill="url(#lmAreaAway)"
                     dot={false}
                     activeDot={{ r: 4, strokeWidth: 2, style: { filter: "drop-shadow(0 0 4px rgba(47,214,180,0.7))" } }}
-                    isAnimationActive={false}
+                    isAnimationActive={isReplayStreamMode}
+                    animationDuration={areaAnimationDuration}
+                    animationEasing="ease-out"
                     name="Away odds"
                   />
                 )}
