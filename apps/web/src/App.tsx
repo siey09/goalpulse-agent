@@ -73,6 +73,9 @@ const VerificationPage = lazy(() =>
 const SystemHealthPage = lazy(() =>
   import("./features/health/SystemHealthPage").then((m) => ({ default: m.SystemHealthPage }))
 );
+const AboutPage = lazy(() =>
+  import("./features/about/AboutPage").then((m) => ({ default: m.AboutPage }))
+);
 import { VerificationReceipt } from "./components/VerificationReceipt";
 import { SignalAuditDrawer } from "./components/signals/SignalAuditDrawer";
 import type {
@@ -1568,6 +1571,9 @@ function App() {
             } : null}
           />
         );
+        break;
+      case "about":
+        destinationContent = <AboutPage />;
         break;
       case "command-center":
       default:

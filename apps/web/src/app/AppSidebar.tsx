@@ -2,6 +2,7 @@ import {
   Archive as ArchiveIcon,
   BadgeCheck,
   HeartPulse,
+  Info,
   LayoutDashboard,
   LineChart,
   Radio,
@@ -30,6 +31,7 @@ const DESTINATION_ICONS: Record<DestinationId, typeof LayoutDashboard> = {
   verification: BadgeCheck,
   archive: ArchiveIcon,
   "system-health": HeartPulse,
+  about: Info,
 };
 
 function NavButton({

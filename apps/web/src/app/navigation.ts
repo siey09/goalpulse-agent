@@ -7,7 +7,8 @@ export type DestinationId =
   | "replay-lab"
   | "verification"
   | "archive"
-  | "system-health";
+  | "system-health"
+  | "about";
 
 export interface NavGroup {
   label: string;
@@ -41,13 +42,14 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: "verification", label: "Verification" },
       { id: "archive", label: "Archive" },
       { id: "system-health", label: "System Health" },
+      { id: "about", label: "About" },
     ],
   },
 ];
 
 export const DEFAULT_DESTINATION: DestinationId = "command-center";
 
-const PAGE_HEADING_DESTINATIONS = new Set<DestinationId>(["live-markets", "signals", "archive"]);
+const PAGE_HEADING_DESTINATIONS = new Set<DestinationId>(["live-markets", "signals", "archive", "about"]);
 
 /** Destinations with a page-specific h1 ask the shared status bar to render its title as plain text. */
 export function destinationOwnsPageHeading(destination: DestinationId) {
