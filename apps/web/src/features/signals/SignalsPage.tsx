@@ -152,7 +152,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
         ))}
       </section>
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.38fr)] lg:items-start">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.38fr)]">
         <Card className="min-w-0 overflow-hidden" role="region" aria-label="Signal queue">
           <div className="border-b border-border p-3 sm:p-4">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
