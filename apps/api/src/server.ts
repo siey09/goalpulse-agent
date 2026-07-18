@@ -11,6 +11,7 @@ import { getLiveStreamState, startLiveStreamMonitor } from "./services/txlineStr
 import { getLiveOddsStreamState, startLiveOddsStreamMonitor } from "./services/txlineOddsStream";
 import { deriveStreamStatus } from "./services/sseStreamMonitor";
 import { validateStatOnChain } from "./services/onchainValidation";
+import { anchorProofHashOnDevnet } from "./services/solanaDevnetAnchor";
 import { loadSnapshot, saveSnapshot } from "./services/persistence";
 import { buildSignalFromSnapshots } from "./logic/signalEngine";
 import { computeMarketMakerQuote } from "./logic/marketMaker";
@@ -54,7 +55,7 @@ import { createReplayOddsStreamHandler } from "./services/replayOddsStream";
 import { createAgentScheduler } from "./services/agentScheduler";
 import { config } from "./config";
 import { requireApiKey } from "./middleware/apiKeyAuth";
-import { generalApiLimiter, runOnceLimiter } from "./middleware/rateLimiters";
+import { generalApiLimiter, runOnceLimiter, anchorProofLimiter } from "./middleware/rateLimiters";
 import { findPreviousSnapshot, getPnlSummary, getStats, mergeOddsSnapshots, store , upsertRecentFinishedMatches } from "./store";
 import type { OddsSnapshot } from "./types";
 
@@ -181,6 +182,31 @@ app.get("/api/onchain/validate-stat", async (req, res) => {
   }
 
   const result = await validateStatOnChain(fixtureId, seq, statKey);
+
+  res.json({ data: result });
+});
+
+
+/**
+ * Submits a real Solana DEVNET transaction anchoring a locally-computed
+ * SHA-256 outcome-audit proof hash (see /api/replay/backtest's `proof`
+ * object), via a Memo-program instruction. Distinct from
+ * /api/onchain/validate-stat above, which is a read-only MAINNET check
+ * against TxLINE's own program. Devnet SOL has no monetary value.
+ *
+ * Returns `available: false` with an honest reason (never a fabricated
+ * signature) if the wallet is unconfigured, unfunded, or the devnet RPC
+ * call fails.
+ */
+app.post("/api/replay/anchor-proof", anchorProofLimiter, async (req, res) => {
+  const { hash } = req.body ?? {};
+
+  if (!hash || typeof hash !== "string") {
+    res.status(400).json({ error: "A string 'hash' field is required in the request body." });
+    return;
+  }
+
+  const result = await anchorProofHashOnDevnet(hash);
 
   res.json({ data: result });
 });

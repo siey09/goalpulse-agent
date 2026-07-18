@@ -79,6 +79,7 @@ import type {
   Match,
   AgentSignal,
   OnChainVerifyData,
+  AnchorProofResult,
   ReplayBacktest,
   Health,
   SimilarSignalsResult,
@@ -156,6 +157,22 @@ async function request<T>(path: string): Promise<T> {
   }
 
   return response.json();
+}
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const json = await response.json();
+
+  if (!response.ok) {
+    throw new Error(json?.error ?? `Request failed: ${response.status} ${API_BASE_URL}${path}`);
+  }
+
+  return json;
 }
 
 function asArray<T>(payload: unknown, keys: string[] = []): T[] {
@@ -288,6 +305,10 @@ function App() {
   const [onchainVerify, setOnchainVerify] = useState<
     Record<string, { loading: boolean; data: OnChainVerifyData | null }>
   >({});
+  const [anchorProof, setAnchorProof] = useState<{
+    loading: boolean;
+    result: AnchorProofResult | null;
+  }>({ loading: false, result: null });
   const hasLoadedOnceRef = useRef(false);
   const replayCursorRef = useRef(0);
   const replayRetryRef = useRef(createReplayRetryState());
@@ -698,6 +719,34 @@ function App() {
           },
         },
       }));
+    }
+  }
+
+
+
+  async function runAnchorProof(hash: string | undefined) {
+    if (!hash) return;
+
+    setAnchorProof({ loading: true, result: null });
+
+    try {
+      const payload = await postJson<{ data: AnchorProofResult }>(
+        "/api/replay/anchor-proof",
+        { hash }
+      );
+
+      setAnchorProof({ loading: false, result: payload.data });
+    } catch (currentError) {
+      setAnchorProof({
+        loading: false,
+        result: {
+          available: false,
+          reason:
+            currentError instanceof Error
+              ? currentError.message
+              : "Unable to reach the devnet anchoring endpoint.",
+        },
+      });
     }
   }
 
@@ -3048,6 +3097,44 @@ function App() {
                     <p className="mt-2 truncate text-[10px] text-stone-500">
                       Hash: {replayBacktest.proof?.hash ?? "pending"}
                     </p>
+
+                    <button
+                      type="button"
+                      onClick={() => runAnchorProof(replayBacktest.proof?.hash)}
+                      disabled={anchorProof.loading || !replayBacktest.proof?.hash}
+                      className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-info/10 px-3 py-1.5 text-[10px] font-semibold text-info transition-colors hover:bg-info/20 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                      {anchorProof.loading ? "Anchoring on Solana devnet..." : "Anchor proof on Solana devnet"}
+                    </button>
+
+                    {anchorProof.result && (
+                      <div className="mt-2 rounded-lg border border-border/70 bg-black/30 p-2 text-[10px]">
+                        {anchorProof.result.available ? (
+                          <>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-stone-500">Devnet anchor</span>
+                              <span className="font-mono font-semibold text-positive">ANCHORED</span>
+                            </div>
+                            <p className="mt-1 truncate text-stone-400">
+                              Signature: {anchorProof.result.signature}
+                            </p>
+                            {anchorProof.result.explorerUrl && (
+                              <a
+                                href={anchorProof.result.explorerUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-1 flex items-center gap-1.5 text-info underline decoration-info/40 underline-offset-2"
+                              >
+                                View on Solana Explorer (devnet)
+                              </a>
+                            )}
+                          </>
+                        ) : (
+                          <p className="leading-4 text-stone-500">{anchorProof.result.reason}</p>
+                        )}
+                      </div>
+                    )}
 
                     <VerificationReceipt
                       selectedSignal={selectedSignal}
