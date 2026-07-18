@@ -40,7 +40,7 @@ function reversalBadgeClass(risk: string | undefined): string {
   return REVERSAL_STYLES[risk ?? ""] ?? "border-proof/25 bg-proof/10 text-proof-200";
 }
 
-function VoteIcon({ vote }: { vote: string }) {
+function VoteIcon({ vote }: { vote: string | undefined }) {
   if (vote === "approve") return <CheckCircle2 className="h-3 w-3" aria-hidden="true" />;
   if (vote === "reject") return <XCircle className="h-3 w-3" aria-hidden="true" />;
   return <Eye className="h-3 w-3" aria-hidden="true" />;
