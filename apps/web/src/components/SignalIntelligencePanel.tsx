@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "./ui/Card";
+import { EmptyState } from "./ui/EmptyState";
 import { SectionHeader } from "./ui/SectionHeader";
 import { StatusBadge, type StatusTone } from "./ui/StatusBadge";
 import { StatusCapsule } from "./ui/widgets/StatusCapsule";
@@ -340,18 +341,24 @@ export function SignalIntelligencePanel() {
                 TXODDS field context
               </div>
 
-              <div className="grid gap-3">
-                <EvidenceRow label="Latest Field Action" value={scoresContext?.actionLabel ?? scoresContext?.latestAction} />
-                <EvidenceRow label="Pressure Level" value={scoresContext?.pressureLevel} />
-                <EvidenceRow label="Pressure Score" value={scoresContext?.fieldPressureScore !== undefined ? `${scoresContext.fieldPressureScore}/45` : undefined} />
-                <EvidenceRow label="Reliability" value={scoresContext?.reliability} />
-                <EvidenceRow label="Match Phase" value={scoresContext?.statusName} />
-                <EvidenceRow label="Scoreline" value={scoresContext?.scoreline} />
-              </div>
+              {scoresContext ? (
+                <>
+                  <div className="grid gap-3">
+                    <EvidenceRow label="Latest Field Action" value={scoresContext.actionLabel ?? scoresContext.latestAction} />
+                    <EvidenceRow label="Pressure Level" value={scoresContext.pressureLevel} />
+                    <EvidenceRow label="Pressure Score" value={scoresContext.fieldPressureScore !== undefined ? `${scoresContext.fieldPressureScore}/45` : undefined} />
+                    <EvidenceRow label="Reliability" value={scoresContext.reliability} />
+                    <EvidenceRow label="Match Phase" value={scoresContext.statusName} />
+                    <EvidenceRow label="Scoreline" value={scoresContext.scoreline} />
+                  </div>
 
-              <p className="mt-3 text-xs leading-5 text-stone-400">
-                GoalPulse now checks whether market movement is supported by on-field context such as goals, shots, VAR, cards, penalties, or danger possession.
-              </p>
+                  <p className="mt-3 text-xs leading-5 text-stone-400">
+                    GoalPulse now checks whether market movement is supported by on-field context such as goals, shots, VAR, cards, penalties, or danger possession.
+                  </p>
+                </>
+              ) : (
+                <EmptyState reason="No live match in progress for this signal yet - on-field context (goals, shots, cards, pressure) becomes available once kickoff starts." />
+              )}
             </div>
 
             <div className="mt-4 rounded-xl border border-border bg-surface-3 p-4">
