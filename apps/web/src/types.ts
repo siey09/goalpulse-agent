@@ -77,6 +77,13 @@ export type OnChainVerifyData = {
   dailyScoresPda?: string;
 };
 
+export type AnchorProofResult = {
+  available: boolean;
+  reason?: string;
+  signature?: string;
+  explorerUrl?: string;
+};
+
 export type ReplayBacktest = {
   datasetId?: string;
   mode?: string;
