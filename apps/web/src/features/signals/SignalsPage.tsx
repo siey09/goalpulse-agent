@@ -152,7 +152,7 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
         ))}
       </section>
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.38fr)]">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.38fr)] lg:items-start">
         <Card className="flex min-w-0 flex-col overflow-hidden" role="region" aria-label="Signal queue">
           <div className="border-b border-border p-3 sm:p-4">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -377,7 +377,11 @@ export function SignalsPage({ outcomeVerificationItems, onSelectSignal }: Signal
           )}
         </Card>
 
-        <aside aria-label="Live pattern scan" role="region" className="min-w-0 space-y-4">
+        <aside
+          aria-label="Live pattern scan"
+          role="region"
+          className="min-w-0 space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:pr-1"
+        >
           <SteamMoveDetectionPanel />
           <SignalCorrelationPanel />
         </aside>
