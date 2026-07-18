@@ -6,16 +6,17 @@ import { TopStatusBar } from "./TopStatusBar";
 import { DEFAULT_DESTINATION, NAV_GROUPS, destinationOwnsPageHeading } from "./navigation";
 
 describe("navigation", () => {
-  it("accounts for exactly 9 destinations across 3 groups", () => {
+  it("accounts for exactly 10 destinations across 3 groups", () => {
     const total = NAV_GROUPS.reduce((sum, group) => sum + group.destinations.length, 0);
     expect(NAV_GROUPS).toHaveLength(3);
-    expect(total).toBe(9);
+    expect(total).toBe(10);
   });
 
   it("lets page-led destinations own the document h1", () => {
     expect(destinationOwnsPageHeading("live-markets")).toBe(true);
     expect(destinationOwnsPageHeading("signals")).toBe(true);
     expect(destinationOwnsPageHeading("archive")).toBe(true);
+    expect(destinationOwnsPageHeading("about")).toBe(true);
     expect(destinationOwnsPageHeading("command-center")).toBe(false);
   });
 });
