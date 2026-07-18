@@ -1467,7 +1467,7 @@ function App() {
       title: "Autonomous World Cup Market Intelligence",
       agentStatus: (health?.ok ? "RUNNING" : "DEGRADED") as "RUNNING" | "DEGRADED",
       feedMode: "LIVE TxLINE" as const,
-      freshnessLabel: dataFreshnessLabel(selectedMatch?.lastUpdated) ?? undefined,
+      freshnessLabel: dataFreshnessLabel(health?.liveOddsStream?.lastEventAt ?? undefined) ?? undefined,
       lastDecisionLabel: agentTimeline[2]?.title,
     };
 
@@ -1581,7 +1581,7 @@ function App() {
           <CommandCenterPage
             kpis={{
               liveFixtures: matchStatusCounts.live,
-              feedFreshnessLabel: dataFreshnessLabel(selectedMatch?.lastUpdated) ?? "—",
+              feedFreshnessLabel: dataFreshnessLabel(health?.liveOddsStream?.lastEventAt ?? undefined) ?? "—",
               signalsInWindow: stats?.signalsGenerated ?? null,
               openSimulatedPositions: pnl?.openPositions ?? null,
             }}
