@@ -1,8 +1,9 @@
+import { ShieldCheck } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { StatusCapsule } from "../../components/ui/widgets/StatusCapsule";
 import { VerificationReceipt } from "../../components/VerificationReceipt";
 import { getSignalTarget } from "../../lib/formatters";
-import type { AgentSignal, OnChainVerifyData, ReplayBacktest } from "../../types";
+import type { AgentSignal, AnchorProofResult, OnChainVerifyData, ReplayBacktest } from "../../types";
 
 export interface ReplayLabPnl {
   netUnits: number;
@@ -22,6 +23,8 @@ export interface ReplayLabPageProps {
   onSelectSignal: (signal: AgentSignal) => void;
   onchainVerify: Record<string, { loading: boolean; data: OnChainVerifyData | null }>;
   onVerify: (signal: AgentSignal | null) => void;
+  anchorProof: { loading: boolean; result: AnchorProofResult | null };
+  onAnchorProof: (hash: string | undefined) => void;
 }
 
 /**
@@ -40,6 +43,8 @@ export function ReplayLabPage({
   onSelectSignal,
   onchainVerify,
   onVerify,
+  anchorProof,
+  onAnchorProof,
 }: ReplayLabPageProps) {
   return (
     <div className="space-y-4">
@@ -189,6 +194,42 @@ export function ReplayLabPage({
               </div>
 
               <p className="mt-2 truncate text-[10px] text-stone-500">Hash: {replayBacktest.proof?.hash ?? "pending"}</p>
+
+              <button
+                type="button"
+                onClick={() => onAnchorProof(replayBacktest.proof?.hash)}
+                disabled={anchorProof.loading || !replayBacktest.proof?.hash}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-info/10 px-3 py-1.5 text-[10px] font-semibold text-info transition-colors hover:bg-info/20 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                {anchorProof.loading ? "Anchoring on Solana devnet..." : "Anchor proof on Solana devnet"}
+              </button>
+
+              {anchorProof.result && (
+                <div className="mt-2 rounded-lg border border-border/70 bg-black/30 p-2 text-[10px]">
+                  {anchorProof.result.available ? (
+                    <>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-stone-500">Devnet anchor</span>
+                        <span className="font-mono font-semibold text-positive">ANCHORED</span>
+                      </div>
+                      <p className="mt-1 truncate text-stone-400">Signature: {anchorProof.result.signature}</p>
+                      {anchorProof.result.explorerUrl && (
+                        <a
+                          href={anchorProof.result.explorerUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-1 flex items-center gap-1.5 text-info underline decoration-info/40 underline-offset-2"
+                        >
+                          View on Solana Explorer (devnet)
+                        </a>
+                      )}
+                    </>
+                  ) : (
+                    <p className="leading-4 text-stone-500">{anchorProof.result.reason}</p>
+                  )}
+                </div>
+              )}
 
               <div className="mt-2">
                 <VerificationReceipt selectedSignal={selectedSignal} onchainVerify={onchainVerify} onVerify={onVerify} />
