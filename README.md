@@ -12,6 +12,7 @@ The CI badge above reflects whether `main` currently passes. Run `npm run test` 
 
 ## Live Links
 
+- Demo Video: https://www.youtube.com/watch?v=julntqJjWfo
 - Frontend: https://goalpulse-agent.vercel.app
 - Backend API: https://goalpulse-agent-api.onrender.com
 - Health Check: https://goalpulse-agent-api.onrender.com/health
@@ -140,7 +141,6 @@ Momentum scoring combines odds compression, match time pressure, score movement,
 
 - apps/api: Express API, TxLINE adapter, autonomous agent, signal engine
 - apps/web: React dashboard and judge-facing UI
-- DEMO_CHECKLIST.md: demo flow
 - TECHNICAL_DOCS.md: architecture notes
 
 ## Local Development
