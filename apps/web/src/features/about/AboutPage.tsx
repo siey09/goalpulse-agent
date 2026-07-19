@@ -38,11 +38,6 @@ const DOC_LINKS = [
     description: "Architecture, formulas, endpoints, and known limitations.",
   },
   {
-    label: "Demo checklist",
-    href: `${REPO_URL}/blob/main/DEMO_CHECKLIST.md`,
-    description: "The judge-facing demo flow.",
-  },
-  {
     label: "OpenAPI spec",
     href: `${REPO_URL}/blob/main/openapi.yaml`,
     description: "Full REST API schema, source for the interactive docs.",

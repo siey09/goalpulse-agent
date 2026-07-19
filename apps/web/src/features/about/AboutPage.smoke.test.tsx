@@ -39,7 +39,7 @@ describe("AboutPage", () => {
     expect(screen.getByText("Operations")).toBeInTheDocument();
   });
 
-  it("links to the README, technical docs, demo checklist, and OpenAPI spec", () => {
+  it("links to the README, technical docs, and OpenAPI spec", () => {
     render(<AboutPage />);
 
     expect(screen.getByRole("link", { name: /README/ })).toHaveAttribute(

@@ -141,7 +141,6 @@ Momentum scoring combines odds compression, match time pressure, score movement,
 
 - apps/api: Express API, TxLINE adapter, autonomous agent, signal engine
 - apps/web: React dashboard and judge-facing UI
-- DEMO_CHECKLIST.md: demo flow
 - TECHNICAL_DOCS.md: architecture notes
 
 ## Local Development
