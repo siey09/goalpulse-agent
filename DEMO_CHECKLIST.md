@@ -1,6 +1,11 @@
 # GoalPulse Agent Demo Checklist
 
-> **Demo URL: `https://goalpulse-agent.vercel.app/`**
+> **Live app: `https://goalpulse-agent.vercel.app/`**
+>
+> **Submission video: `https://www.youtube.com/watch?v=julntqJjWfo`**
+>
+> **Screening requirement:** keep the final published video at or below `5:00`.
+>
 > The redesigned 9-destination Command Center experience (Operations/
 > Strategy/Trust nav groups, the reworked 22-step Guided Tour, the
 > Signal Audit Drawer) is now the default at the bare production URL —
